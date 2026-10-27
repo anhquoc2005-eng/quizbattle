@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Domain: entity và logic nghiệp vụ thuần. Không tham chiếu project hay thư viện nào khác. -->
+
+</Project>

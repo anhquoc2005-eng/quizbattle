@@ -1,0 +1,9 @@
+<Project>
+  <!-- Cấu hình chung cho mọi project trong /backend -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+  </PropertyGroup>
+</Project>

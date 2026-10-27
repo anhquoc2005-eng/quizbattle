@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- Secret khi dev lưu bằng: dotnet user-secrets set "ConnectionStrings:Default" "..." -->
+    <UserSecretsId>quizbattle-api-7c1f2e4a</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\QuizBattle.Application\QuizBattle.Application.csproj" />
+    <ProjectReference Include="..\QuizBattle.Infrastructure\QuizBattle.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

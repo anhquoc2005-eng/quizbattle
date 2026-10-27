@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+
+/* Bộ màu cố định của dự án. Dùng qua class Tailwind: bg-brand-500, text-ink-muted... */
+@theme {
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+
+  --color-surface: #0f0d1a;
+  --color-surface-raised: #1a1729;
+  --color-line: #2c2840;
+
+  --color-ink: #f4f2fb;
+  --color-ink-muted: #a29db8;
+
+  --color-good: #34d399;
+  --color-warn: #fbbf24;
+  --color-bad: #f87171;
+}
+
+body {
+  @apply bg-surface text-ink antialiased;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}

@@ -122,6 +122,17 @@ docker-compose.yml
 - Không xóa hoặc viết lại code ngoài phạm vi yêu cầu.
 - Gặp yêu cầu mâu thuẫn với quy tắc này: dừng lại và hỏi, không tự quyết.
 
+## Môi trường và Deploy
+
+- Dev (máy cá nhân): PostgreSQL chạy bằng `docker compose up -d`. Thử migration ở đây trước.
+- Production: database là Supabase, CHỈ dùng như PostgreSQL được host sẵn.
+  - Không dùng Supabase Auth, Supabase REST API, Supabase Realtime. Xác thực là JWT của backend, real-time là SignalR.
+  - Kết nối bằng chuỗi **Session pooler (cổng 5432)**. Không dùng kết nối trực tiếp (thường chỉ IPv6) và không dùng Transaction pooler (cổng 6543, vướng prepared statement của EF Core).
+  - Gói Free bị tạm dừng sau 7 ngày ít hoạt động: backend có job nhẹ truy vấn DB định kỳ (ví dụ mỗi 12 giờ).
+- Code không phân biệt môi trường: chuỗi kết nối luôn đọc từ biến `ConnectionStrings__Default`.
+- Backend deploy lên nơi hỗ trợ WebSocket và chạy liên tục (yêu cầu của SignalR); frontend deploy lên Vercel/Netlify. Ưu tiên cùng vùng Singapore với database.
+- Migration lên production chạy thủ công có chủ đích, không tự chạy khi app khởi động.
+
 ## Git
 
 - Commit nhỏ theo từng tính năng, message dạng Conventional Commits:

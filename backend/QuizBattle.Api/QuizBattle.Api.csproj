@@ -10,4 +10,11 @@
     <ProjectReference Include="..\QuizBattle.Infrastructure\QuizBattle.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Chỉ dùng cho dotnet ef (tạo/áp migration), không cần lúc chạy app. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
 </Project>

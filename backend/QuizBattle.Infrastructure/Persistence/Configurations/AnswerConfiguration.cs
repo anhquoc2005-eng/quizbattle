@@ -10,7 +10,7 @@ public sealed class AnswerConfiguration : IEntityTypeConfiguration<Answer>
     {
         builder.ToTable("Answers", t => t.HasCheckConstraint(
             "CK_Answers_SelectedIndex_Range",
-            "\"SelectedIndex\" BETWEEN 0 AND 3"));
+            $"\"SelectedIndex\" BETWEEN 0 AND {Question.OPTION_COUNT - 1}"));
 
         builder.HasKey(a => a.Id);
 

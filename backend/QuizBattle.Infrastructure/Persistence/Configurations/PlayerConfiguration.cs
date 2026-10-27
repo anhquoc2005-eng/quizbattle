@@ -17,7 +17,6 @@ public sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
         builder.Property(p => p.Score).HasDefaultValue(0);
         builder.Property(p => p.JoinedAt).HasColumnType("timestamptz");
 
-        builder.HasIndex(p => p.RoomId);
         builder.HasIndex(p => new { p.RoomId, p.DisplayName }).IsUnique();
         builder.HasIndex(p => p.SessionTokenHash).IsUnique();
 

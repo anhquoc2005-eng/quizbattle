@@ -10,8 +10,8 @@ public sealed class QuestionConfiguration : IEntityTypeConfiguration<Question>
     {
         builder.ToTable("Questions", t =>
         {
-            t.HasCheckConstraint("CK_Questions_CorrectIndex_Range", "\"CorrectIndex\" BETWEEN 0 AND 3");
-            t.HasCheckConstraint("CK_Questions_Options_Count", "cardinality(\"Options\") = 4");
+            t.HasCheckConstraint("CK_Questions_CorrectIndex_Range", $"\"CorrectIndex\" BETWEEN 0 AND {Question.OPTION_COUNT - 1}");
+            t.HasCheckConstraint("CK_Questions_Options_Count", $"cardinality(\"Options\") = {Question.OPTION_COUNT}");
         });
 
         builder.HasKey(q => q.Id);

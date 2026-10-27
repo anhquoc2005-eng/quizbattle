@@ -68,6 +68,29 @@ cd backend && dotnet test
 cd frontend && npm test
 ```
 
+## Vibe code với Claude Code
+
+Repo khai báo sẵn plugin trong `.claude/settings.json`. Mở repo bằng Claude Code và chọn tin tưởng thư mục;
+nếu không thấy hỏi cài plugin, chạy trong Claude Code:
+
+```
+/plugin marketplace add anthropics/claude-plugins-official
+/plugin marketplace add wshobson/agents
+/plugin install csharp-lsp@claude-plugins-official
+/plugin install typescript-lsp@claude-plugins-official
+/plugin install security-guidance@claude-plugins-official
+/plugin install commit-commands@claude-plugins-official
+/plugin install code-review@claude-plugins-official
+/plugin install dotnet-contribution@claude-code-workflows
+```
+
+Hai plugin LSP cần language server trên máy:
+
+```bash
+dotnet tool install --global csharp-ls
+npm install -g typescript-language-server typescript
+```
+
 ## Quy tắc dự án
 
 Xem [CLAUDE.md](CLAUDE.md).

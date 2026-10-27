@@ -133,6 +133,17 @@ docker-compose.yml
 - Backend deploy lên nơi hỗ trợ WebSocket và chạy liên tục (yêu cầu của SignalR); frontend deploy lên Vercel/Netlify. Ưu tiên cùng vùng Singapore với database.
 - Migration lên production chạy thủ công có chủ đích, không tự chạy khi app khởi động.
 
+## Plugin và skill
+
+Plugin của dự án khai báo trong `.claude/settings.json`: `csharp-lsp`, `typescript-lsp`, `security-guidance`,
+`commit-commands`, `code-review` (Anthropic) và `dotnet-contribution` (wshobson/agents).
+Giao diện dùng skill `taste-skill` (cài ở tài khoản người dùng).
+
+- Khi skill/plugin gợi ý khác file này, **file này thắng**.
+- Skill `dotnet-backend-patterns` có ví dụ Redis, Dapper, Moq, Minimal API và Result pattern:
+  dự án KHÔNG dùng các thứ đó (trừ khi đã hỏi và được đồng ý). Giữ Controller + EF Core + test bằng lớp giả tự viết.
+- Chỉ dùng một skill thiết kế giao diện cho toàn dự án để phong cách nhất quán.
+
 ## Git
 
 - Commit nhỏ theo từng tính năng, message dạng Conventional Commits:

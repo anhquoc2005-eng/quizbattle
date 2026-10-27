@@ -44,7 +44,7 @@ docker compose up -d
 
 ```bash
 cd backend/QuizBattle.Api
-dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=quizbattle;Username=quizbattle;Password=<mật khẩu trong .env>"
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5433;Database=quizbattle;Username=quizbattle;Password=<mật khẩu trong .env>"
 dotnet run
 ```
 

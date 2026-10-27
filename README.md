@@ -65,6 +65,28 @@ Trang chủ hiện thẻ "Trạng thái hệ thống" với Backend và Database
 
 Sau khi đã làm bước cài đặt lần đầu ở trên (tạo `.env` ở gốc repo, tạo `.env` trong `frontend/`, chạy `dotnet user-secrets set` cho backend), mở project trong VS Code và nhấn `Ctrl+Shift+B` (task `dev: all`) để khởi động Postgres, backend (`dotnet watch run`) và frontend (`npm run dev`) cùng lúc, mỗi phần một terminal riêng. Dùng task `db: stop` khi muốn tắt Postgres.
 
+## Migration
+
+Lần đầu clone repo (hoặc sau khi pull có migration mới), cài `dotnet-ef` đúng version theo tool manifest:
+
+```bash
+dotnet tool restore
+```
+
+Áp migration vào database dev (đọc connection string từ user-secrets, xem mục "Chạy trên máy"):
+
+```bash
+dotnet ef database update --project backend/QuizBattle.Infrastructure --startup-project backend/QuizBattle.Api
+```
+
+Tạo migration mới sau khi sửa entity/cấu hình:
+
+```bash
+dotnet ef migrations add <TênMigration> --project backend/QuizBattle.Infrastructure --startup-project backend/QuizBattle.Api -o Persistence/Migrations
+```
+
+App không tự chạy migration khi khởi động — luôn chạy `dotnet ef database update` thủ công.
+
 ## Test
 
 ```bash

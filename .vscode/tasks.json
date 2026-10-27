@@ -1,0 +1,101 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "db: start",
+      "type": "shell",
+      "command": "docker compose up -d --wait",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "clear": false,
+        "group": "quizbattle"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "db: stop",
+      "type": "shell",
+      "command": "docker compose stop",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "clear": false,
+        "group": "quizbattle"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "backend: watch",
+      "type": "shell",
+      "command": "dotnet watch run",
+      "options": {
+        "cwd": "${workspaceFolder}/backend/QuizBattle.Api"
+      },
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "clear": false,
+        "group": "quizbattle"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^(.*)$",
+          "file": 1,
+          "location": 1,
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "dotnet watch.*(Started|File changed|Building)",
+          "endsPattern": "Now listening on:"
+        }
+      }
+    },
+    {
+      "label": "frontend: dev",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "presentation": {
+        "panel": "dedicated",
+        "clear": false,
+        "group": "quizbattle"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^(.*)$",
+          "file": 1,
+          "location": 1,
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "VITE v",
+          "endsPattern": "Local:"
+        }
+      }
+    },
+    {
+      "label": "dev: all",
+      "dependsOn": [
+        "db: start",
+        "backend: watch",
+        "frontend: dev"
+      ],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -29,6 +29,7 @@ Mục đích: dự án portfolio xin thực tập fullstack C#. Code phải sạ
   src/components/ Component dùng lại
   src/hooks/      Custom hooks
   src/types/      Kiểu TypeScript dùng chung
+  src/validation/ Validate form thuần, không gọi API (test được bằng Vitest)
 docker-compose.yml
 ```
 

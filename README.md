@@ -48,6 +48,18 @@ dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5433;Da
 dotnet run
 ```
 
+Cần thêm `Jwt:Key` (ký JWT, dùng chung cho đăng ký/đăng nhập) — sinh ngẫu nhiên ≥ 32 byte rồi lưu bằng user-secrets, **không đặt trong appsettings hay commit**:
+
+```powershell
+[Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
+```
+
+```bash
+dotnet user-secrets set "Jwt:Key" "<chuỗi vừa sinh>"
+```
+
+`Jwt:Issuer`/`Jwt:Audience` đã có sẵn trong `appsettings.Development.json` (không phải secret, không cần đặt thêm khi dev).
+
 Kiểm tra: mở http://localhost:5000/api/health, kết quả mong đợi `{"status":"ok","database":"up"}`.
 
 **3. Frontend** (chạy ở http://localhost:5173)
@@ -116,6 +128,10 @@ Hai plugin LSP cần language server trên máy:
 dotnet tool install --global csharp-ls
 npm install -g typescript-language-server typescript
 ```
+
+## Hạn chế đã biết
+
+- **Login không chống timing side-channel**: thời gian xử lý "email không tồn tại" (không hash) khác "sai mật khẩu" (có hash) dù trả về cùng message, nên về lý thuyết kẻ tấn công có thể đo thời gian để dò email tồn tại qua endpoint login. Trên thực tế không tăng rủi ro: `POST /api/auth/register` đã trả 409 ngay khi email tồn tại, tức là cách lộ email tồn tại dễ và rẻ hơn nhiều đã có sẵn. Chặn timing ở riêng login không giải quyết được gốc vấn đề; muốn chặn triệt để cần thêm bước xác minh email (gửi mail, click link) — ngoài phạm vi MVP này.
 
 ## Quy tắc dự án
 

@@ -6,20 +6,15 @@ export function BackendStatus() {
   const { data, error, isPending, refetch, isFetching } = useHealth()
 
   return (
-    <section className="rounded-xl border border-line bg-surface-raised p-5">
+    <section className="card">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="font-semibold">Trạng thái hệ thống</h2>
-        <button
-          type="button"
-          onClick={() => void refetch()}
-          disabled={isFetching}
-          className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted transition hover:border-brand-500 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
-        >
+        <h2>Trạng thái hệ thống</h2>
+        <button className="btn btn-ghost" type="button" onClick={() => void refetch()} disabled={isFetching}>
           {isFetching ? 'Đang kiểm tra…' : 'Kiểm tra lại'}
         </button>
       </div>
 
-      <div className="mt-4 text-sm">
+      <div className="mt-4 text-xs">
         {isPending ? (
           <StatusLine tone="muted" label="Đang kết nối backend…" />
         ) : error ? (
@@ -31,7 +26,7 @@ export function BackendStatus() {
             </li>
             <li>
               <StatusLine
-                tone={data.database === 'up' ? 'good' : 'warn'}
+                tone={data.database === 'up' ? 'good' : 'bad'}
                 label={data.database === 'up' ? 'Database: đã kết nối' : 'Database: chưa kết nối'}
               />
             </li>
@@ -42,13 +37,12 @@ export function BackendStatus() {
   )
 }
 
-type Tone = 'good' | 'warn' | 'bad' | 'muted'
+type Tone = 'good' | 'bad' | 'muted'
 
 const DOT_CLASS: Record<Tone, string> = {
-  good: 'bg-good',
-  warn: 'bg-warn',
-  bad: 'bg-bad',
-  muted: 'bg-ink-muted animate-pulse',
+  good: 'bg-positive',
+  bad: 'bg-negative',
+  muted: 'bg-faint animate-pulse',
 }
 
 function StatusLine({ tone, label }: { tone: Tone; label: string }) {

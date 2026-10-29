@@ -111,6 +111,34 @@ docker-compose.yml
 - Dùng Tailwind, không viết CSS inline rời rạc. Màu và khoảng cách theo một bộ cố định.
 - Nút bấm có trạng thái disabled khi đang gửi để tránh gửi hai lần.
 
+**Hệ thiết kế**: "true-black-flat" (taste-skill), nguồn gốc ở `docs/design/` (`app.css`, `login.html`, `dashboard.html`, ảnh chụp, `taste-direction.json`). Token định nghĩa ở `frontend/src/index.css` (`@theme`), dùng qua class Tailwind, không viết hex trực tiếp:
+
+| Token | Giá trị | Dùng cho |
+|---|---|---|
+| `bg-ground` | `#000000` | Nền |
+| `bg-surface` | `#111111` | Thẻ/card (`.card`) |
+| `bg-raised` | `#2A2A2A` | Panel lồng bên trong card (bước, mã phòng) |
+| `border-rule` | `#1F1F1F` | Đường kẻ phân cách (ví dụ đầu bảng lịch sử) |
+| `border-control` | `#444444` | Viền ô nhập, nút ghost, khối rỗng nét đứt |
+| `text-ink` | `#FFFFFF` | Chữ chính |
+| `text-muted` | `#B4B4B4` | Chữ phụ |
+| `text-faint` | `#949494` | Chữ chú thích nhỏ nhất (đi cùng `text-xs`) |
+| `text-accent` / `bg-accent` | `#F5C518` | **Chỉ dùng cho dữ liệu** (mã phòng, thanh tiến độ) |
+| `text-positive` | `#3FC07A` | Trạng thái tốt ("Đã xong") |
+| `text-negative` | `#E5566F` | Lỗi |
+
+**Quy tắc màu nhấn**: `accent` (#f5c518) chỉ xuất hiện trên dữ liệu (ký tự mã phòng, thanh tiến độ). Không dùng cho nút, tab, hay link.
+
+**Font**: Inter (400/500/600) qua `<link>` Google Fonts ở `index.html` (có `preconnect`), không cài package. Một font cho cả trang. Số liệu dùng `tabular-nums`.
+
+**Tiêu đề màn hình**: 20px/600 (`h1` mặc định trong `index.css`). Không dùng cỡ chữ hero lớn cho màn hình ứng dụng (login/dashboard); trang chủ (landing) là ngoại lệ, vẫn dùng tiêu đề lớn.
+
+**Class dùng chung** (`index.css`, `@layer components`): `.card` (thẻ, bo góc 20px, không viền không bóng), `.btn`/`.btn-primary` (pill trắng chữ đen, cao 36px desktop / 44px điện thoại)/`.btn-ghost` (viền, nền trong suốt), `.field`/`.field input` (nhãn phía trên, cao 44px, giữ viền, focus đổi viền sang trắng, `[data-invalid]` đổi viền sang đỏ), `.code`/`.code span` (ô ký tự mã phòng, `.code.slot` cho ô trống "?"), `.col`/`.bar`/`.mark` (cột căn giữa, thanh trên cùng, logo+tên).
+
+**Cấm**: gradient, bóng đổ, hiệu ứng kính mờ (backdrop-blur), emoji, chữ in hoa giãn khoảng cách (eyebrow label phía trên tiêu đề), đánh số kiểu 01/02, zebra table, icon trong vòng tròn màu trên mỗi thẻ KPI.
+
+**Kiểm tra**: nếu máy đã cài skill `design-taste-frontend`, chạy `node <đường dẫn skill>/scripts/lint.mjs --app <file>` và `node <đường dẫn skill>/scripts/inspect.mjs --app <url bản build>` sau khi đổi giao diện, sửa hết FAIL trước khi coi là xong.
+
 ## Quy trình làm việc với AI
 
 - Làm từng bước nhỏ, mỗi lần một tính năng theo lộ trình. Không sinh cả dự án một lần.

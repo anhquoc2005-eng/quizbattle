@@ -71,6 +71,18 @@ public sealed class AuthServiceTests
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(RegisterRequest.DisplayName)));
     }
 
+    [Fact]
+    public void Login_PasswordOver128Chars_ReturnsValidationError()
+    {
+        var request = new LoginRequest { Email = "user@example.com", Password = new string('a', 129) };
+        var results = new List<ValidationResult>();
+
+        var isValid = Validator.TryValidateObject(request, new ValidationContext(request), results, validateAllProperties: true);
+
+        Assert.False(isValid);
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(LoginRequest.Password)));
+    }
+
     private static AuthService CreateService(FakeUserRepository repository) =>
         new(repository, new FakePasswordHasher(), new FakeTokenService(), TimeProvider.System);
 

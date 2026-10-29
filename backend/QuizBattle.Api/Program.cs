@@ -40,6 +40,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
             ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30), // mặc định 5 phút, token sẽ hết hạn đúng ~60 phút như yêu cầu
         };
     });
 builder.Services.AddAuthorization();

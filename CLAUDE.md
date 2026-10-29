@@ -132,6 +132,7 @@ docker-compose.yml
 - Code không phân biệt môi trường: chuỗi kết nối luôn đọc từ biến `ConnectionStrings__Default`.
 - Backend deploy lên nơi hỗ trợ WebSocket và chạy liên tục (yêu cầu của SignalR); frontend deploy lên Vercel/Netlify. Ưu tiên cùng vùng Singapore với database.
 - Migration lên production chạy thủ công có chủ đích, không tự chạy khi app khởi động.
+- Khi deploy sau reverse proxy/load balancer: bật `UseForwardedHeaders`, chỉ tin proxy của nhà cung cấp hosting (khai báo `KnownProxies`/`KnownNetworks`, không dùng mặc định tin mọi proxy). Thiếu bước này, `RemoteIpAddress` mà server thấy là IP của proxy, rate limit theo IP sẽ gộp toàn bộ người dùng thành một IP.
 
 ## Plugin và skill
 

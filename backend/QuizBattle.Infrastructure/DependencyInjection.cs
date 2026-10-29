@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using QuizBattle.Application.Abstractions;
+using QuizBattle.Application.Auth;
 using QuizBattle.Infrastructure.Persistence;
+using QuizBattle.Infrastructure.Security;
 
 namespace QuizBattle.Infrastructure;
 
@@ -18,6 +20,12 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IDatabaseHealthCheck, DatabaseHealthCheck>();
+
+        // Validate ngay lúc khởi động, không chờ tới lần tạo token đầu tiên.
+        services.AddSingleton(JwtOptions.Load(configuration));
+        services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IPasswordHasher, PasswordHasherAdapter>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         return services;
     }

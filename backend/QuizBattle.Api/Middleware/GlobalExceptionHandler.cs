@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using QuizBattle.Application.Common;
 
 namespace QuizBattle.Api.Middleware;
 
 /// <summary>
-/// Bắt mọi exception chưa được xử lý, ghi log và trả về ProblemDetails 500.
-/// Không gửi chi tiết lỗi nội bộ (stack trace) xuống client.
+/// Bắt mọi exception chưa được xử lý. Exception nghiệp vụ (Conflict/Unauthorized) map sang
+/// mã lỗi tương ứng, còn lại coi là lỗi không mong muốn (500). Không gửi stack trace xuống client.
 /// </summary>
 public sealed class GlobalExceptionHandler(
     IProblemDetailsService problemDetailsService,
@@ -16,9 +17,19 @@ public sealed class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
-        logger.LogError(exception, "Lỗi chưa được xử lý khi gọi {Path}", httpContext.Request.Path);
+        var (status, title, type) = exception switch
+        {
+            ConflictException => (StatusCodes.Status409Conflict, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.10"),
+            UnauthorizedException => (StatusCodes.Status401Unauthorized, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.2"),
+            _ => (StatusCodes.Status500InternalServerError, "Đã xảy ra lỗi không mong muốn.", "https://tools.ietf.org/html/rfc9110#section-15.6.1"),
+        };
 
-        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        if (status == StatusCodes.Status500InternalServerError)
+        {
+            logger.LogError(exception, "Lỗi chưa được xử lý khi gọi {Path}", httpContext.Request.Path);
+        }
+
+        httpContext.Response.StatusCode = status;
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
@@ -26,9 +37,9 @@ public sealed class GlobalExceptionHandler(
             Exception = exception,
             ProblemDetails = new ProblemDetails
             {
-                Status = StatusCodes.Status500InternalServerError,
-                Title = "Đã xảy ra lỗi không mong muốn.",
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+                Status = status,
+                Title = title,
+                Type = type,
             },
         });
     }

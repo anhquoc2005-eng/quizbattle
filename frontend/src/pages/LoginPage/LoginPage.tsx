@@ -1,15 +1,62 @@
+import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { ApiError } from '../../api/apiError'
+import { FormField } from '../../components/FormField'
 import { HowItWorksCard } from '../../components/HowItWorksCard'
 import { LogoMark } from '../../components/LogoMark'
+import { useAuth } from '../../hooks/useAuth'
+import { hasFormErrors, mapServerErrorsToFields, validateLoginForm, type LoginFormErrors } from '../../validation/authForm'
+
+const LOGIN_FIELDS = ['email', 'password'] as const
 
 export function LoginPage() {
+  const { login, user, isLoading: authLoading } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<LoginFormErrors>({})
+  const [formError, setFormError] = useState<string | undefined>()
+
+  const mutation = useMutation({
+    mutationFn: () => login(email, password),
+    onSuccess: () => navigate(getRedirectPath(location.state), { replace: true }),
+    onError: (error: unknown) => {
+      setFormError(undefined)
+
+      if (!(error instanceof ApiError)) {
+        setFieldErrors({})
+        setFormError('Không kết nối được máy chủ.')
+        return
+      }
+
+      if (error.status === 400) {
+        setFieldErrors(mapServerErrorsToFields(error.problem?.errors, LOGIN_FIELDS))
+      } else if (error.status === 401) {
+        setFieldErrors({ password: 'Email hoặc mật khẩu không đúng.' })
+      } else if (error.status === 429) {
+        setFieldErrors({})
+        setFormError('Thử quá nhiều lần, đợi 1 phút.')
+      } else {
+        setFieldErrors({})
+        setFormError(error.problem?.title ?? 'Có lỗi xảy ra.')
+      }
+    },
+  })
+
+  if (!authLoading && user) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
-    // TODO: nối POST /api/auth/login khi làm tính năng xác thực ở frontend.
+    const errors = validateLoginForm({ email, password })
+    setFieldErrors(errors)
+    setFormError(undefined)
+    if (!hasFormErrors(errors)) {
+      mutation.mutate()
+    }
   }
 
   return (
@@ -31,28 +78,31 @@ export function LoginPage() {
               <h1 id="login-title">Đăng nhập chủ phòng</h1>
               <p className="mt-1 text-muted">Người chơi không cần tài khoản, chỉ cần mã phòng.</p>
             </div>
-            <div className="field">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="password">Mật khẩu</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </div>
-            <button className="btn btn-primary mt-2 justify-self-stretch" type="submit">
-              Đăng nhập
+            <FormField
+              id="email"
+              label="Email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={setEmail}
+              error={fieldErrors.email}
+            />
+            <FormField
+              id="password"
+              label="Mật khẩu"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={setPassword}
+              error={fieldErrors.password}
+            />
+            {formError && (
+              <p className="error" role="alert">
+                {formError}
+              </p>
+            )}
+            <button className="btn btn-primary mt-2 justify-self-stretch" type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? 'Đang xử lý…' : 'Đăng nhập'}
             </button>
           </form>
         </section>
@@ -60,4 +110,19 @@ export function LoginPage() {
       </main>
     </>
   )
+}
+
+interface LocationState {
+  from?: { pathname: string }
+}
+
+function isLocationState(value: unknown): value is LocationState {
+  return typeof value === 'object' && value !== null
+}
+
+function getRedirectPath(state: unknown): string {
+  if (isLocationState(state) && typeof state.from?.pathname === 'string') {
+    return state.from.pathname
+  }
+  return '/dashboard'
 }

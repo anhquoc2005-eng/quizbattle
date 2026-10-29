@@ -1,16 +1,67 @@
+import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, Navigate, useNavigate } from 'react-router'
+import { ApiError } from '../../api/apiError'
+import { FormField } from '../../components/FormField'
 import { HowItWorksCard } from '../../components/HowItWorksCard'
 import { LogoMark } from '../../components/LogoMark'
+import { useAuth } from '../../hooks/useAuth'
+import {
+  hasFormErrors,
+  mapServerErrorsToFields,
+  validateRegisterForm,
+  type RegisterFormErrors,
+} from '../../validation/authForm'
+
+const REGISTER_FIELDS = ['displayName', 'email', 'password'] as const
 
 export function RegisterPage() {
+  const { register, user, isLoading: authLoading } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<RegisterFormErrors>({})
+  const [formError, setFormError] = useState<string | undefined>()
+
+  const mutation = useMutation({
+    mutationFn: () => register(email, password, displayName),
+    onSuccess: () => navigate('/dashboard', { replace: true }),
+    onError: (error: unknown) => {
+      setFormError(undefined)
+
+      if (!(error instanceof ApiError)) {
+        setFieldErrors({})
+        setFormError('Không kết nối được máy chủ.')
+        return
+      }
+
+      if (error.status === 400) {
+        setFieldErrors(mapServerErrorsToFields(error.problem?.errors, REGISTER_FIELDS))
+      } else if (error.status === 409) {
+        setFieldErrors({ email: 'Email đã được sử dụng.' })
+      } else if (error.status === 429) {
+        setFieldErrors({})
+        setFormError('Thử quá nhiều lần, đợi 1 phút.')
+      } else {
+        setFieldErrors({})
+        setFormError(error.problem?.title ?? 'Có lỗi xảy ra.')
+      }
+    },
+  })
+
+  if (!authLoading && user) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
-    // TODO: nối POST /api/auth/register khi làm tính năng xác thực ở frontend.
+    const errors = validateRegisterForm({ displayName, email, password })
+    setFieldErrors(errors)
+    setFormError(undefined)
+    if (!hasFormErrors(errors)) {
+      mutation.mutate()
+    }
   }
 
   return (
@@ -32,42 +83,40 @@ export function RegisterPage() {
               <h1 id="register-title">Đăng ký chủ phòng</h1>
               <p className="mt-1 text-muted">Tạo tài khoản để tạo phòng và quản lý lịch sử trận.</p>
             </div>
-            <div className="field">
-              <label htmlFor="displayName">Tên hiển thị</label>
-              <input
-                id="displayName"
-                type="text"
-                autoComplete="name"
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="password">Mật khẩu</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                aria-describedby="password-hint"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <p id="password-hint" className="text-xs text-faint">
-                8–128 ký tự.
+            <FormField
+              id="displayName"
+              label="Tên hiển thị"
+              autoComplete="name"
+              value={displayName}
+              onChange={setDisplayName}
+              error={fieldErrors.displayName}
+            />
+            <FormField
+              id="email"
+              label="Email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={setEmail}
+              error={fieldErrors.email}
+            />
+            <FormField
+              id="password"
+              label="Mật khẩu"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={setPassword}
+              error={fieldErrors.password}
+              hint="8–128 ký tự."
+            />
+            {formError && (
+              <p className="error" role="alert">
+                {formError}
               </p>
-            </div>
-            <button className="btn btn-primary mt-2 justify-self-stretch" type="submit">
-              Đăng ký
+            )}
+            <button className="btn btn-primary mt-2 justify-self-stretch" type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? 'Đang xử lý…' : 'Đăng ký'}
             </button>
           </form>
         </section>

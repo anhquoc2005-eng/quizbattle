@@ -1,11 +1,19 @@
 import { Link } from 'react-router'
 import { LogoMark } from '../../components/LogoMark'
 import { RoomCodeBoxes } from '../../components/RoomCodeBoxes'
-
-// TODO: lấy từ phiên đăng nhập thật khi nối API xác thực ở frontend.
-const CURRENT_USER_NAME = 'Quốc'
+import { useAuth } from '../../hooks/useAuth'
 
 export function DashboardPage() {
+  const { user, logout } = useAuth()
+
+  function handleLogout() {
+    // Tải lại trang thật (không điều hướng SPA): tránh đua với ProtectedRoute - nó cũng đổi sang
+    // /login ngay khi user = null nếu còn điều hướng bằng navigate() trong lúc đang ở /dashboard.
+    // Dọn sạch state React cũng là điều nên làm khi đăng xuất.
+    logout()
+    window.location.href = '/'
+  }
+
   return (
     <>
       <header className="col bar">
@@ -17,8 +25,8 @@ export function DashboardPage() {
           <Link className="hide-sm" to="/dashboard" aria-current="page">
             Phòng của tôi
           </Link>
-          <span className="text-muted">{CURRENT_USER_NAME}</span>
-          <button className="btn btn-ghost" type="button">
+          <span className="text-muted">{user?.displayName}</span>
+          <button className="btn btn-ghost" type="button" onClick={handleLogout}>
             Đăng xuất
           </button>
         </nav>

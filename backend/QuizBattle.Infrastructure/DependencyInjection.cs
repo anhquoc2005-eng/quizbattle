@@ -3,7 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using QuizBattle.Application.Abstractions;
 using QuizBattle.Application.Auth;
+using QuizBattle.Application.Questions;
 using QuizBattle.Application.Rooms;
+using QuizBattle.Infrastructure.Ai;
 using QuizBattle.Infrastructure.Persistence;
 using QuizBattle.Infrastructure.Security;
 
@@ -29,6 +31,15 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoomRepository, RoomRepository>();
         services.AddScoped<IRoomCodeGenerator, RoomCodeGenerator>();
+        services.AddScoped<IQuestionRepository, QuestionRepository>();
+
+        // Không validate/throw lúc khởi động - thiếu Ai:ApiKey/Ai:Model thì app vẫn chạy (khác Jwt).
+        services.AddSingleton(AiOptions.Load(configuration));
+        services.AddHttpClient<IQuestionGenerator, GeminiQuestionGenerator>(client =>
+        {
+            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
 
         return services;
     }

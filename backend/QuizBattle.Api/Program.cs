@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using QuizBattle.Api.Extensions;
 using QuizBattle.Api.Middleware;
 using QuizBattle.Application;
 using QuizBattle.Infrastructure;
@@ -11,6 +12,7 @@ using QuizBattle.Infrastructure.Security;
 
 const string FrontendCorsPolicy = "Frontend";
 const string AuthRateLimiterPolicy = "auth";
+const string GenerateQuestionsRateLimiterPolicy = "generate-questions";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +55,13 @@ builder.Services.AddRateLimiter(options =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1) }));
+
+    // Theo user (claim "sub"), không theo IP: nhiều người chơi cùng mạng/NAT không được gộp chung hạn mức.
+    // UseAuthorization() chạy trước UseRateLimiter() (xem thứ tự middleware dưới) nên user đã xác thực xong.
+    options.AddPolicy(GenerateQuestionsRateLimiterPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.GetUserId().ToString(),
+            factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromHours(1) }));
 
     // UseStatusCodePages tự dùng IProblemDetailsService nhưng không tự điền Title - điền ở đây cho đúng format chung.
     options.OnRejected = async (context, cancellationToken) =>

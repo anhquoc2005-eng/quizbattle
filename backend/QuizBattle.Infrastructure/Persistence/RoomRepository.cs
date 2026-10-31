@@ -71,6 +71,9 @@ public sealed class RoomRepository(AppDbContext db) : IRoomRepository
             : new RoomResponse(row.Id, row.Code, row.Topic, row.Status.ToString(), row.QuestionTimeLimitSeconds, row.CreatedAt, row.QuestionCount, row.PlayerCount);
     }
 
+    public Task<Room?> FindEntityByCodeForUserAsync(Guid hostUserId, string code, CancellationToken cancellationToken) =>
+        db.Rooms.AsNoTracking().SingleOrDefaultAsync(r => r.HostUserId == hostUserId && r.Code == code, cancellationToken);
+
     public Task<int> DeleteDeletableAsync(Guid hostUserId, string code, CancellationToken cancellationToken) =>
         db.Rooms
             .Where(r => r.HostUserId == hostUserId && r.Code == code && (r.Status == RoomStatus.Draft || r.Status == RoomStatus.Finished))

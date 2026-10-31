@@ -1,0 +1,36 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đăng nhập · QuizBattle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<style>
+.auth { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); padding-block: 32px 48px; align-items: start; min-height: calc(100dvh - 48px); align-content: center; }
+.auth form { display: grid; gap: 16px; align-content: start; }
+.auth form .btn { justify-self: stretch; margin-top: 8px; }
+.how { display: grid; gap: 24px; align-content: start; }
+.how ol { list-style: none; padding: 0; display: grid; gap: 16px; }
+.how li { display: grid; gap: 4px; }
+.how li strong { font-weight: 600; }
+@media (max-width: 860px) { .auth { grid-template-columns: 1fr; } }
+</style></head><body>
+<header class="col bar"><a class="mark" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#f5c518"/><circle cx="12" cy="12" r="5" fill="#000"/></svg> QuizBattle</a>
+<nav><span class="muted hide-sm">Chưa có tài khoản?</span><a href="register.html">Đăng ký</a></nav></header>
+<main class="col auth">
+  <section class="card" aria-labelledby="t">
+    <form novalidate>
+      <div><h1 id="t">Đăng nhập chủ phòng</h1><p class="muted" style="margin-top:4px">Người chơi không cần tài khoản, chỉ cần mã phòng.</p></div>
+      <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="email" value="quoc@gmail.com"></div>
+      <div class="field" data-invalid><label for="pw">Mật khẩu</label><input id="pw" type="password" autocomplete="current-password" aria-describedby="pw-err" value="sai-mat-khau"><p id="pw-err" class="error">Email hoặc mật khẩu không đúng.</p></div>
+      <button class="btn btn-primary" type="submit">Đăng nhập</button>
+    </form>
+  </section>
+  <section class="card how" aria-labelledby="h">
+    <h2 id="h">Một trận QuizBattle diễn ra thế nào</h2>
+    <div class="code" aria-label="Ví dụ mã phòng K7Q2MX"><span>K</span><span>7</span><span>Q</span><span>2</span><span>M</span><span>X</span></div>
+    <ol>
+      <li><strong>Bạn nhập chủ đề</strong><span class="muted">Ví dụ "Java OOP", chọn 5–20 câu. AI soạn câu hỏi, bạn duyệt và sửa trước khi chơi.</span></li>
+      <li><strong>Gửi mã phòng cho bạn bè</strong><span class="muted">Mỗi phòng có một mã 6 ký tự như trên. Người chơi nhập mã và tên là vào, tối đa 50 người.</span></li>
+      <li><strong>Trả lời nhanh, điểm cao</strong><span class="muted">Mỗi câu có 20 giây. Đúng và nhanh được nhiều điểm hơn, bảng xếp hạng hiện sau từng câu.</span></li>
+    </ol>
+  </section>
+</main></body></html>

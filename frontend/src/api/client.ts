@@ -1,9 +1,17 @@
 import { ApiError, parseProblemDetails } from './apiError'
+import { clearAuth, loadAuth } from './tokenStorage'
 
 const API_URL = import.meta.env.VITE_API_URL
 
 if (!API_URL) {
   throw new Error('Thiếu biến môi trường VITE_API_URL. Sao chép frontend/.env.example thành frontend/.env.')
+}
+
+let onUnauthorized: (() => void) | null = null
+
+/** AuthProvider đăng ký hàm này để biết lúc nào phải đặt user = null (không điều hướng ở đây). */
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  onUnauthorized = handler
 }
 
 /**
@@ -17,11 +25,23 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set('Content-Type', 'application/json')
   }
 
+  const auth = loadAuth()
+  if (auth) {
+    headers.set('Authorization', `Bearer ${auth.token}`)
+  }
+
   const response = await fetch(`${API_URL}${path}`, { ...init, headers })
 
   const body: unknown = await readJson(response)
 
   if (!response.ok) {
+    // Request này đã gắn token mà vẫn bị từ chối: phiên không còn dùng được.
+    // Không tự điều hướng ở đây - AuthProvider đặt user = null, ProtectedRoute lo việc chuyển trang.
+    if (response.status === 401 && auth) {
+      clearAuth()
+      onUnauthorized?.()
+    }
+
     throw new ApiError(response.status, parseProblemDetails(body))
   }
 

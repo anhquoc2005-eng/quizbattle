@@ -1,0 +1,40 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phòng của tôi · QuizBattle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<style>
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 24px 16px; }
+.title-row .act { display: grid; justify-items: end; gap: 4px; }
+.grid { display: grid; grid-template-columns: 2fr 1fr; gap: var(--gap); padding-bottom: 48px; }
+.setup { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; gap: 8px 24px; align-items: center; }
+.meter { height: 6px; background: var(--raised); border-radius: 999px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 33.3%; background: var(--accent); }
+.steps { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); margin-top: 8px; }
+.step { background: var(--raised); border-radius: 14px; padding: 14px 16px; display: grid; gap: 4px; }
+.step b { font-weight: 600; } .done { color: var(--positive); font-size: var(--fs-small); }
+.empty { display: grid; gap: 16px; margin-top: 16px; padding: 20px; border: 1px dashed var(--control); border-radius: 14px; justify-items: start; }
+.code.slot span { color: var(--faint); background: transparent; border: 1px solid var(--raised); }
+.hist { margin-top: 16px; display: grid; gap: 8px; }
+.hist-head { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; color: var(--faint); font-size: var(--fs-small); padding: 0 4px 8px; border-bottom: 1px solid var(--rule); }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .steps { grid-template-columns: 1fr; } .title-row { flex-wrap: wrap; } .title-row .act { justify-items: start; } }
+</style></head><body>
+<header class="col bar"><a class="mark" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#f5c518"/><circle cx="12" cy="12" r="5" fill="#000"/></svg> QuizBattle</a>
+<nav><a class="hide-sm" href="#" aria-current="page">Phòng của tôi</a><span class="muted">Quốc</span><button class="btn btn-ghost" type="button">Đăng xuất</button></nav></header>
+<main class="col">
+  <div class="title-row"><div><h1>Phòng của tôi</h1><p class="muted">Bạn chưa tạo phòng nào.</p></div>
+    <div class="act"><button class="btn btn-primary" type="button" disabled aria-describedby="soon">Tạo phòng</button><span id="soon" class="faint">Tính năng tạo phòng đang được làm</span></div></div>
+  <div class="grid">
+    <section class="card setup" aria-labelledby="s"><h2 id="s">Bắt đầu với QuizBattle</h2><span class="faint" style="justify-self:end">1 trên 3 bước</span>
+      <div class="meter" style="grid-column:1/-1" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="3" aria-label="Tiến độ bắt đầu"><i></i></div>
+      <div class="steps"><div class="step"><b>Tạo tài khoản</b><span class="done">Đã xong</span></div>
+        <div class="step"><b>Tạo phòng đầu tiên</b><span class="muted">Nhập chủ đề, AI soạn câu hỏi</span></div>
+        <div class="step"><b>Mời người chơi</b><span class="muted">Gửi mã phòng cho bạn bè</span></div></div></section>
+    <section class="card" aria-labelledby="r"><h2 id="r">Phòng đang mở</h2>
+      <div class="empty"><div class="code slot" aria-hidden="true"><span>?</span><span>?</span><span>?</span><span>?</span><span>?</span><span>?</span></div>
+        <p class="muted">Khi bạn tạo phòng, mã phòng sẽ hiện ở đây để gửi cho người chơi.</p></div></section>
+    <section class="card" aria-labelledby="l"><h2 id="l">Lịch sử trận</h2>
+      <div class="hist"><div class="hist-head"><span>Chủ đề</span><span>Người chơi</span><span>Ngày</span></div>
+      <div class="empty" style="margin-top:0"><p class="muted">Chưa có trận nào. Trận đã chơi sẽ lưu ở đây kèm bảng xếp hạng cuối cùng.</p></div></div></section>
+  </div>
+</main></body></html>

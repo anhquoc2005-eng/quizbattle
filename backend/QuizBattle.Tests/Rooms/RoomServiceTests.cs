@@ -131,6 +131,16 @@ public sealed class RoomServiceTests
             return Task.FromResult<RoomResponse?>(null);
         }
 
+        public Task<Room?> FindEntityByCodeForUserAsync(Guid hostUserId, string code, CancellationToken cancellationToken)
+        {
+            if (_seededRoom is not null && _seededOwnerId == hostUserId && _seededRoom.Code == code)
+            {
+                return Task.FromResult<Room?>(_seededRoom);
+            }
+
+            return Task.FromResult<Room?>(null);
+        }
+
         public Task<int> DeleteDeletableAsync(Guid hostUserId, string code, CancellationToken cancellationToken)
         {
             var deletable = _seededRoom is not null

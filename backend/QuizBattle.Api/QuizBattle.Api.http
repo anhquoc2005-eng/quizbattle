@@ -1,0 +1,41 @@
+@baseUrl = http://localhost:5000
+
+### 0. Đăng nhập lấy token - chạy xong copy giá trị "token" trong response vào biến @token bên dưới
+# (Cần đã có tài khoản - đăng ký trước qua POST {{baseUrl}}/api/auth/register nếu chưa có.)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ban@example.com",
+  "password": "mat-khau-cua-ban"
+}
+
+### Biến token dùng cho các request bên dưới. KHÔNG commit giá trị thật vào đây.
+@token = PASTE_TOKEN_TU_BUOC_0_VAO_DAY
+
+### 1. Tạo phòng
+POST {{baseUrl}}/api/rooms
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "topic": "Java OOP",
+  "questionTimeLimitSeconds": 20
+}
+
+### 2. Danh sách phòng của tôi
+GET {{baseUrl}}/api/rooms
+Authorization: Bearer {{token}}
+
+### 3. Lấy 1 phòng theo mã (viết thường cũng được - server tự chuẩn hóa)
+# Thay ABCDEF bằng mã thật lấy từ bước 1.
+GET {{baseUrl}}/api/rooms/abcdef
+Authorization: Bearer {{token}}
+
+### 4. Xóa phòng (chỉ xóa được khi đang Draft hoặc Finished)
+# Thay ABCDEF bằng mã thật.
+DELETE {{baseUrl}}/api/rooms/ABCDEF
+Authorization: Bearer {{token}}
+
+### 5. Không có token -> 401
+GET {{baseUrl}}/api/rooms

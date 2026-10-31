@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using QuizBattle.Application.Abstractions;
 using QuizBattle.Application.Auth;
+using QuizBattle.Application.Rooms;
 using QuizBattle.Infrastructure.Persistence;
 using QuizBattle.Infrastructure.Security;
 
@@ -26,6 +27,8 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPasswordHasher, PasswordHasherAdapter>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRoomRepository, RoomRepository>();
+        services.AddScoped<IRoomCodeGenerator, RoomCodeGenerator>();
 
         return services;
     }

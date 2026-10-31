@@ -6,6 +6,8 @@ public sealed class Room
 {
     public const int MAX_PLAYERS = 50;
 
+    public const int MAX_QUESTIONS_PER_ROOM = 30;
+
     public Guid Id { get; set; }
 
     public required string Code { get; set; }

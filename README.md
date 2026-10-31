@@ -62,6 +62,19 @@ dotnet user-secrets set "Jwt:Key" "<chuỗi vừa sinh>"
 
 Kiểm tra: mở http://localhost:5000/api/health, kết quả mong đợi `{"status":"ok","database":"up"}`.
 
+**AI sinh câu hỏi (tùy chọn)** — thiếu thì backend vẫn chạy bình thường, chỉ endpoint `POST /api/rooms/{code}/questions/generate` trả 503:
+
+1. Lấy API key miễn phí tại [Google AI Studio](https://aistudio.google.com/apikey).
+2. Chọn một model Gemini Flash còn hạn mức miễn phí ở trang [Rate Limit của AI Studio](https://aistudio.google.com/usage?tab=rate-limit) (ví dụ `gemini-2.5-flash`).
+3. Đặt bằng user-secrets, **không đặt trong appsettings hay commit**:
+
+```bash
+dotnet user-secrets set "Ai:ApiKey" "<key của bạn>"
+dotnet user-secrets set "Ai:Model" "<model đã chọn, ví dụ gemini-2.5-flash>"
+```
+
+Lưu ý: gói miễn phí của Gemini có thể dùng dữ liệu gửi lên (chủ đề câu hỏi) để cải thiện model — không gửi dữ liệu cá nhân/nhạy cảm vào ô chủ đề.
+
 **3. Frontend** (chạy ở http://localhost:5173)
 
 ```bash

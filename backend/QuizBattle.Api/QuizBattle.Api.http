@@ -39,3 +39,63 @@ Authorization: Bearer {{token}}
 
 ### 5. Không có token -> 401
 GET {{baseUrl}}/api/rooms
+
+### === Câu hỏi / AI sinh câu hỏi ===
+# Thay ABCDEF bằng mã phòng thật (tạo ở bước 1, nên tạo phòng mới "Java OOP" riêng cho khối test này).
+# Cần đã đặt Ai:ApiKey và Ai:Model bằng user-secrets trước khi chạy bước 7 (xem README).
+
+### 6. Danh sách câu hỏi (rỗng lúc đầu)
+GET {{baseUrl}}/api/rooms/ABCDEF/questions
+Authorization: Bearer {{token}}
+
+### 7. Sinh 5 câu hỏi bằng AI (gọi Gemini thật, có thể mất vài giây)
+POST {{baseUrl}}/api/rooms/ABCDEF/questions/generate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "count": 5
+}
+
+### 8. Danh sách câu hỏi sau khi sinh
+GET {{baseUrl}}/api/rooms/ABCDEF/questions
+Authorization: Bearer {{token}}
+
+### 9. Sửa 1 câu (thay QUESTION_ID bằng id thật lấy từ bước 8) - sau khi sửa phải chuyển Approved
+PUT {{baseUrl}}/api/rooms/ABCDEF/questions/QUESTION_ID
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "text": "Trong Java, từ khóa nào dùng để kế thừa một lớp?",
+  "options": ["extends", "implements", "inherits", "super"],
+  "correctIndex": 0
+}
+
+### 10. Duyệt 1 câu khác (thay QUESTION_ID)
+POST {{baseUrl}}/api/rooms/ABCDEF/questions/QUESTION_ID/approve
+Authorization: Bearer {{token}}
+
+### 11. Xóa 1 câu (thay QUESTION_ID)
+DELETE {{baseUrl}}/api/rooms/ABCDEF/questions/QUESTION_ID
+Authorization: Bearer {{token}}
+
+### 12. Thêm câu hỏi thủ công (Approved ngay, không qua AI)
+POST {{baseUrl}}/api/rooms/ABCDEF/questions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "text": "HTTP status 201 nghĩa là gì?",
+  "options": ["Tạo thành công", "Không tìm thấy", "Lỗi server", "Không có quyền"],
+  "correctIndex": 0
+}
+
+### 13. Phòng không ở Draft thì generate phải trả 409 (cần 1 phòng đã Lobby/Finished để test, tạm bỏ qua nếu chưa có flow đổi trạng thái phòng)
+POST {{baseUrl}}/api/rooms/ABCDEF/questions/generate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "count": 5
+}

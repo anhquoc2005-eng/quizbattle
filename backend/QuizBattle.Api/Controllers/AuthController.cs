@@ -1,7 +1,7 @@
-using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using QuizBattle.Api.Extensions;
 using QuizBattle.Application.Auth;
 
 namespace QuizBattle.Api.Controllers;
@@ -33,9 +33,7 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<UserDto>> Me(CancellationToken cancellationToken)
     {
-        var sub = User.Claims.First(c => c.Type == JwtRegisteredClaimNames.Sub).Value;
-        var userId = Guid.Parse(sub);
-        var result = await authService.GetCurrentUserAsync(userId, cancellationToken);
+        var result = await authService.GetCurrentUserAsync(User.GetUserId(), cancellationToken);
         return Ok(result);
     }
 }

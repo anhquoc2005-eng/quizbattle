@@ -65,10 +65,10 @@ docker-compose.yml
 - Bật CORS chỉ cho domain frontend, không dùng `AllowAnyOrigin` khi deploy.
 
 ### Real-time (SignalR)
-- Một Hub: `GameHub`. Mỗi phòng là một SignalR group theo mã phòng.
+- Một Hub: `GameHub`. Mỗi phòng là một SignalR group theo mã phòng (chủ phòng còn vào thêm nhóm phụ `{mã phòng}:host` để nhận riêng `AnswerProgress`).
 - Danh sách sự kiện cố định, đặt tên thống nhất, ghi trong `src/realtime/events.ts` và hằng số tương ứng ở backend:
-  - Client → Server: `JoinRoom`, `StartGame`, `SubmitAnswer`, `LeaveRoom`
-  - Server → Client: `PlayerJoined`, `PlayerLeft`, `QuestionStarted`, `QuestionEnded`, `LeaderboardUpdated`, `GameEnded`, `Error`
+  - Client → Server: `JoinRoom`, `StartGame`, `EndQuestion`, `NextQuestion`, `SubmitAnswer`, `LeaveRoom`
+  - Server → Client: `RoomState`, `PlayerJoined`, `PlayerLeft`, `QuestionStarted`, `QuestionEnded`, `LeaderboardUpdated`, `GameEnded`, `AnswerProgress`, `Error`
 - Server là nguồn sự thật duy nhất: thời gian bắt đầu câu, thời gian trả lời, điểm số đều tính ở server. Client chỉ hiển thị.
 - Không nhận điểm hay thời gian do client gửi lên.
 - Mỗi người chỉ được trả lời một lần cho mỗi câu; chặn ở server.

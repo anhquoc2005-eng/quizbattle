@@ -446,6 +446,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Script test tay tạm thời (ví dụ mô phỏng SignalR) - không commit
+frontend/scratch-*.mjs
+
 # Hệ điều hành / editor
 .DS_Store
 Thumbs.db

@@ -68,9 +68,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-// Đăng ký là IHubFilter để SignalR tự áp dụng cho mọi Hub - không cần gọi options.AddFilter() riêng.
-builder.Services.AddSingleton<IHubFilter, GameHubExceptionFilter>();
-builder.Services.AddSignalR();
+// AddFilter<T>() chỉ có trên HubOptions<THub> (từ AddHubOptions<THub>), không có trên HubOptions chung
+// (từ AddSignalR(options => ...)) - phải đăng ký theo đúng Hub cụ thể như dưới đây.
+builder.Services.AddScoped<GameHubExceptionFilter>();
+builder.Services.AddSignalR().AddHubOptions<GameHub>(options => options.AddFilter<GameHubExceptionFilter>());
 
 // Chặn brute-force cho register/login: tối đa 5 request/phút cho mỗi IP riêng. Vượt thì 429 (ProblemDetails qua UseStatusCodePages).
 builder.Services.AddRateLimiter(options =>

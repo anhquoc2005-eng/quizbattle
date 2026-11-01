@@ -76,7 +76,9 @@ public sealed class GameHub(IGameService gameService) : Hub
         }
     }
 
-    public async Task<AnswerAckDto> SubmitAnswer(Guid questionId, int selectedIndex)
+    // Kiểu trả về nullable: khi GameHubExceptionFilter bắt exception, nó trả null (đã gửi Error riêng cho
+    // người gọi) - không có AnswerAckDto thật ở nhánh đó.
+    public async Task<AnswerAckDto?> SubmitAnswer(Guid questionId, int selectedIndex)
     {
         var playerId = RequirePlayerId();
         var code = RequireRoomCode();

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using QuizBattle.Application.Abstractions;
 using QuizBattle.Application.Auth;
+using QuizBattle.Application.Game;
 using QuizBattle.Application.Questions;
 using QuizBattle.Application.Rooms;
 using QuizBattle.Infrastructure.Ai;
@@ -32,6 +33,8 @@ public static class DependencyInjection
         services.AddScoped<IRoomRepository, RoomRepository>();
         services.AddScoped<IRoomCodeGenerator, RoomCodeGenerator>();
         services.AddScoped<IQuestionRepository, QuestionRepository>();
+        services.AddScoped<IGameRepository, GameRepository>();
+        services.AddScoped<ISessionTokenGenerator, SessionTokenGenerator>();
 
         // Không validate/throw lúc khởi động - thiếu Ai:ApiKey/Ai:Model thì app vẫn chạy (khác Jwt).
         services.AddSingleton(AiOptions.Load(configuration));

@@ -85,10 +85,15 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SessionTokenHash")
                         .IsUnique();
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("RoomId", "DisplayName")
                         .IsUnique();
@@ -104,6 +109,9 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("CorrectIndex")
                         .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamptz");
 
                     b.Property<string[]>("Options")
                         .IsRequired()
@@ -250,6 +258,11 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
                         .HasForeignKey("RoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("QuizBattle.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Room");
                 });

@@ -24,5 +24,11 @@ public sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
             .WithOne(a => a.Player)
             .HasForeignKey(a => a.PlayerId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Chuẩn bị người chơi có tài khoản sau này - xóa User thì chỉ gỡ liên kết, không xóa Player/điểm.
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

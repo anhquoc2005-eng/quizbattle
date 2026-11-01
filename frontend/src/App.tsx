@@ -5,6 +5,7 @@ import { HomePage } from './pages/HomePage/HomePage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
 import { RegisterPage } from './pages/RegisterPage/RegisterPage'
+import { RoomPage } from './pages/RoomPage/RoomPage'
 
 export function App() {
   return (
@@ -17,6 +18,14 @@ export function App() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/rooms/:code"
+        element={
+          <ProtectedRoute>
+            <RoomPage />
           </ProtectedRoute>
         }
       />

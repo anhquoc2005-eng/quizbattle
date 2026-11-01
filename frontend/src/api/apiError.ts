@@ -38,6 +38,24 @@ export function parseProblemDetails(body: unknown): ProblemDetails | null {
   }
 }
 
+/** Câu lỗi tiếng Việt chung cho các khối gọi API ngoài 400 (400 hiển thị dưới đúng ô bằng mapServerErrorsToFields). */
+export function describeApiError(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return 'Không kết nối được máy chủ.'
+  }
+
+  switch (error.status) {
+    case 429:
+      return 'Bạn đã sinh câu hỏi quá nhiều, thử lại sau.'
+    case 502:
+      return 'AI trả kết quả không dùng được, hãy thử lại.'
+    case 503:
+      return 'Dịch vụ AI đang bận, thử lại sau ít phút.'
+    default:
+      return error.problem?.title ?? 'Có lỗi xảy ra.'
+  }
+}
+
 function isValidationErrors(value: unknown): value is Record<string, string[]> {
   if (typeof value !== 'object' || value === null) {
     return false

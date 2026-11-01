@@ -1,10 +1,19 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
+import { describeApiError } from '../../api/apiError'
+import { ErrorRetry } from '../../components/ErrorRetry'
 import { LogoMark } from '../../components/LogoMark'
-import { RoomCodeBoxes } from '../../components/RoomCodeBoxes'
 import { useAuth } from '../../hooks/useAuth'
+import { useRooms } from '../../hooks/useRooms'
+import { CreateRoomForm } from './CreateRoomForm'
+import { RoomList } from './RoomList'
+
+const TOTAL_STEPS = 3
 
 export function DashboardPage() {
   const { user, logout } = useAuth()
+  const roomsQuery = useRooms()
+  const [showCreateForm, setShowCreateForm] = useState(false)
 
   function handleLogout() {
     // Tải lại trang thật (không điều hướng SPA): tránh đua với ProtectedRoute - nó cũng đổi sang
@@ -13,6 +22,12 @@ export function DashboardPage() {
     logout()
     window.location.href = '/'
   }
+
+  const rooms = roomsQuery.data ?? []
+  const hasAnyRoom = rooms.length > 0
+  const openRooms = rooms.filter((room) => room.status !== 'Finished')
+  const finishedRooms = rooms.filter((room) => room.status === 'Finished')
+  const doneSteps = hasAnyRoom ? 2 : 1
 
   return (
     <>
@@ -36,59 +51,58 @@ export function DashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-4 pt-6 pb-4">
           <div>
             <h1>Phòng của tôi</h1>
-            <p className="text-muted">Bạn chưa tạo phòng nào.</p>
+            <p className="text-muted">
+              {roomsQuery.isPending ? 'Đang tải…' : hasAnyRoom ? `Bạn có ${rooms.length} phòng.` : 'Bạn chưa tạo phòng nào.'}
+            </p>
           </div>
-          <div className="grid justify-items-end gap-1 max-[860px]:justify-items-start">
-            <button className="btn btn-primary" type="button" disabled aria-describedby="create-room-soon">
-              Tạo phòng
-            </button>
-            <span id="create-room-soon" className="text-xs text-faint">
-              Tính năng tạo phòng đang được làm
-            </span>
-          </div>
+          <button className="btn btn-primary" type="button" onClick={() => setShowCreateForm((value) => !value)}>
+            Tạo phòng
+          </button>
         </div>
 
         <div className="grid grid-cols-1 gap-3.5 pb-12 min-[861px]:grid-cols-[2fr_1fr]">
+          {showCreateForm && <CreateRoomForm onCancel={() => setShowCreateForm(false)} />}
+
           <section className="card col-span-full grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2" aria-labelledby="setup-title">
             <h2 id="setup-title">Bắt đầu với QuizBattle</h2>
-            <span className="justify-self-end text-xs text-faint">1 trên 3 bước</span>
+            <span className="justify-self-end text-xs text-faint">{doneSteps} trên {TOTAL_STEPS} bước</span>
             <div
               className="col-span-full h-1.5 overflow-hidden rounded-full bg-raised"
               role="progressbar"
-              aria-valuenow={1}
+              aria-valuenow={doneSteps}
               aria-valuemin={0}
-              aria-valuemax={3}
+              aria-valuemax={TOTAL_STEPS}
               aria-label="Tiến độ bắt đầu"
             >
-              <span className="block h-full bg-accent" style={{ width: '33.3%' }} />
+              <span className="block h-full bg-accent" style={{ width: `${(doneSteps / TOTAL_STEPS) * 100}%` }} />
             </div>
             <div className="col-span-full mt-2 grid grid-cols-1 gap-3.5 min-[861px]:grid-cols-3">
               <StepCard title="Tạo tài khoản" done />
-              <StepCard title="Tạo phòng đầu tiên" description="Nhập chủ đề, AI soạn câu hỏi" />
+              <StepCard title="Tạo phòng đầu tiên" description="Nhập chủ đề, AI soạn câu hỏi" done={hasAnyRoom} />
               <StepCard title="Mời người chơi" description="Gửi mã phòng cho bạn bè" />
             </div>
           </section>
 
           <section className="card" aria-labelledby="open-rooms-title">
             <h2 id="open-rooms-title">Phòng đang mở</h2>
-            <div className="mt-4 grid justify-items-start gap-4 rounded-[14px] border border-dashed border-control p-5">
-              <RoomCodeBoxes chars={['?', '?', '?', '?', '?', '?']} variant="slot" />
-              <p className="text-muted">Khi bạn tạo phòng, mã phòng sẽ hiện ở đây để gửi cho người chơi.</p>
-            </div>
+            {roomsQuery.isPending ? (
+              <p className="mt-4 text-muted">Đang tải…</p>
+            ) : roomsQuery.isError ? (
+              <ErrorRetry message={describeApiError(roomsQuery.error)} onRetry={() => roomsQuery.refetch()} />
+            ) : (
+              <RoomList rooms={openRooms} emptyMessage="Khi bạn tạo phòng, mã phòng sẽ hiện ở đây để gửi cho người chơi." />
+            )}
           </section>
 
           <section className="card" aria-labelledby="history-title">
             <h2 id="history-title">Lịch sử trận</h2>
-            <div className="mt-4 grid gap-2">
-              <div className="grid grid-cols-[1fr_auto_auto] gap-4 border-b border-rule px-1 pb-2 text-xs text-faint">
-                <span>Chủ đề</span>
-                <span>Người chơi</span>
-                <span>Ngày</span>
-              </div>
-              <div className="grid justify-items-start gap-4 rounded-[14px] border border-dashed border-control p-5">
-                <p className="text-muted">Chưa có trận nào. Trận đã chơi sẽ lưu ở đây kèm bảng xếp hạng cuối cùng.</p>
-              </div>
-            </div>
+            {roomsQuery.isPending ? (
+              <p className="mt-4 text-muted">Đang tải…</p>
+            ) : roomsQuery.isError ? (
+              <ErrorRetry message={describeApiError(roomsQuery.error)} onRetry={() => roomsQuery.refetch()} />
+            ) : (
+              <RoomList rooms={finishedRooms} emptyMessage="Chưa có trận nào. Trận đã chơi sẽ lưu ở đây kèm bảng xếp hạng cuối cùng." />
+            )}
           </section>
         </div>
       </main>

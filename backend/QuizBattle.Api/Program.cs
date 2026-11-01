@@ -3,8 +3,10 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using QuizBattle.Api.Extensions;
+using QuizBattle.Api.Hubs;
 using QuizBattle.Api.Middleware;
 using QuizBattle.Application;
 using QuizBattle.Infrastructure;
@@ -13,6 +15,7 @@ using QuizBattle.Infrastructure.Security;
 const string FrontendCorsPolicy = "Frontend";
 const string AuthRateLimiterPolicy = "auth";
 const string GenerateQuestionsRateLimiterPolicy = "generate-questions";
+const string JoinRoomRateLimiterPolicy = "join-room";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,8 +47,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30), // mặc định 5 phút, token sẽ hết hạn đúng ~60 phút như yêu cầu
         };
+        options.Events = new JwtBearerEvents
+        {
+            // SignalR qua WebSocket không gửi được header Authorization - đọc token từ query access_token,
+            // nhưng CHỈ cho path /hubs (REST vẫn phải dùng header). Mức log mặc định của
+            // "Microsoft.AspNetCore" đã hạ xuống Warning (xem appsettings.Development.json) nên request có
+            // access_token trong query không bị log ở Information - không thêm log nào ở đây để tránh vô
+            // tình ghi lại query string chứa token.
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            },
+        };
     });
 builder.Services.AddAuthorization();
+
+// Đăng ký là IHubFilter để SignalR tự áp dụng cho mọi Hub - không cần gọi options.AddFilter() riêng.
+builder.Services.AddSingleton<IHubFilter, GameHubExceptionFilter>();
+builder.Services.AddSignalR();
 
 // Chặn brute-force cho register/login: tối đa 5 request/phút cho mỗi IP riêng. Vượt thì 429 (ProblemDetails qua UseStatusCodePages).
 builder.Services.AddRateLimiter(options =>
@@ -62,6 +87,12 @@ builder.Services.AddRateLimiter(options =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.User.GetUserId().ToString(),
             factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromHours(1) }));
+
+    // Endpoint ẩn danh (người chơi vào phòng, không có JWT) - chỉ chặn được theo IP.
+    options.AddPolicy(JoinRoomRateLimiterPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
 
     // UseStatusCodePages tự dùng IProblemDetailsService nhưng không tự điền Title - điền ở đây cho đúng format chung.
     options.OnRejected = async (context, cancellationToken) =>
@@ -102,6 +133,7 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 app.MapControllers();
+app.MapHub<GameHub>("/hubs/game");
 
 app.Run();
 

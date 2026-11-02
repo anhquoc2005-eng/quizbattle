@@ -9,6 +9,7 @@ import { useTick } from '../../realtime/useTick'
 export function LiveQuestion({ state }: { state: GameState }) {
   const { endQuestion, nextQuestion } = useGameConnection()
   const [pending, setPending] = useState(false)
+  const [offline, setOffline] = useState(false)
   const question = state.currentQuestion
   // Không có sự kiện server nào báo "đã hết giờ" - phải tự re-render định kỳ để phát hiện qua đồng hồ.
   useTick(!question?.ended)
@@ -23,17 +24,21 @@ export function LiveQuestion({ state }: { state: GameState }) {
   const canEnd = !question.ended && (timeUp || allAnswered)
   const isLast = question.index === question.total - 1
 
-  const handleEnd = async () => {
+  const runAction = async (action: () => Promise<void>) => {
     setPending(true)
-    await endQuestion()
-    setPending(false)
+    setOffline(false)
+    try {
+      await action()
+    } catch {
+      // invoke chỉ ném khi kết nối không ở trạng thái Connected (lỗi nghiệp vụ đã về qua sự kiện Error).
+      setOffline(true)
+    } finally {
+      setPending(false)
+    }
   }
 
-  const handleNext = async () => {
-    setPending(true)
-    await nextQuestion()
-    setPending(false)
-  }
+  const handleEnd = () => runAction(endQuestion)
+  const handleNext = () => runAction(nextQuestion)
 
   return (
     <section className="card grid gap-4">
@@ -60,6 +65,8 @@ export function LiveQuestion({ state }: { state: GameState }) {
           Đã trả lời {progress?.answeredCount ?? 0}/{progress?.totalPlayers ?? state.players.length}
         </p>
       )}
+
+      {offline && <p className="error" role="alert">Mất kết nối, thử lại khi đã kết nối lại.</p>}
 
       {!question.ended ? (
         <button className="btn btn-primary justify-self-start" type="button" onClick={handleEnd} disabled={!canEnd || pending}>

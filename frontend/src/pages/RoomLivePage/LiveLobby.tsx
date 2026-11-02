@@ -8,12 +8,20 @@ import { useGameConnection } from '../../realtime/useGameConnection'
 export function LiveLobby({ state }: { state: GameState }) {
   const { startGame } = useGameConnection()
   const [starting, setStarting] = useState(false)
+  const [offline, setOffline] = useState(false)
   const code = state.code ?? ''
 
   async function handleStart() {
     setStarting(true)
-    await startGame()
-    setStarting(false)
+    setOffline(false)
+    try {
+      await startGame()
+    } catch {
+      // invoke chỉ ném khi kết nối không ở trạng thái Connected (lỗi nghiệp vụ đã về qua sự kiện Error).
+      setOffline(true)
+    } finally {
+      setStarting(false)
+    }
   }
 
   return (
@@ -33,6 +41,8 @@ export function LiveLobby({ state }: { state: GameState }) {
         <h2 className="mb-2">Người chơi ({state.players.length})</h2>
         <PlayerList players={state.players} />
       </div>
+
+      {offline && <p className="error" role="alert">Mất kết nối, thử lại khi đã kết nối lại.</p>}
 
       <button
         className="btn btn-primary justify-self-start"

@@ -9,6 +9,7 @@ import { useTick } from '../../realtime/useTick'
 export function PlayQuestion({ state }: { state: GameState }) {
   const { submitAnswer } = useGameConnection()
   const [submitting, setSubmitting] = useState(false)
+  const [offlineQuestionId, setOfflineQuestionId] = useState<string | null>(null)
   const question = state.currentQuestion
   // Không có sự kiện server nào báo "đã hết giờ" - phải tự re-render định kỳ để phát hiện qua đồng hồ.
   useTick(!question?.ended)
@@ -24,8 +25,15 @@ export function PlayQuestion({ state }: { state: GameState }) {
   const handleAnswer = async (index: number) => {
     if (locked) return
     setSubmitting(true)
-    await submitAnswer(question.questionId, index)
-    setSubmitting(false)
+    setOfflineQuestionId(null)
+    try {
+      await submitAnswer(question.questionId, index)
+    } catch {
+      // invoke chỉ ném khi kết nối không ở trạng thái Connected (lỗi nghiệp vụ đã về qua sự kiện Error).
+      setOfflineQuestionId(question.questionId)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -50,6 +58,7 @@ export function PlayQuestion({ state }: { state: GameState }) {
         ))}
       </div>
 
+      {offlineQuestionId === question.questionId && !state.hasAnswered && !question.ended && <p className="error" role="alert">Mất kết nối, thử lại khi đã kết nối lại.</p>}
       {state.hasAnswered && !question.ended && <p className="text-muted">Đã gửi câu trả lời.</p>}
       {!state.hasAnswered && timeUp && !question.ended && <p className="text-muted">Đã hết giờ.</p>}
 

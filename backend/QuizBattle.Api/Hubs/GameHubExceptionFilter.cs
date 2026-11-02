@@ -19,13 +19,13 @@ public sealed class GameHubExceptionFilter(IHubContext<GameHub> hubContext, ILog
         }
         catch (Exception ex) when (ex is ConflictException or UnauthorizedException or NotFoundException)
         {
-            await hubContext.Clients.Client(invocationContext.Context.ConnectionId).SendAsync("Error", ex.Message);
+            await hubContext.Clients.Client(invocationContext.Context.ConnectionId).SendAsync(GameHubEvents.ERROR, ex.Message);
             return null;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Lỗi chưa xử lý trong GameHub.{Method}", invocationContext.HubMethodName);
-            await hubContext.Clients.Client(invocationContext.Context.ConnectionId).SendAsync("Error", "Đã xảy ra lỗi, vui lòng thử lại.");
+            await hubContext.Clients.Client(invocationContext.Context.ConnectionId).SendAsync(GameHubEvents.ERROR, "Đã xảy ra lỗi, vui lòng thử lại.");
             return null;
         }
     }

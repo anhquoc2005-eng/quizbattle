@@ -27,8 +27,8 @@ public sealed class GameHub(IGameService gameService) : Hub
             Context.Items[IsHostKey] = false;
 
             await Groups.AddToGroupAsync(Context.ConnectionId, state.Code);
-            await Clients.Caller.SendAsync("RoomState", state);
-            await Clients.OthersInGroup(state.Code).SendAsync("PlayerJoined", broadcast);
+            await Clients.Caller.SendAsync(GameHubEvents.ROOM_STATE, state);
+            await Clients.OthersInGroup(state.Code).SendAsync(GameHubEvents.PLAYER_JOINED, broadcast);
             return;
         }
 
@@ -43,22 +43,22 @@ public sealed class GameHub(IGameService gameService) : Hub
 
         await Groups.AddToGroupAsync(Context.ConnectionId, hostState.Code);
         await Groups.AddToGroupAsync(Context.ConnectionId, HostGroup(hostState.Code));
-        await Clients.Caller.SendAsync("RoomState", hostState);
+        await Clients.Caller.SendAsync(GameHubEvents.ROOM_STATE, hostState);
     }
 
     public async Task StartGame()
     {
         var code = RequireHostRoomCode();
         var started = await gameService.StartGameAsync(Context.User!.GetUserId(), code, Context.ConnectionAborted);
-        await Clients.Group(code).SendAsync("QuestionStarted", started);
+        await Clients.Group(code).SendAsync(GameHubEvents.QUESTION_STARTED, started);
     }
 
     public async Task EndQuestion()
     {
         var code = RequireHostRoomCode();
         var (ended, leaderboard) = await gameService.EndQuestionAsync(Context.User!.GetUserId(), code, Context.ConnectionAborted);
-        await Clients.Group(code).SendAsync("QuestionEnded", ended);
-        await Clients.Group(code).SendAsync("LeaderboardUpdated", leaderboard);
+        await Clients.Group(code).SendAsync(GameHubEvents.QUESTION_ENDED, ended);
+        await Clients.Group(code).SendAsync(GameHubEvents.LEADERBOARD_UPDATED, leaderboard);
     }
 
     public async Task NextQuestion()
@@ -68,11 +68,11 @@ public sealed class GameHub(IGameService gameService) : Hub
 
         if (outcome.NextQuestion is not null)
         {
-            await Clients.Group(code).SendAsync("QuestionStarted", outcome.NextQuestion);
+            await Clients.Group(code).SendAsync(GameHubEvents.QUESTION_STARTED, outcome.NextQuestion);
         }
         else
         {
-            await Clients.Group(code).SendAsync("GameEnded", outcome.GameEnded);
+            await Clients.Group(code).SendAsync(GameHubEvents.GAME_ENDED, outcome.GameEnded);
         }
     }
 
@@ -84,7 +84,7 @@ public sealed class GameHub(IGameService gameService) : Hub
         var code = RequireRoomCode();
 
         var (ack, progress) = await gameService.SubmitAnswerAsync(playerId, questionId, selectedIndex, Context.ConnectionAborted);
-        await Clients.Group(HostGroup(code)).SendAsync("AnswerProgress", progress);
+        await Clients.Group(HostGroup(code)).SendAsync(GameHubEvents.ANSWER_PROGRESS, progress);
         return ack;
     }
 
@@ -103,7 +103,7 @@ public sealed class GameHub(IGameService gameService) : Hub
         }
         else if (Context.Items.TryGetValue(PlayerIdKey, out var playerIdValue) && playerIdValue is Guid playerId)
         {
-            await Clients.Group(code).SendAsync("PlayerLeft", new PlayerLeftDto(playerId));
+            await Clients.Group(code).SendAsync(GameHubEvents.PLAYER_LEFT, new PlayerLeftDto(playerId));
         }
 
         Context.Items.Clear();
@@ -116,7 +116,7 @@ public sealed class GameHub(IGameService gameService) : Hub
         if (TryGetRoomCode(out var code)
             && Context.Items.TryGetValue(PlayerIdKey, out var playerIdValue) && playerIdValue is Guid playerId)
         {
-            await Clients.Group(code).SendAsync("PlayerLeft", new PlayerLeftDto(playerId));
+            await Clients.Group(code).SendAsync(GameHubEvents.PLAYER_LEFT, new PlayerLeftDto(playerId));
         }
 
         await base.OnDisconnectedAsync(exception);

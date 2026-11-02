@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { clearPlayerSession, loadPlayerSession } from '../../api/playerSession'
 import { GameConnectionProvider } from '../../realtime/GameConnectionProvider'
+import { getScreen } from '../../realtime/gameScreen'
 import { shouldDiscardSession } from '../../realtime/sessionErrors'
 import { useGameConnection } from '../../realtime/useGameConnection'
 import { PlayFinished } from './PlayFinished'
@@ -46,7 +47,10 @@ function PlayPageContent({ code }: { code: string }) {
     }
   }, [lastError, code, navigate])
 
-  if (connectionStatus === 'connecting' || state.status === null) {
+  const screen = getScreen(connectionStatus, state, lastError)
+
+  // Lỗi làm hỏng phiên thì effect trên đang chuyển về /join - giữ màn "Đang kết nối…" trong lúc chuyển.
+  if (screen === 'connecting' || (screen === 'joinError' && lastError && shouldDiscardSession(lastError))) {
     return (
       <main className="col flex min-h-dvh items-center justify-center">
         <p className="text-muted">Đang kết nối…</p>
@@ -54,7 +58,20 @@ function PlayPageContent({ code }: { code: string }) {
     )
   }
 
-  if (connectionStatus === 'disconnected') {
+  if (screen === 'joinError') {
+    return (
+      <main className="col flex min-h-dvh flex-col items-center justify-center gap-4">
+        <p className="text-negative" role="alert">
+          {lastError?.message}
+        </p>
+        <button className="btn btn-primary" type="button" onClick={reconnect}>
+          Thử lại
+        </button>
+      </main>
+    )
+  }
+
+  if (screen === 'disconnected') {
     return (
       <main className="col flex min-h-dvh flex-col items-center justify-center gap-4">
         <p className="text-muted">Mất kết nối tới máy chủ.</p>

@@ -18,7 +18,7 @@ export interface GameConnectionContextValue {
   endQuestion: () => Promise<void>
   nextQuestion: () => Promise<void>
   submitAnswer: (questionId: string, selectedIndex: number) => Promise<AnswerAck | null>
-  /** Gọi khi withAutomaticReconnect() đã hết số lần thử (connectionStatus = 'disconnected') - tạo lại kết nối từ đầu. */
+  /** Gọi khi withAutomaticReconnect() đã hết số lần thử (connectionStatus = 'disconnected') hoặc JoinRoom lỗi - tạo lại kết nối từ đầu. */
   reconnect: () => void
 }
 
@@ -122,7 +122,12 @@ export function GameConnectionProvider({
         }
         return ack
       },
-      reconnect: () => setRetryTick((tick) => tick + 1),
+      reconnect: () => {
+        // Xóa lỗi cũ để màn quay về "Đang kết nối…" thay vì hiện lại lỗi JoinRoom của lần trước.
+        setLastError(null)
+        setConnectionStatus('connecting')
+        setRetryTick((tick) => tick + 1)
+      },
     }),
     [state, connectionStatus, lastError],
   )

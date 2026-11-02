@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router'
 import { LogoMark } from '../../components/LogoMark'
 import { useAuth } from '../../hooks/useAuth'
 import { GameConnectionProvider } from '../../realtime/GameConnectionProvider'
+import { getScreen } from '../../realtime/gameScreen'
 import { useGameConnection } from '../../realtime/useGameConnection'
 import { LiveFinished } from './LiveFinished'
 import { LiveLobby } from './LiveLobby'
@@ -21,6 +22,7 @@ export function RoomLivePage() {
 function RoomLivePageContent() {
   const { user, logout } = useAuth()
   const { state, connectionStatus, lastError, clearError, reconnect } = useGameConnection()
+  const screen = getScreen(connectionStatus, state, lastError)
 
   function handleLogout() {
     logout()
@@ -46,9 +48,32 @@ function RoomLivePageContent() {
       </header>
 
       <main className="col pt-6 pb-12">
-        {(connectionStatus === 'connecting' || state.status === null) && <p className="text-muted">Đang kết nối…</p>}
+        {screen === 'connecting' && <p className="text-muted">Đang kết nối…</p>}
 
-        {connectionStatus === 'disconnected' && (
+        {screen === 'joinError' && lastError?.code === 'unauthorized' && (
+          <div className="card grid justify-items-start gap-4">
+            <p className="text-negative" role="alert">
+              Phiên đăng nhập đã hết hạn.
+            </p>
+            {/* logout() đặt user = null, ProtectedRoute tự chuyển về /login và quay lại đây sau khi đăng nhập. */}
+            <button className="btn btn-primary" type="button" onClick={logout}>
+              Đăng nhập lại
+            </button>
+          </div>
+        )}
+
+        {screen === 'joinError' && lastError?.code !== 'unauthorized' && (
+          <div className="card grid justify-items-start gap-4">
+            <p className="text-negative" role="alert">
+              {lastError?.message}
+            </p>
+            <button className="btn btn-primary" type="button" onClick={reconnect}>
+              Thử lại
+            </button>
+          </div>
+        )}
+
+        {screen === 'disconnected' && (
           <div className="card grid justify-items-start gap-4">
             <p className="text-muted">Mất kết nối tới máy chủ.</p>
             <button className="btn btn-primary" type="button" onClick={reconnect}>
@@ -57,7 +82,7 @@ function RoomLivePageContent() {
           </div>
         )}
 
-        {connectionStatus !== 'disconnected' && state.status !== null && (
+        {screen === 'game' && (
           <>
             {connectionStatus === 'reconnecting' && <p className="mb-2 text-xs text-faint">Đang kết nối lại…</p>}
             {lastError && (

@@ -24,5 +24,7 @@ public sealed class Question
 
     public DateTimeOffset? StartedAt { get; set; }
 
+    public DateTimeOffset? EndedAt { get; set; }
+
     public ICollection<Answer> Answers { get; set; } = [];
 }

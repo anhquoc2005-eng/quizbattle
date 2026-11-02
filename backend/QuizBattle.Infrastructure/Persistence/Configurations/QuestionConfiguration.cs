@@ -20,6 +20,7 @@ public sealed class QuestionConfiguration : IEntityTypeConfiguration<Question>
         builder.Property(q => q.Options).HasColumnType("text[]").IsRequired();
         builder.Property(q => q.ReviewStatus).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(q => q.StartedAt).HasColumnType("timestamptz");
+        builder.Property(q => q.EndedAt).HasColumnType("timestamptz");
 
         builder.HasIndex(q => new { q.RoomId, q.OrderIndex }).IsUnique();
 

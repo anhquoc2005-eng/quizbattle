@@ -1,0 +1,14 @@
+namespace QuizBattle.Application.Game;
+
+/// <summary>
+/// Gửi khi 1 câu bắt đầu chạy. KHÔNG có CorrectIndex - cố tình không khai báo thuộc tính này (không chỉ
+/// là không gán giá trị) để không có cách nào vô tình serialize đáp án đúng ra trước khi câu kết thúc.
+/// </summary>
+public sealed record QuestionStartedDto(
+    Guid QuestionId,
+    int Index,
+    int Total,
+    string Text,
+    string[] Options,
+    DateTimeOffset StartedAt,
+    DateTimeOffset Deadline);

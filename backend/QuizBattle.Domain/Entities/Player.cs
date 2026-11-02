@@ -8,6 +8,9 @@ public sealed class Player
 
     public Room? Room { get; set; }
 
+    // Chuẩn bị cho tính năng người chơi có tài khoản sau này - CHƯA dùng ở bước này.
+    public Guid? UserId { get; set; }
+
     public required string DisplayName { get; set; }
 
     public required string SessionTokenHash { get; set; }

@@ -32,6 +32,9 @@ export interface GameState {
   players: PlayerPresence[]
   currentQuestion: CurrentQuestionState | null
   hasAnswered: boolean
+  /** Đáp án chính người chơi này đã chọn cho câu hiện tại - server không gửi lại giá trị này, chỉ nhớ
+   * được trong phiên hiện tại (mất nếu tải lại trang giữa câu). Dùng để hiện "Bạn chọn" sau khi câu kết thúc. */
+  selectedIndex: number | null
   leaderboard: LeaderboardEntry[]
   isHost: boolean
   playerId: string | null
@@ -48,6 +51,7 @@ export const initialGameState: GameState = {
   players: [],
   currentQuestion: null,
   hasAnswered: false,
+  selectedIndex: null,
   leaderboard: [],
   isHost: false,
   playerId: null,
@@ -67,7 +71,7 @@ export type GameAction =
   | { type: 'GAME_ENDED'; payload: GameEnded }
   // Không phải sự kiện server - dispatch cục bộ ngay sau khi invoke('SubmitAnswer') thành công (ack khác
   // null), để khóa nút ngay lập tức thay vì chờ một broadcast không tồn tại cho riêng người vừa trả lời.
-  | { type: 'ANSWER_SUBMITTED' }
+  | { type: 'ANSWER_SUBMITTED'; selectedIndex: number }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -80,6 +84,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         players: s.players.map((p) => ({ ...p, online: true })),
         currentQuestion: s.currentQuestion,
         hasAnswered: s.hasAnsweredCurrentQuestion ?? false,
+        selectedIndex: null, // server không gửi lại - không khôi phục được sau khi tải lại trang
         leaderboard: s.leaderboard,
         isHost: s.isHost,
         playerId: s.playerId,
@@ -121,6 +126,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           correctIndex: null,
         },
         hasAnswered: false,
+        selectedIndex: null,
         answerProgress: null,
         clockOffsetMs: computeClockOffsetMs(action.payload.serverTime),
       }
@@ -150,7 +156,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
 
     case 'ANSWER_SUBMITTED':
-      return { ...state, hasAnswered: true }
+      return { ...state, hasAnswered: true, selectedIndex: action.selectedIndex }
 
     default:
       return state

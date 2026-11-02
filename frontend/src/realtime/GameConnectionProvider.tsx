@@ -118,7 +118,7 @@ export function GameConnectionProvider({
         const ack = (await connectionRef.current?.invoke<AnswerAck | null>(GAME_HUB_METHODS.SUBMIT_ANSWER, questionId, selectedIndex)) ?? null
         // ack = null nghĩa là filter backend đã bắt lỗi (xem sự kiện Error riêng) - không đánh dấu đã trả lời.
         if (ack) {
-          dispatch({ type: 'ANSWER_SUBMITTED' })
+          dispatch({ type: 'ANSWER_SUBMITTED', selectedIndex })
         }
         return ack
       },

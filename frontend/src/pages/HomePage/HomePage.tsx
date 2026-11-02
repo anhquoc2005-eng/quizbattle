@@ -13,7 +13,7 @@ export function HomePage() {
           Quiz real-time: nhập chủ đề, AI sinh câu hỏi, bạn bè vào phòng bằng mã và thi đấu trực tiếp.
         </p>
         {!isLoading && (
-          <div className="flex gap-3.5">
+          <div className="flex flex-wrap gap-3.5">
             {user ? (
               <Link className="btn btn-primary" to="/dashboard">
                 Vào trang của tôi
@@ -28,6 +28,9 @@ export function HomePage() {
                 </Link>
               </>
             )}
+            <Link className="btn btn-ghost" to="/join">
+              Vào phòng
+            </Link>
           </div>
         )}
       </header>

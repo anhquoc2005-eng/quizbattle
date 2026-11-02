@@ -51,7 +51,9 @@ export function GameConnectionProvider({
     let stopped = false
 
     const connection = new HubConnectionBuilder()
-      .withUrl(`${API_URL}/hubs/game`, { accessTokenFactory: () => loadAuth()?.token ?? '' })
+      // JWT chỉ dành cho chủ phòng: WebSocket gửi token qua query string, trang người chơi không được
+      // làm lộ JWT của tài khoản đang đăng nhập trên cùng trình duyệt.
+      .withUrl(`${API_URL}/hubs/game`, sessionToken ? {} : { accessTokenFactory: () => loadAuth()?.token ?? '' })
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Warning)
       .build()

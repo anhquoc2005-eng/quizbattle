@@ -81,6 +81,19 @@ describe('playerSession', () => {
     expect(loadPlayerSession('ABCDEF')).toBeNull()
   })
 
+  it.each([
+    ['JSON hỏng', '{khong-phai-json'],
+    ['không phải object', '"chuoi"'],
+    ['null', 'null'],
+    ['thiếu sessionToken', JSON.stringify({ playerId: 'p1' })],
+    ['playerId không phải string', JSON.stringify({ playerId: 1, sessionToken: 'tok' })],
+  ])('loadPlayerSession trả về null và xóa dữ liệu khi %s', (_, raw) => {
+    memoryStorage.setItem('quizbattle.player.ABCDEF', raw)
+
+    expect(loadPlayerSession('ABCDEF')).toBeNull()
+    expect(memoryStorage.getItem('quizbattle.player.ABCDEF')).toBeNull()
+  })
+
   it('clearPlayerSession không ném lỗi khi localStorage ném lỗi', () => {
     vi.spyOn(memoryStorage, 'removeItem').mockImplementation(() => {
       throw new Error('blocked')

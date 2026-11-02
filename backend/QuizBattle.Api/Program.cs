@@ -68,8 +68,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-// AddFilter<T>() chỉ có trên HubOptions<THub> (từ AddHubOptions<THub>), không có trên HubOptions chung
-// (từ AddSignalR(options => ...)) - phải đăng ký theo đúng Hub cụ thể như dưới đây.
+// AddFilter<T>() là extension method của HubOptions - gọi trên AddSignalR(options => ...) để áp dụng
+// cho mọi Hub, hoặc trên AddHubOptions<THub>(options => ...) để chỉ áp dụng cho 1 Hub cụ thể như ở đây
+// (dự án chỉ có GameHub). Lỗi gặp lúc test tay: lúc đầu chỉ đăng ký GameHubExceptionFilter vào DI làm
+// IHubFilter (AddSingleton<IHubFilter, T>()) mà KHÔNG gọi AddFilter() ở đâu cả - SignalR không tự áp
+// dụng IHubFilter chỉ vì nó có trong DI, phải gọi AddFilter() tường minh thì filter mới vào pipeline.
 builder.Services.AddScoped<GameHubExceptionFilter>();
 builder.Services.AddSignalR().AddHubOptions<GameHub>(options => options.AddFilter<GameHubExceptionFilter>());
 

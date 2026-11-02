@@ -174,6 +174,7 @@ Giao diện dùng skill `taste-skill` (cài ở tài khoản người dùng).
 - Skill `dotnet-backend-patterns` có ví dụ Redis, Dapper, Moq, Minimal API và Result pattern:
   dự án KHÔNG dùng các thứ đó (trừ khi đã hỏi và được đồng ý). Giữ Controller + EF Core + test bằng lớp giả tự viết.
 - Chỉ dùng một skill thiết kế giao diện cho toàn dự án để phong cách nhất quán.
+- Plugin `andrej-karpathy-skills` (cài ở tài khoản người dùng) là nguyên tắc làm việc chung. Kiến trúc phân lớp Controller → Service → Repository và DI qua interface trong file này là yêu cầu của dự án, KHÔNG coi là abstraction thừa theo nguyên tắc Simplicity First.
 
 ## Git
 

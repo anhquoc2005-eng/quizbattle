@@ -69,6 +69,7 @@ docker-compose.yml
 - Danh sách sự kiện cố định, đặt tên thống nhất, ghi trong `src/realtime/events.ts` và hằng số tương ứng ở backend:
   - Client → Server: `JoinRoom`, `StartGame`, `EndQuestion`, `NextQuestion`, `SubmitAnswer`, `LeaveRoom`
   - Server → Client: `RoomState`, `PlayerJoined`, `PlayerLeft`, `QuestionStarted`, `QuestionEnded`, `LeaderboardUpdated`, `GameEnded`, `AnswerProgress`, `Error`
+  - Payload `Error` là `{ method, code, message }` (`GameErrorDto`), không phải chuỗi đơn: `method` là tên Hub method gây lỗi, `code` là `"unauthorized" | "not_found" | "conflict" | "unknown"` để client tự quyết định xử lý (ví dụ chỉ xóa phiên đã lưu khi `method="JoinRoom"` và `code` là `unauthorized`/`not_found`), `message` để hiển thị.
 - Server là nguồn sự thật duy nhất: thời gian bắt đầu câu, thời gian trả lời, điểm số đều tính ở server. Client chỉ hiển thị.
 - Không nhận điểm hay thời gian do client gửi lên.
 - Mỗi người chỉ được trả lời một lần cho mỗi câu; chặn ở server.

@@ -91,7 +91,7 @@ public sealed class GameService(
             throw new NotFoundException("Không tìm thấy phòng.");
         }
 
-        return BuildRoomState(snapshot, isHost: true, playerId: null);
+        return BuildRoomState(snapshot, isHost: true, playerId: null, timeProvider.GetUtcNow());
     }
 
     public async Task<(RoomStateDto State, PlayerJoinedDto Broadcast)> JoinAsPlayerAsync(string code, string sessionToken, CancellationToken cancellationToken)
@@ -108,7 +108,7 @@ public sealed class GameService(
             throw new UnauthorizedException("Phiên không khớp với phòng này.");
         }
 
-        var state = BuildRoomState(snapshot, isHost: false, playerId: player.Id);
+        var state = BuildRoomState(snapshot, isHost: false, playerId: player.Id, timeProvider.GetUtcNow());
         var broadcast = new PlayerJoinedDto(player.Id, player.DisplayName);
         return (state, broadcast);
     }
@@ -246,9 +246,10 @@ public sealed class GameService(
         question.Text,
         question.Options,
         question.StartedAt!.Value,
-        question.StartedAt.Value.AddSeconds(snapshot.Room.QuestionTimeLimitSeconds));
+        question.StartedAt.Value.AddSeconds(snapshot.Room.QuestionTimeLimitSeconds),
+        question.StartedAt.Value);
 
-    private static RoomStateDto BuildRoomState(GameSnapshot snapshot, bool isHost, Guid? playerId)
+    private static RoomStateDto BuildRoomState(GameSnapshot snapshot, bool isHost, Guid? playerId, DateTimeOffset now)
     {
         var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
         var current = snapshot.CurrentQuestion;
@@ -279,7 +280,8 @@ public sealed class GameService(
             leaderboard,
             isHost,
             playerId,
-            hasAnswered);
+            hasAnswered,
+            now);
     }
 
     // Hòa điểm: tổng thời gian trả lời đúng ít hơn đứng trên - chỉ tính các câu đã trả lời đúng.

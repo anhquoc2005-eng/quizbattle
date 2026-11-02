@@ -11,4 +11,7 @@ public sealed record QuestionStartedDto(
     string Text,
     string[] Options,
     DateTimeOffset StartedAt,
-    DateTimeOffset Deadline);
+    DateTimeOffset Deadline,
+    // Giống RoomStateDto.ServerTime - client tính offset đồng hồ từ đây. Luôn bằng StartedAt ở DTO này
+    // (cùng thời điểm tạo), tách riêng field cho rõ ý nghĩa (đây là "giờ server", không phải nghiệp vụ).
+    DateTimeOffset ServerTime);

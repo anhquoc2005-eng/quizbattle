@@ -10,4 +10,7 @@ public sealed record RoomStateDto(
     IReadOnlyList<LeaderboardEntryDto> Leaderboard,
     bool IsHost,
     Guid? PlayerId,
-    bool? HasAnsweredCurrentQuestion);
+    bool? HasAnsweredCurrentQuestion,
+    // Đồng hồ client có thể lệch vài giây - client tự tính offset = ServerTime - Date.now() lúc nhận, rồi
+    // dùng offset đó để suy ra "server nghĩ bây giờ là mấy giờ" thay vì tin thẳng đồng hồ máy mình.
+    DateTimeOffset ServerTime);

@@ -127,6 +127,16 @@ App không tự chạy migration khi khởi động — luôn chạy `dotnet ef 
 
 Server là nguồn sự thật duy nhất cho thời gian và điểm số — client không bao giờ gửi điểm hay thời gian lên, server cũng không chạy bộ hẹn giờ nền (chỉ ghi thời điểm và từ chối câu trả lời quá hạn khi có request tới).
 
+## Thử chơi nhiều người trên máy
+
+Sau khi backend (`http://localhost:5000`) và frontend (`http://localhost:5173`) đều đang chạy:
+
+1. Mở 1 tab trình duyệt, đăng nhập (`/login`), tạo phòng, thêm câu hỏi và duyệt, rồi vào `/rooms/:code/live` (nút "Mở phòng chờ" → "Vào màn điều khiển" trên `RoomPage`). Đây là màn chủ phòng.
+2. Mở thêm 1-2 tab/trình duyệt khác (hoặc cửa sổ ẩn danh để không trùng session với tab chủ phòng), vào `/join`, nhập mã phòng 6 ký tự và tên hiển thị. Mỗi tab là một người chơi.
+3. Để test trên điện thoại thật trong cùng mạng LAN: chạy `npm run dev -- --host` ở frontend, sửa `VITE_API_URL` trỏ sang IP LAN của máy chạy backend (backend cũng cần bind `0.0.0.0` và mở CORS cho origin đó), rồi mở `http://<IP-LAN>:5173/join` trên điện thoại.
+4. Ở màn điều khiển, bấm "Bắt đầu" rồi theo dõi "Đã trả lời x/y"; nút "Kết thúc câu" tự bật khi hết giờ hoặc mọi người đã trả lời.
+5. Test rớt mạng: tắt Wi-Fi/mạng của một tab người chơi giữa câu, bật lại sau vài giây — tab đó hiện trạng thái "Đang kết nối lại", sau khi nối lại sẽ tự `JoinRoom` lại và đồng bộ đúng câu hỏi/điểm hiện tại (không bị reset).
+
 ## Test
 
 ```bash
@@ -162,6 +172,7 @@ npm install -g typescript-language-server typescript
 - **Login không chống timing side-channel**: thời gian xử lý "email không tồn tại" (không hash) khác "sai mật khẩu" (có hash) dù trả về cùng message, nên về lý thuyết kẻ tấn công có thể đo thời gian để dò email tồn tại qua endpoint login. Trên thực tế không tăng rủi ro: `POST /api/auth/register` đã trả 409 ngay khi email tồn tại, tức là cách lộ email tồn tại dễ và rẻ hơn nhiều đã có sẵn. Chặn timing ở riêng login không giải quyết được gốc vấn đề; muốn chặn triệt để cần thêm bước xác minh email (gửi mail, click link) — ngoài phạm vi MVP này.
 - **GameHub chỉ chạy đúng với 1 instance backend**: nhóm SignalR (Groups) và trạng thái kết nối (Context.Items) sống trong bộ nhớ của từng tiến trình. Nếu scale ngang ra nhiều instance, 2 người trong cùng phòng có thể rơi vào 2 instance khác nhau và không nhận được broadcast của nhau. Muốn chạy nhiều instance cần thêm **Redis backplane** cho SignalR (gói `Microsoft.AspNetCore.SignalR.StackExchangeRedis`, gọi `AddStackExchangeRedis(...)` sau `AddSignalR()`) để các instance chia sẻ group/connection qua Redis pub/sub — chưa làm ở bước này.
 - **Tên hiển thị người chơi trùng đang so phân biệt hoa thường**: "Alice" và "alice" được coi là 2 tên khác nhau khi vào cùng phòng (so sánh `==` thường, khớp đúng unique index `(RoomId, DisplayName)` trong DB). Có thể gây nhầm lẫn nhẹ trên bảng xếp hạng nhưng không phải lỗi bảo mật.
+- **JWT của chủ phòng hết hạn giữa trận (60 phút) làm mất kết nối màn điều khiển**: khác với người chơi (dùng `sessionToken` không hết hạn giữa trận), kết nối SignalR của chủ phòng xác thực bằng JWT đăng nhập. Nếu một trận kéo dài quá 60 phút, JWT hết hạn thì `withAutomaticReconnect` sẽ thử nối lại nhưng bị 401 vì token cũ trong `accessTokenFactory` đã hết hạn — màn điều khiển rơi vào trạng thái lỗi, chủ phòng phải đăng nhập lại. Điểm và trạng thái trận ở server không mất (server không phụ thuộc kết nối của chủ phòng), người chơi không bị ảnh hưởng. Chưa xử lý refresh token tự động trong phạm vi MVP này.
 
 ## Quy tắc dự án
 

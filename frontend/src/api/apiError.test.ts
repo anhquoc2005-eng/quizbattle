@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ApiError, parseProblemDetails } from './apiError'
+import { ApiError, describeApiError, parseProblemDetails } from './apiError'
 
 describe('parseProblemDetails', () => {
   it('trả về null khi body không phải object', () => {
@@ -43,5 +43,25 @@ describe('ApiError', () => {
 
   it('có message mặc định khi không có ProblemDetails', () => {
     expect(new ApiError(503, null).message).toBe('Yêu cầu thất bại (HTTP 503)')
+  })
+})
+
+describe('describeApiError', () => {
+  it('429 mặc định là câu chung chung', () => {
+    expect(describeApiError(new ApiError(429, null))).toBe('Bạn thao tác quá nhanh, thử lại sau ít phút.')
+  })
+
+  it('overrides thay được câu mặc định theo ngữ cảnh', () => {
+    const message = describeApiError(new ApiError(429, null), { 429: 'Bạn đã sinh câu hỏi quá nhiều, thử lại sau.' })
+    expect(message).toBe('Bạn đã sinh câu hỏi quá nhiều, thử lại sau.')
+  })
+
+  it('overrides không ảnh hưởng mã trạng thái khác', () => {
+    const message = describeApiError(new ApiError(503, null), { 429: 'Câu riêng cho 429.' })
+    expect(message).toBe('Dịch vụ AI đang bận, thử lại sau ít phút.')
+  })
+
+  it('lỗi không phải ApiError (mất mạng) trả về câu chung', () => {
+    expect(describeApiError(new TypeError('Failed to fetch'))).toBe('Không kết nối được máy chủ.')
   })
 })

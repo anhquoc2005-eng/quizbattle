@@ -22,7 +22,7 @@ export function GenerateQuestionsPanel({ code }: { code: string }) {
     },
     onError: (error: unknown) => {
       setResultMessage(undefined)
-      setFormError(describeApiError(error))
+      setFormError(describeApiError(error, { 429: 'Bạn đã sinh câu hỏi quá nhiều, thử lại sau.' }))
     },
   })
 

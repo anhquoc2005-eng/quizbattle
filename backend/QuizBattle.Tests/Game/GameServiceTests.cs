@@ -74,6 +74,7 @@ public sealed class GameServiceTests
 
         Assert.Equal(750, state.Players.Single(p => p.PlayerId == player.Id).Score);
         Assert.Single(repository.Players); // vào lại không tạo thêm Player mới
+        Assert.Equal(Now, state.ServerTime);
     }
 
     [Fact]

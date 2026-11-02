@@ -1,25 +1,33 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { describeApiError } from '../../api/apiError'
+import { openRoom } from '../../api/game'
 import { deleteRoom } from '../../api/rooms'
 import { RoomCodeBoxes } from '../../components/RoomCodeBoxes'
 import { ROOM_STATUS_LABEL, type Room } from '../../types/room'
 
-/** Đầu trang phòng: chủ đề, trạng thái, mã phòng và xóa phòng (xác nhận 2 bước tại chỗ, không window.confirm). */
+/** Đầu trang phòng: chủ đề, trạng thái, mã phòng, mở phòng chờ/vào màn điều khiển, xóa phòng. */
 export function RoomHeader({ room }: { room: Room }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [formError, setFormError] = useState<string>()
+  const [openError, setOpenError] = useState<string>()
 
-  const mutation = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: () => deleteRoom(room.code),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rooms'] })
       navigate('/dashboard')
     },
     onError: (error: unknown) => setFormError(describeApiError(error)),
+  })
+
+  const openMutation = useMutation({
+    mutationFn: () => openRoom(room.code),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['rooms', room.code] }),
+    onError: (error: unknown) => setOpenError(describeApiError(error)),
   })
 
   return (
@@ -37,22 +45,39 @@ export function RoomHeader({ room }: { room: Room }) {
           {formError}
         </p>
       )}
-
-      {confirmingDelete ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-muted">Xóa phòng này? Không thể hoàn tác.</span>
-          <button className="btn btn-ghost" type="button" onClick={() => setConfirmingDelete(false)}>
-            Hủy
-          </button>
-          <button className="btn btn-primary" type="button" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-            {mutation.isPending ? 'Đang xóa…' : 'Xác nhận xóa'}
-          </button>
-        </div>
-      ) : (
-        <button className="btn btn-ghost justify-self-start" type="button" onClick={() => setConfirmingDelete(true)}>
-          Xóa phòng
-        </button>
+      {openError && (
+        <p className="error" role="alert">
+          {openError}
+        </p>
       )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        {room.status === 'Draft' ? (
+          <button className="btn btn-primary" type="button" onClick={() => openMutation.mutate()} disabled={openMutation.isPending}>
+            {openMutation.isPending ? 'Đang mở…' : 'Mở phòng chờ'}
+          </button>
+        ) : (
+          <Link className="btn btn-primary" to={`/rooms/${room.code}/live`}>
+            Vào màn điều khiển
+          </Link>
+        )}
+
+        {confirmingDelete ? (
+          <>
+            <span className="text-muted">Xóa phòng này? Không thể hoàn tác.</span>
+            <button className="btn btn-ghost" type="button" onClick={() => setConfirmingDelete(false)}>
+              Hủy
+            </button>
+            <button className="btn btn-primary" type="button" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? 'Đang xóa…' : 'Xác nhận xóa'}
+            </button>
+          </>
+        ) : (
+          <button className="btn btn-ghost" type="button" onClick={() => setConfirmingDelete(true)}>
+            Xóa phòng
+          </button>
+        )}
+      </div>
     </div>
   )
 }

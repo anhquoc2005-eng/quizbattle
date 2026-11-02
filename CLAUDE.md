@@ -69,6 +69,7 @@ docker-compose.yml
 - Danh sách sự kiện cố định, đặt tên thống nhất, ghi trong `src/realtime/events.ts` và hằng số tương ứng ở backend:
   - Client → Server: `JoinRoom`, `StartGame`, `EndQuestion`, `NextQuestion`, `SubmitAnswer`, `LeaveRoom`
   - Server → Client: `RoomState`, `PlayerJoined`, `PlayerLeft`, `QuestionStarted`, `QuestionEnded`, `LeaderboardUpdated`, `GameEnded`, `AnswerProgress`, `Error`
+  - Payload `Error` là `{ method, code, message }` (`GameErrorDto`), không phải chuỗi đơn: `method` là tên Hub method gây lỗi, `code` là `"unauthorized" | "not_found" | "conflict" | "unknown"` để client tự quyết định xử lý (ví dụ chỉ xóa phiên đã lưu khi `method="JoinRoom"` và `code` là `unauthorized`/`not_found`), `message` để hiển thị.
 - Server là nguồn sự thật duy nhất: thời gian bắt đầu câu, thời gian trả lời, điểm số đều tính ở server. Client chỉ hiển thị.
 - Không nhận điểm hay thời gian do client gửi lên.
 - Mỗi người chỉ được trả lời một lần cho mỗi câu; chặn ở server.
@@ -173,6 +174,7 @@ Giao diện dùng skill `taste-skill` (cài ở tài khoản người dùng).
 - Skill `dotnet-backend-patterns` có ví dụ Redis, Dapper, Moq, Minimal API và Result pattern:
   dự án KHÔNG dùng các thứ đó (trừ khi đã hỏi và được đồng ý). Giữ Controller + EF Core + test bằng lớp giả tự viết.
 - Chỉ dùng một skill thiết kế giao diện cho toàn dự án để phong cách nhất quán.
+- Plugin `andrej-karpathy-skills` (cài ở tài khoản người dùng) là nguyên tắc làm việc chung. Kiến trúc phân lớp Controller → Service → Repository và DI qua interface trong file này là yêu cầu của dự án, KHÔNG coi là abstraction thừa theo nguyên tắc Simplicity First.
 
 ## Git
 

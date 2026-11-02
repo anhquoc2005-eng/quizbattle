@@ -38,15 +38,23 @@ export function parseProblemDetails(body: unknown): ProblemDetails | null {
   }
 }
 
-/** Câu lỗi tiếng Việt chung cho các khối gọi API ngoài 400 (400 hiển thị dưới đúng ô bằng mapServerErrorsToFields). */
-export function describeApiError(error: unknown): string {
+/**
+ * Câu lỗi tiếng Việt chung cho các khối gọi API ngoài 400 (400 hiển thị dưới đúng ô bằng mapServerErrorsToFields).
+ * overrides cho phép 1 màn cụ thể thay câu mặc định của 1 mã trạng thái (ví dụ màn sinh câu hỏi vẫn
+ * muốn câu 429 nói rõ "sinh câu hỏi quá nhiều" thay vì câu chung chung).
+ */
+export function describeApiError(error: unknown, overrides?: Partial<Record<number, string>>): string {
   if (!(error instanceof ApiError)) {
     return 'Không kết nối được máy chủ.'
   }
 
+  if (overrides?.[error.status]) {
+    return overrides[error.status]!
+  }
+
   switch (error.status) {
     case 429:
-      return 'Bạn đã sinh câu hỏi quá nhiều, thử lại sau.'
+      return 'Bạn thao tác quá nhanh, thử lại sau ít phút.'
     case 502:
       return 'AI trả kết quả không dùng được, hãy thử lại.'
     case 503:

@@ -4,11 +4,14 @@ import { Leaderboard } from '../../components/Leaderboard'
 import type { GameState } from '../../realtime/gameReducer'
 import { getRemainingMs } from '../../realtime/serverTime'
 import { useGameConnection } from '../../realtime/useGameConnection'
+import { useTick } from '../../realtime/useTick'
 
 export function PlayQuestion({ state }: { state: GameState }) {
   const { submitAnswer } = useGameConnection()
   const [submitting, setSubmitting] = useState(false)
   const question = state.currentQuestion
+  // Không có sự kiện server nào báo "đã hết giờ" - phải tự re-render định kỳ để phát hiện qua đồng hồ.
+  useTick(!question?.ended)
 
   if (!question) {
     return null

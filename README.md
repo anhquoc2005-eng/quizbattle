@@ -122,10 +122,10 @@ App không tự chạy migration khi khởi động — luôn chạy `dotnet ef 
    - Cả hai nhận lại `RoomState` — dùng chung cho lần vào đầu tiên lẫn vào lại sau khi rớt mạng.
 4. Chủ phòng gọi `StartGame()` → mọi người nhận `QuestionStarted` (không có đáp án đúng).
 5. Người chơi gọi `SubmitAnswer(questionId, selectedIndex)` trước `deadline` trong `QuestionStarted` — mỗi câu chỉ trả lời được đúng 1 lần.
-6. Chủ phòng gọi `EndQuestion()` khi đã hết hạn hoặc mọi người đã trả lời → mọi người nhận `QuestionEnded` (có đáp án đúng) rồi `LeaderboardUpdated`.
-7. Chủ phòng gọi `NextQuestion()`: còn câu thì lặp lại bước 4-6 cho câu tiếp theo; hết câu thì phòng chuyển `Finished`, mọi người nhận `GameEnded` kèm bảng xếp hạng cuối.
+6. Câu tự kết thúc khi hết hạn hoặc khi mọi người đã trả lời; chủ phòng cũng có thể gọi `EndQuestion()` để kết thúc sớm bất cứ lúc nào. Mọi người nhận `QuestionEnded` (có đáp án đúng và `NextQuestionAt`) rồi `LeaderboardUpdated`.
+7. Sau 6 giây hiện kết quả, server tự chuyển câu (hoặc chủ phòng gọi `NextQuestion()` để chuyển ngay): còn câu thì lặp lại bước 4-6; hết câu thì phòng chuyển `Finished`, mọi người nhận `GameEnded` kèm bảng xếp hạng cuối.
 
-Server là nguồn sự thật duy nhất cho thời gian và điểm số — client không bao giờ gửi điểm hay thời gian lên, server cũng không chạy bộ hẹn giờ nền (chỉ ghi thời điểm và từ chối câu trả lời quá hạn khi có request tới).
+Server là nguồn sự thật duy nhất cho thời gian và điểm số — client không bao giờ gửi điểm hay thời gian lên, trận tự chạy nhờ `GameTimerService` (BackgroundService quét DB mỗi giây, không giữ timer trong RAM nên khởi động lại backend không làm mất lượt).
 
 ## Thử chơi nhiều người trên máy
 
@@ -134,7 +134,7 @@ Sau khi backend (`http://localhost:5000`) và frontend (`http://localhost:5173`)
 1. Mở 1 tab trình duyệt, đăng nhập (`/login`), tạo phòng, thêm câu hỏi và duyệt, rồi vào `/rooms/:code/live` (nút "Mở phòng chờ" → "Vào màn điều khiển" trên `RoomPage`). Đây là màn chủ phòng.
 2. Mở thêm 1-2 tab/trình duyệt khác (hoặc cửa sổ ẩn danh để không trùng session với tab chủ phòng), vào `/join`, nhập mã phòng 6 ký tự và tên hiển thị. Mỗi tab là một người chơi.
 3. Để test trên điện thoại thật trong cùng mạng LAN: chạy `npm run dev -- --host` ở frontend, sửa `VITE_API_URL` trỏ sang IP LAN của máy chạy backend (backend cũng cần bind `0.0.0.0` và mở CORS cho origin đó), rồi mở `http://<IP-LAN>:5173/join` trên điện thoại.
-4. Ở màn điều khiển, bấm "Bắt đầu" rồi theo dõi "Đã trả lời x/y"; nút "Kết thúc câu" tự bật khi hết giờ hoặc mọi người đã trả lời.
+4. Ở màn điều khiển, bấm "Bắt đầu" rồi theo dõi "Đã trả lời x/y"; không cần bấm gì thêm: câu tự kết thúc khi hết giờ hoặc mọi người đã trả lời, rồi tự chuyển sau 6 giây ("Kết thúc sớm" / "Chuyển ngay" chỉ để bấm sớm hơn).
 5. Test rớt mạng: tắt Wi-Fi/mạng của một tab người chơi giữa câu, bật lại sau vài giây — tab đó hiện trạng thái "Đang kết nối lại", sau khi nối lại sẽ tự `JoinRoom` lại và đồng bộ đúng câu hỏi/điểm hiện tại (không bị reset).
 
 ## Test

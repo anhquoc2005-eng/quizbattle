@@ -4,6 +4,7 @@ import { loadAuth } from '../api/tokenStorage'
 import type { AnswerAck, AnswerProgress, GameEnded, GameError, LeaderboardUpdated, PlayerJoined, PlayerLeft, QuestionEnded, QuestionStarted, RoomState } from '../types/game'
 import { GAME_HUB_EVENTS, GAME_HUB_METHODS } from './events'
 import { gameReducer, initialGameState, type GameState } from './gameReducer'
+import { reconnectPolicy } from './retryPolicy'
 import { shouldIgnoreError } from './sessionErrors'
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -55,7 +56,7 @@ export function GameConnectionProvider({
       // JWT chỉ dành cho chủ phòng: WebSocket gửi token qua query string, trang người chơi không được
       // làm lộ JWT của tài khoản đang đăng nhập trên cùng trình duyệt.
       .withUrl(`${API_URL}/hubs/game`, sessionToken ? {} : { accessTokenFactory: () => loadAuth()?.token ?? '' })
-      .withAutomaticReconnect()
+      .withAutomaticReconnect(reconnectPolicy)
       .configureLogging(LogLevel.Warning)
       .build()
 

@@ -1,5 +1,5 @@
 import { HubConnectionBuilder, LogLevel, type HubConnection } from '@microsoft/signalr'
-import { createContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 import { loadAuth } from '../api/tokenStorage'
 import type { AnswerAck, AnswerProgress, GameEnded, GameError, LeaderboardUpdated, PlayerJoined, PlayerLeft, QuestionEnded, QuestionStarted, RoomState } from '../types/game'
 import { GAME_HUB_EVENTS, GAME_HUB_METHODS } from './events'
@@ -123,6 +123,30 @@ export function GameConnectionProvider({
     }
   }, [code, sessionToken, retryTick])
 
+  const reconnect = useCallback(() => {
+    // Xóa lỗi cũ để màn quay về "Đang kết nối…" thay vì hiện lại lỗi JoinRoom của lần trước.
+    setLastError(null)
+    setConnectionStatus('connecting')
+    setRetryTick((tick) => tick + 1)
+  }, [])
+
+  // Đã bỏ cuộc sau 10 phút (hoặc JoinRoom lỗi): thử lại 1 lần khi người dùng quay lại tab / có mạng lại.
+  // Chỉ gắn listener khi 'disconnected' - connecting/reconnecting thì bỏ qua, không mở kết nối song song
+  // (reconnect() đổi trạng thái sang 'connecting' nên effect này tự gỡ listener ngay).
+  useEffect(() => {
+    if (connectionStatus !== 'disconnected') return
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reconnect()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', reconnect)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', reconnect)
+    }
+  }, [connectionStatus, reconnect])
+
   const value = useMemo<GameConnectionContextValue>(
     () => ({
       state,
@@ -146,14 +170,9 @@ export function GameConnectionProvider({
         }
         return ack
       },
-      reconnect: () => {
-        // Xóa lỗi cũ để màn quay về "Đang kết nối…" thay vì hiện lại lỗi JoinRoom của lần trước.
-        setLastError(null)
-        setConnectionStatus('connecting')
-        setRetryTick((tick) => tick + 1)
-      },
+      reconnect,
     }),
-    [state, connectionStatus, lastError],
+    [state, connectionStatus, lastError, reconnect],
   )
 
   return <GameConnectionContext.Provider value={value}>{children}</GameConnectionContext.Provider>

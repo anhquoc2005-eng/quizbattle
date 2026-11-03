@@ -1,27 +1,21 @@
 import { useState } from 'react'
 import { Countdown } from '../../components/Countdown'
 import { Leaderboard } from '../../components/Leaderboard'
+import { NextQuestionIn } from '../../components/NextQuestionIn'
 import type { GameState } from '../../realtime/gameReducer'
-import { getRemainingMs } from '../../realtime/serverTime'
 import { useGameConnection } from '../../realtime/useGameConnection'
-import { useTick } from '../../realtime/useTick'
 
 export function LiveQuestion({ state }: { state: GameState }) {
   const { endQuestion, nextQuestion } = useGameConnection()
   const [pending, setPending] = useState(false)
   const [offline, setOffline] = useState(false)
   const question = state.currentQuestion
-  // Không có sự kiện server nào báo "đã hết giờ" - phải tự re-render định kỳ để phát hiện qua đồng hồ.
-  useTick(!question?.ended)
 
   if (!question) {
     return null
   }
 
-  const timeUp = !question.ended && getRemainingMs(question.deadline, state.clockOffsetMs) <= 0
   const progress = state.answerProgress
-  const allAnswered = !!progress && progress.answeredCount >= progress.totalPlayers
-  const canEnd = !question.ended && (timeUp || allAnswered)
   const isLast = question.index === question.total - 1
 
   const runAction = async (action: () => Promise<void>) => {
@@ -69,8 +63,8 @@ export function LiveQuestion({ state }: { state: GameState }) {
       {offline && <p className="error" role="alert">Mất kết nối, thử lại khi đã kết nối lại.</p>}
 
       {!question.ended ? (
-        <button className="btn btn-primary justify-self-start" type="button" onClick={handleEnd} disabled={!canEnd || pending}>
-          {pending ? 'Đang kết thúc…' : 'Kết thúc câu'}
+        <button className="btn btn-primary justify-self-start" type="button" onClick={handleEnd} disabled={pending}>
+          {pending ? 'Đang kết thúc…' : 'Kết thúc sớm'}
         </button>
       ) : (
         <>
@@ -79,8 +73,15 @@ export function LiveQuestion({ state }: { state: GameState }) {
             <Leaderboard entries={state.leaderboard} />
           </div>
           <button className="btn btn-primary justify-self-start" type="button" onClick={handleNext} disabled={pending}>
-            {pending ? 'Đang chuyển…' : isLast ? 'Xem kết quả' : 'Câu tiếp theo'}
+            {pending ? 'Đang chuyển…' : isLast ? 'Xem kết quả ngay' : 'Chuyển ngay'}
           </button>
+          {question.nextQuestionAt && (
+            <NextQuestionIn
+              label={isLast ? 'Tự kết thúc trận sau' : 'Tự chuyển câu sau'}
+              nextQuestionAt={question.nextQuestionAt}
+              offsetMs={state.clockOffsetMs}
+            />
+          )}
         </>
       )}
     </section>

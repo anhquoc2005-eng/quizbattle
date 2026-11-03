@@ -124,6 +124,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           deadline: action.payload.deadline,
           ended: false,
           correctIndex: null,
+          nextQuestionAt: null,
         },
         hasAnswered: false,
         selectedIndex: null,
@@ -136,7 +137,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         currentQuestion:
           state.currentQuestion?.questionId === action.payload.questionId
-            ? { ...state.currentQuestion, ended: true, correctIndex: action.payload.correctIndex }
+            ? {
+                ...state.currentQuestion,
+                ended: true,
+                correctIndex: action.payload.correctIndex,
+                nextQuestionAt: action.payload.nextQuestionAt,
+              }
             : state.currentQuestion,
         answerProgress: { answeredCount: action.payload.answeredCount, totalPlayers: action.payload.totalPlayers },
       }

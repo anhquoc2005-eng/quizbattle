@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Countdown } from '../../components/Countdown'
 import { Leaderboard } from '../../components/Leaderboard'
+import { NextQuestionIn } from '../../components/NextQuestionIn'
 import type { GameState } from '../../realtime/gameReducer'
 import { getRemainingMs } from '../../realtime/serverTime'
 import { useGameConnection } from '../../realtime/useGameConnection'
@@ -66,6 +67,13 @@ export function PlayQuestion({ state }: { state: GameState }) {
         <div className="grid gap-3 border-t border-rule pt-4">
           <h2>Bảng xếp hạng</h2>
           <Leaderboard entries={state.leaderboard} highlightPlayerId={state.playerId} />
+          {question.nextQuestionAt && (
+            <NextQuestionIn
+              label={question.index === question.total - 1 ? 'Kết quả cuối sau' : 'Câu tiếp theo sau'}
+              nextQuestionAt={question.nextQuestionAt}
+              offsetMs={state.clockOffsetMs}
+            />
+          )}
         </div>
       )}
     </section>

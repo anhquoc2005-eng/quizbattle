@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { GameEnded, PlayerJoined, PlayerLeft, QuestionEnded, QuestionStarted, RoomState } from '../types/game'
 import { gameReducer, initialGameState, type GameState } from './gameReducer'
 
+const ENDED_AT = '2026-01-01T12:00:10.000Z'
+const NEXT_AT = '2026-01-01T12:00:16.000Z'
+
 function roomState(overrides: Partial<RoomState> = {}): RoomState {
   return {
     code: 'ABCDEF',
@@ -32,6 +35,7 @@ function stateWithQuestion(overrides: Partial<GameState> = {}): GameState {
       deadline: new Date(Date.now() + 20_000).toISOString(),
       ended: false,
       correctIndex: null,
+      nextQuestionAt: null,
     },
     ...overrides,
   }
@@ -106,18 +110,19 @@ describe('gameReducer', () => {
 
   it('QUESTION_ENDED lưu correctIndex cho đúng câu đang hiển thị', () => {
     const state = stateWithQuestion()
-    const payload: QuestionEnded = { questionId: 'q1', correctIndex: 2, answeredCount: 3, totalPlayers: 4 }
+    const payload: QuestionEnded = { questionId: 'q1', correctIndex: 2, answeredCount: 3, totalPlayers: 4, endedAt: ENDED_AT, nextQuestionAt: NEXT_AT }
 
     const next = gameReducer(state, { type: 'QUESTION_ENDED', payload })
 
     expect(next.currentQuestion?.ended).toBe(true)
     expect(next.currentQuestion?.correctIndex).toBe(2)
+    expect(next.currentQuestion?.nextQuestionAt).toBe(NEXT_AT)
     expect(next.answerProgress).toEqual({ answeredCount: 3, totalPlayers: 4 })
   })
 
   it('QUESTION_ENDED không ghi đè nếu questionId không khớp câu hiện tại (sự kiện đến muộn)', () => {
     const state = stateWithQuestion()
-    const payload: QuestionEnded = { questionId: 'câu-khác', correctIndex: 2, answeredCount: 3, totalPlayers: 4 }
+    const payload: QuestionEnded = { questionId: 'câu-khác', correctIndex: 2, answeredCount: 3, totalPlayers: 4, endedAt: ENDED_AT, nextQuestionAt: NEXT_AT }
 
     const next = gameReducer(state, { type: 'QUESTION_ENDED', payload })
 

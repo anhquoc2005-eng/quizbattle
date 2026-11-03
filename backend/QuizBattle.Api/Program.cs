@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
+using QuizBattle.Api.BackgroundServices;
 using QuizBattle.Api.Extensions;
 using QuizBattle.Api.Hubs;
 using QuizBattle.Api.Middleware;
@@ -74,6 +75,8 @@ builder.Services.AddAuthorization();
 // IHubFilter (AddSingleton<IHubFilter, T>()) mà KHÔNG gọi AddFilter() ở đâu cả - SignalR không tự áp
 // dụng IHubFilter chỉ vì nó có trong DI, phải gọi AddFilter() tường minh thì filter mới vào pipeline.
 builder.Services.AddScoped<GameHubExceptionFilter>();
+builder.Services.AddSingleton<GameBroadcaster>();
+builder.Services.AddHostedService<GameTimerService>();
 builder.Services.AddSignalR().AddHubOptions<GameHub>(options => options.AddFilter<GameHubExceptionFilter>());
 
 // Chặn brute-force cho register/login: tối đa 5 request/phút cho mỗi IP riêng. Vượt thì 429 (ProblemDetails qua UseStatusCodePages).

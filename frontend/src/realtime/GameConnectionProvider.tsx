@@ -4,6 +4,7 @@ import { loadAuth } from '../api/tokenStorage'
 import type { AnswerAck, AnswerProgress, GameEnded, GameError, LeaderboardUpdated, PlayerJoined, PlayerLeft, QuestionEnded, QuestionStarted, RoomState } from '../types/game'
 import { GAME_HUB_EVENTS, GAME_HUB_METHODS } from './events'
 import { gameReducer, initialGameState, type GameState } from './gameReducer'
+import { shouldIgnoreError } from './sessionErrors'
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -66,7 +67,9 @@ export function GameConnectionProvider({
     connection.on(GAME_HUB_EVENTS.LEADERBOARD_UPDATED, (payload: LeaderboardUpdated) => dispatch({ type: 'LEADERBOARD_UPDATED', payload }))
     connection.on(GAME_HUB_EVENTS.ANSWER_PROGRESS, (payload: AnswerProgress) => dispatch({ type: 'ANSWER_PROGRESS', payload }))
     connection.on(GAME_HUB_EVENTS.GAME_ENDED, (payload: GameEnded) => dispatch({ type: 'GAME_ENDED', payload }))
-    connection.on(GAME_HUB_EVENTS.ERROR, (payload: GameError) => setLastError(payload))
+    connection.on(GAME_HUB_EVENTS.ERROR, (payload: GameError) => {
+      if (!shouldIgnoreError(payload)) setLastError(payload)
+    })
 
     connection.onreconnecting(() => setConnectionStatus('reconnecting'))
     connection.onreconnected(() => {

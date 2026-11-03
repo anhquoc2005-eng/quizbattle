@@ -11,7 +11,7 @@ namespace QuizBattle.Api.Hubs;
 /// kết nối) sau khi JoinRoom thành công. Exception từ GameService được GameHubExceptionFilter bắt chung,
 /// không try/catch trong các method dưới đây.
 /// </summary>
-public sealed class GameHub(IGameService gameService) : Hub
+public sealed class GameHub(IGameService gameService, GameBroadcaster broadcaster) : Hub
 {
     private const string RoomCodeKey = "roomCode";
     private const string PlayerIdKey = "playerId";
@@ -50,30 +50,21 @@ public sealed class GameHub(IGameService gameService) : Hub
     {
         var code = RequireHostRoomCode();
         var started = await gameService.StartGameAsync(Context.User!.GetUserId(), code, Context.ConnectionAborted);
-        await Clients.Group(code).SendAsync(GameHubEvents.QUESTION_STARTED, started);
+        await broadcaster.QuestionStartedAsync(code, started);
     }
 
     public async Task EndQuestion()
     {
         var code = RequireHostRoomCode();
         var (ended, leaderboard) = await gameService.EndQuestionAsync(Context.User!.GetUserId(), code, Context.ConnectionAborted);
-        await Clients.Group(code).SendAsync(GameHubEvents.QUESTION_ENDED, ended);
-        await Clients.Group(code).SendAsync(GameHubEvents.LEADERBOARD_UPDATED, leaderboard);
+        await broadcaster.QuestionEndedAsync(code, ended, leaderboard);
     }
 
     public async Task NextQuestion()
     {
         var code = RequireHostRoomCode();
         var outcome = await gameService.NextQuestionAsync(Context.User!.GetUserId(), code, Context.ConnectionAborted);
-
-        if (outcome.NextQuestion is not null)
-        {
-            await Clients.Group(code).SendAsync(GameHubEvents.QUESTION_STARTED, outcome.NextQuestion);
-        }
-        else
-        {
-            await Clients.Group(code).SendAsync(GameHubEvents.GAME_ENDED, outcome.GameEnded);
-        }
+        await broadcaster.NextQuestionAsync(code, outcome);
     }
 
     // Kiểu trả về nullable: khi GameHubExceptionFilter bắt exception, nó trả null (đã gửi Error riêng cho
@@ -83,8 +74,15 @@ public sealed class GameHub(IGameService gameService) : Hub
         var playerId = RequirePlayerId();
         var code = RequireRoomCode();
 
-        var (ack, progress) = await gameService.SubmitAnswerAsync(playerId, questionId, selectedIndex, Context.ConnectionAborted);
+        var (ack, progress, roomId) = await gameService.SubmitAnswerAsync(playerId, questionId, selectedIndex, Context.ConnectionAborted);
         await Clients.Group(HostGroup(code)).SendAsync(GameHubEvents.ANSWER_PROGRESS, progress);
+
+        if (progress.AnsweredCount >= progress.TotalPlayers)
+        {
+            // Việc phụ, tự bắt và log lỗi bên trong - không await để ack trả ngay, và lỗi không bao giờ tới người chơi.
+            _ = broadcaster.TryEndIfAllAnsweredAsync(roomId, code);
+        }
+
         return ack;
     }
 

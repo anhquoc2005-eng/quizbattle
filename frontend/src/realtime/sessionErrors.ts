@@ -8,3 +8,11 @@ import type { GameError } from '../types/game'
 export function shouldDiscardSession(error: GameError): boolean {
   return error.method === 'JoinRoom' && (error.code === 'unauthorized' || error.code === 'not_found')
 }
+
+/**
+ * EndQuestion/NextQuestion bị conflict nghĩa là server (timer) vừa tự chuyển trước khi bấm tới nơi:
+ * trạng thái đúng sẽ tới qua sự kiện, nên không hiện lỗi cho chủ phòng.
+ */
+export function shouldIgnoreError(error: GameError): boolean {
+  return (error.method === 'EndQuestion' || error.method === 'NextQuestion') && error.code === 'conflict'
+}

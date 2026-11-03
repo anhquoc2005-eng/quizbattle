@@ -71,6 +71,7 @@ docker-compose.yml
   - Server → Client: `RoomState`, `PlayerJoined`, `PlayerLeft`, `QuestionStarted`, `QuestionEnded`, `LeaderboardUpdated`, `GameEnded`, `AnswerProgress`, `Error`
   - Payload `Error` là `{ method, code, message }` (`GameErrorDto`), không phải chuỗi đơn: `method` là tên Hub method gây lỗi, `code` là `"unauthorized" | "not_found" | "conflict" | "unknown"` để client tự quyết định xử lý (ví dụ chỉ xóa phiên đã lưu khi `method="JoinRoom"` và `code` là `unauthorized`/`not_found`), `message` để hiển thị.
 - Server là nguồn sự thật duy nhất: thời gian bắt đầu câu, thời gian trả lời, điểm số đều tính ở server. Client chỉ hiển thị.
+- Trận tự chạy như Kahoot: `GameTimerService` (BackgroundService ở `QuizBattle.Api`) quét DB mỗi giây, tự kết thúc câu quá hạn / đủ người trả lời và tự chuyển câu sau `Room.RESULT_DISPLAY_SECONDS` (6 giây); không giữ timer trong RAM. Chủ phòng vẫn bấm `EndQuestion`/`NextQuestion` sớm được; bấm trúng lúc server vừa tự chuyển thì nhận `Error` code `conflict` và client bỏ qua lỗi này. Việc gửi sự kiện dùng chung qua `GameBroadcaster`.
 - Không nhận điểm hay thời gian do client gửi lên.
 - Mỗi người chỉ được trả lời một lần cho mỗi câu; chặn ở server.
 - Xử lý rớt mạng: người chơi kết nối lại bằng token phiên thì vào lại đúng phòng, giữ điểm.

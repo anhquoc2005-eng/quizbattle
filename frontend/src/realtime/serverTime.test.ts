@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeClockOffsetMs, getRemainingMs } from './serverTime'
+import { computeClockOffsetMs, getRemainingMs, getRemainingSeconds } from './serverTime'
 
 describe('computeClockOffsetMs', () => {
   it('= 0 khi đồng hồ client và server khớp nhau', () => {
@@ -41,5 +41,22 @@ describe('getRemainingMs', () => {
     const now = 1_000_000
     const deadline = new Date(now - 5000).toISOString()
     expect(getRemainingMs(deadline, 0, now)).toBe(0)
+  })
+})
+
+describe('getRemainingSeconds', () => {
+  const now = 1_000_000
+
+  it('đếm ngược "câu tiếp theo sau Ns": còn 6 giây -> 6', () => {
+    expect(getRemainingSeconds(new Date(now + 6000).toISOString(), 0, now)).toBe(6)
+  })
+
+  it('làm tròn lên: còn 5,2 giây -> 6', () => {
+    expect(getRemainingSeconds(new Date(now + 5200).toISOString(), 0, now)).toBe(6)
+  })
+
+  it('bù lệch đồng hồ và không âm khi quá mốc', () => {
+    expect(getRemainingSeconds(new Date(now + 6000).toISOString(), 2000, now)).toBe(4)
+    expect(getRemainingSeconds(new Date(now - 1000).toISOString(), 0, now)).toBe(0)
   })
 })

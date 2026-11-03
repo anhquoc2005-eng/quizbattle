@@ -183,6 +183,104 @@ public sealed class GameServiceTests
     }
 
     [Fact]
+    public async Task HostEndQuestion_BeforeDeadline_Allowed()
+    {
+        var room = NewRoom(RoomStatus.InProgress, timeLimitSeconds: 20);
+        var question = NewQuestion(room.Id, 0, startedAt: Now);
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.Add(NewPlayer(room.Id, "Alice")); // chưa ai trả lời, chưa hết giờ
+        var service = CreateService(repository, Now.AddSeconds(2));
+
+        var (ended, _) = await service.EndQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.Equal(Now.AddSeconds(2), question.EndedAt);
+        Assert.Equal(Now.AddSeconds(2 + Room.RESULT_DISPLAY_SECONDS), ended.NextQuestionAt);
+    }
+
+    [Fact]
+    public async Task TryAutoEndQuestion_PastDeadline_EndsQuestion()
+    {
+        var room = NewRoom(RoomStatus.InProgress, timeLimitSeconds: 20);
+        var question = NewQuestion(room.Id, 0, startedAt: Now);
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.Add(NewPlayer(room.Id, "Alice"));
+        var service = CreateService(repository, Now.AddSeconds(20));
+
+        var result = await service.TryAutoEndQuestionAsync(room.Id, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(Now.AddSeconds(20), question.EndedAt);
+    }
+
+    [Fact]
+    public async Task TryAutoEndQuestion_AlreadyEnded_ReturnsNullNoChange()
+    {
+        var room = NewRoom(RoomStatus.InProgress, timeLimitSeconds: 20);
+        var endedAt = Now.AddSeconds(5); // chủ phòng đã kết thúc trước
+        var question = NewQuestion(room.Id, 0, startedAt: Now, endedAt: endedAt);
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        var service = CreateService(repository, Now.AddSeconds(30));
+
+        var result = await service.TryAutoEndQuestionAsync(room.Id, CancellationToken.None);
+
+        Assert.Null(result);
+        Assert.Equal(endedAt, question.EndedAt);
+    }
+
+    [Fact]
+    public async Task TryAutoAdvance_BeforeDisplayTime_ReturnsNull()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(NewQuestion(room.Id, 0, startedAt: Now, endedAt: Now.AddSeconds(10)));
+        repository.Questions.Add(NewQuestion(room.Id, 1));
+        var service = CreateService(repository, Now.AddSeconds(10 + Room.RESULT_DISPLAY_SECONDS - 1));
+
+        Assert.Null(await service.TryAutoAdvanceAsync(room.Id, CancellationToken.None));
+        Assert.Null(repository.Questions[1].StartedAt);
+    }
+
+    [Fact]
+    public async Task TryAutoAdvance_LastQuestion_FinishesGame()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(NewQuestion(room.Id, 0, startedAt: Now, endedAt: Now.AddSeconds(10)));
+        var service = CreateService(repository, Now.AddSeconds(10 + Room.RESULT_DISPLAY_SECONDS));
+
+        var outcome = await service.TryAutoAdvanceAsync(room.Id, CancellationToken.None);
+
+        Assert.NotNull(outcome?.GameEnded);
+        Assert.Equal(RoomStatus.Finished, room.Status);
+    }
+
+    [Fact]
+    public async Task SubmitAnswer_LastPlayer_EndsQuestionImmediately()
+    {
+        var room = NewRoom(RoomStatus.InProgress, timeLimitSeconds: 20);
+        var question = NewQuestion(room.Id, 0, startedAt: Now);
+        var alice = NewPlayer(room.Id, "Alice");
+        var bob = NewPlayer(room.Id, "Bob");
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.AddRange([alice, bob]);
+        var service = CreateService(repository, Now.AddSeconds(2));
+
+        await service.SubmitAnswerAsync(alice.Id, question.Id, 0, CancellationToken.None);
+        Assert.Null(await service.TryAutoEndQuestionAsync(room.Id, CancellationToken.None)); // còn Bob chưa trả lời
+
+        var (_, progress, roomId) = await service.SubmitAnswerAsync(bob.Id, question.Id, 1, CancellationToken.None);
+        var result = await service.TryAutoEndQuestionAsync(roomId, CancellationToken.None);
+
+        Assert.Equal(progress.TotalPlayers, progress.AnsweredCount);
+        Assert.NotNull(result);
+        Assert.Equal(Now.AddSeconds(2), question.EndedAt);
+    }
+
+    [Fact]
     public void QuestionStartedDto_DoesNotExposeCorrectIndex()
     {
         Assert.Null(typeof(QuestionStartedDto).GetProperty("CorrectIndex"));
@@ -257,6 +355,19 @@ public sealed class GameServiceTests
 
             return Task.FromResult(work(BuildSnapshot()));
         }
+
+        public Task<TResult> WithLockedRoomByIdAsync<TResult>(Guid roomId, Func<GameSnapshot, TResult> work, CancellationToken cancellationToken)
+        {
+            if (Room.Id != roomId)
+            {
+                throw new NotFoundException("Không tìm thấy phòng.");
+            }
+
+            return Task.FromResult(work(BuildSnapshot()));
+        }
+
+        public Task<IReadOnlyList<DueRoom>> FindDueRoomsAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
+            throw new NotSupportedException(); // truy vấn SQL thật, không mô phỏng ở lớp giả
 
         public Task<Player> AddPlayerAsync(string code, Func<GameSnapshot, Player> buildPlayer, CancellationToken cancellationToken)
         {

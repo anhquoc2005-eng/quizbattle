@@ -13,4 +13,5 @@ public sealed record CurrentQuestionStateDto(
     DateTimeOffset StartedAt,
     DateTimeOffset Deadline,
     bool Ended,
-    int? CorrectIndex);
+    int? CorrectIndex,
+    DateTimeOffset? NextQuestionAt);

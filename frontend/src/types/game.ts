@@ -18,6 +18,8 @@ export interface CurrentQuestionState {
   deadline: string
   ended: boolean
   correctIndex: number | null
+  /** Mốc server tự chuyển câu - null khi câu chưa kết thúc. */
+  nextQuestionAt: string | null
 }
 
 /** Khớp LeaderboardEntryDto. */
@@ -60,6 +62,8 @@ export interface QuestionEnded {
   correctIndex: number
   answeredCount: number
   totalPlayers: number
+  endedAt: string
+  nextQuestionAt: string
 }
 
 /** Khớp LeaderboardUpdatedDto. */

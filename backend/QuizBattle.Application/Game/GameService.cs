@@ -149,19 +149,8 @@ public sealed class GameService(
                 throw new ConflictException("Không có câu nào đang chạy.");
             }
 
-            var now = timeProvider.GetUtcNow();
-            var deadline = current.StartedAt!.Value.AddSeconds(snapshot.Room.QuestionTimeLimitSeconds);
-            var allAnswered = snapshot.AnsweredCountForCurrentQuestion >= snapshot.Players.Count;
-            if (now < deadline && !allAnswered)
-            {
-                throw new ConflictException("Câu chưa hết hạn và chưa đủ người trả lời.");
-            }
-
-            current.EndedAt = now;
-
-            var ended = new QuestionEndedDto(current.Id, current.CorrectIndex, snapshot.AnsweredCountForCurrentQuestion, snapshot.Players.Count);
-            var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
-            return (ended, new LeaderboardUpdatedDto(leaderboard));
+            // Chủ phòng được kết thúc sớm bất cứ lúc nào - không cần quá hạn hay đủ người trả lời.
+            return EndCurrentQuestion(snapshot, current, timeProvider.GetUtcNow());
         }, cancellationToken);
 
     public Task<NextQuestionOutcome> NextQuestionAsync(Guid hostUserId, string code, CancellationToken cancellationToken) =>
@@ -175,24 +164,43 @@ public sealed class GameService(
                 throw new ConflictException("Câu hiện tại chưa kết thúc.");
             }
 
-            var questions = snapshot.ApprovedQuestions;
-            var currentIndex = questions.ToList().IndexOf(current);
-            var next = currentIndex + 1 < questions.Count ? questions[currentIndex + 1] : null;
-            var now = timeProvider.GetUtcNow();
-
-            if (next is not null)
-            {
-                next.StartedAt = now;
-                return new NextQuestionOutcome(ToQuestionStartedDto(next, currentIndex + 1, snapshot), null);
-            }
-
-            snapshot.Room.Status = RoomStatus.Finished;
-            snapshot.Room.EndedAt = now;
-            var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
-            return new NextQuestionOutcome(null, new GameEndedDto(leaderboard));
+            return AdvanceFrom(snapshot, current, timeProvider.GetUtcNow());
         }, cancellationToken);
 
-    public Task<(AnswerAckDto Ack, AnswerProgressDto Progress)> SubmitAnswerAsync(Guid playerId, Guid questionId, int selectedIndex, CancellationToken cancellationToken) =>
+    // Hai thao tác hệ thống cho GameTimerService / SubmitAnswer: không có host, điều kiện không còn đúng
+    // (host hoặc timer khác đã làm trước) thì trả null chứ không ném lỗi - kiểm tra lại trong khóa FOR UPDATE.
+    public Task<(QuestionEndedDto Ended, LeaderboardUpdatedDto Leaderboard)?> TryAutoEndQuestionAsync(Guid roomId, CancellationToken cancellationToken) =>
+        gameRepository.WithLockedRoomByIdAsync<(QuestionEndedDto, LeaderboardUpdatedDto)?>(roomId, snapshot =>
+        {
+            var current = snapshot.CurrentQuestion;
+            if (snapshot.Room.Status != RoomStatus.InProgress || current is null
+                || !GameTimeline.ShouldEndQuestion(
+                    current.StartedAt!.Value, current.EndedAt, snapshot.Room.QuestionTimeLimitSeconds,
+                    snapshot.AnsweredCountForCurrentQuestion, snapshot.Players.Count, timeProvider.GetUtcNow()))
+            {
+                return null;
+            }
+
+            return EndCurrentQuestion(snapshot, current, timeProvider.GetUtcNow());
+        }, cancellationToken);
+
+    public Task<NextQuestionOutcome?> TryAutoAdvanceAsync(Guid roomId, CancellationToken cancellationToken) =>
+        gameRepository.WithLockedRoomByIdAsync<NextQuestionOutcome?>(roomId, snapshot =>
+        {
+            var current = snapshot.CurrentQuestion;
+            if (snapshot.Room.Status != RoomStatus.InProgress || current is null
+                || !GameTimeline.ShouldAdvance(current.EndedAt, timeProvider.GetUtcNow()))
+            {
+                return null;
+            }
+
+            return AdvanceFrom(snapshot, current, timeProvider.GetUtcNow());
+        }, cancellationToken);
+
+    public Task<IReadOnlyList<DueRoom>> FindDueRoomsAsync(CancellationToken cancellationToken) =>
+        gameRepository.FindDueRoomsAsync(timeProvider.GetUtcNow(), cancellationToken);
+
+    public Task<(AnswerAckDto Ack, AnswerProgressDto Progress, Guid RoomId)> SubmitAnswerAsync(Guid playerId, Guid questionId, int selectedIndex, CancellationToken cancellationToken) =>
         gameRepository.SubmitAnswerAsync(playerId, snapshot =>
         {
             if (snapshot.Question is null || snapshot.Question.Id != questionId || snapshot.Question.EndedAt is not null)
@@ -228,8 +236,37 @@ public sealed class GameService(
             snapshot.Player.Score += points;
 
             var progress = new AnswerProgressDto(snapshot.AnsweredCountForCurrentQuestion + 1, snapshot.TotalPlayers);
-            return (answer, (new AnswerAckDto(true), progress));
+            return (answer, (new AnswerAckDto(true), progress, snapshot.Room.Id));
         }, cancellationToken);
+
+    private static (QuestionEndedDto, LeaderboardUpdatedDto) EndCurrentQuestion(GameSnapshot snapshot, Question current, DateTimeOffset now)
+    {
+        current.EndedAt = now;
+
+        var ended = new QuestionEndedDto(
+            current.Id, current.CorrectIndex, snapshot.AnsweredCountForCurrentQuestion, snapshot.Players.Count,
+            now, now.AddSeconds(Room.RESULT_DISPLAY_SECONDS));
+        var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
+        return (ended, new LeaderboardUpdatedDto(leaderboard));
+    }
+
+    private static NextQuestionOutcome AdvanceFrom(GameSnapshot snapshot, Question current, DateTimeOffset now)
+    {
+        var questions = snapshot.ApprovedQuestions;
+        var currentIndex = questions.ToList().IndexOf(current);
+        var next = currentIndex + 1 < questions.Count ? questions[currentIndex + 1] : null;
+
+        if (next is not null)
+        {
+            next.StartedAt = now;
+            return new NextQuestionOutcome(ToQuestionStartedDto(next, currentIndex + 1, snapshot), null);
+        }
+
+        snapshot.Room.Status = RoomStatus.Finished;
+        snapshot.Room.EndedAt = now;
+        var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
+        return new NextQuestionOutcome(null, new GameEndedDto(leaderboard));
+    }
 
     private static void RequireHost(GameSnapshot snapshot, Guid hostUserId)
     {
@@ -263,7 +300,8 @@ public sealed class GameService(
             var deadline = current.StartedAt!.Value.AddSeconds(snapshot.Room.QuestionTimeLimitSeconds);
             currentDto = new CurrentQuestionStateDto(
                 current.Id, index, snapshot.ApprovedQuestions.Count, current.Text, current.Options,
-                current.StartedAt.Value, deadline, ended, ended ? current.CorrectIndex : null);
+                current.StartedAt.Value, deadline, ended, ended ? current.CorrectIndex : null,
+                ended ? current.EndedAt!.Value.AddSeconds(Room.RESULT_DISPLAY_SECONDS) : null);
 
             if (playerId is not null)
             {

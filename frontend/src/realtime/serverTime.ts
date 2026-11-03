@@ -12,3 +12,8 @@ export function getRemainingMs(deadlineIso: string, offsetMs: number, now = Date
   const estimatedServerNow = now + offsetMs
   return Math.max(0, new Date(deadlineIso).getTime() - estimatedServerNow)
 }
+
+/** Số giây còn lại (làm tròn lên) tới một mốc server, dùng cho "Câu tiếp theo sau Ns". */
+export function getRemainingSeconds(targetIso: string, offsetMs: number, now = Date.now()): number {
+  return Math.ceil(getRemainingMs(targetIso, offsetMs, now) / 1000)
+}

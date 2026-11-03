@@ -24,5 +24,14 @@ public interface IGameService
 
     Task<NextQuestionOutcome> NextQuestionAsync(Guid hostUserId, string code, CancellationToken cancellationToken);
 
-    Task<(AnswerAckDto Ack, AnswerProgressDto Progress)> SubmitAnswerAsync(Guid playerId, Guid questionId, int selectedIndex, CancellationToken cancellationToken);
+    Task<(AnswerAckDto Ack, AnswerProgressDto Progress, Guid RoomId)> SubmitAnswerAsync(Guid playerId, Guid questionId, int selectedIndex, CancellationToken cancellationToken);
+
+    // --- Thao tác hệ thống (GameTimerService, SubmitAnswer người cuối): không cần host, null = không đủ điều kiện ---
+
+    Task<(QuestionEndedDto Ended, LeaderboardUpdatedDto Leaderboard)?> TryAutoEndQuestionAsync(Guid roomId, CancellationToken cancellationToken);
+
+    Task<NextQuestionOutcome?> TryAutoAdvanceAsync(Guid roomId, CancellationToken cancellationToken);
+
+    /// <summary>Các phòng InProgress có câu quá hạn hoặc kết quả đã hiện đủ lâu - một truy vấn cho mọi phòng.</summary>
+    Task<IReadOnlyList<DueRoom>> FindDueRoomsAsync(CancellationToken cancellationToken);
 }

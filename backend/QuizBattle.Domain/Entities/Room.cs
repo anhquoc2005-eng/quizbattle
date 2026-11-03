@@ -8,6 +8,9 @@ public sealed class Room
 
     public const int MAX_QUESTIONS_PER_ROOM = 30;
 
+    /// <summary>Thời gian hiện kết quả sau khi một câu kết thúc, trước khi server tự chuyển sang câu kế.</summary>
+    public const int RESULT_DISPLAY_SECONDS = 6;
+
     public Guid Id { get; set; }
 
     public required string Code { get; set; }

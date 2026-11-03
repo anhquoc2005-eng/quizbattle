@@ -17,6 +17,16 @@ public interface IGameRepository
     /// </summary>
     Task<TResult> WithLockedRoomAsync<TResult>(string code, Func<GameSnapshot, TResult> work, CancellationToken cancellationToken);
 
+    /// <summary>Như WithLockedRoomAsync nhưng tìm phòng theo Id - cho thao tác hệ thống (timer) không có mã phòng từ client.</summary>
+    Task<TResult> WithLockedRoomByIdAsync<TResult>(Guid roomId, Func<GameSnapshot, TResult> work, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Một truy vấn AsNoTracking cho mọi phòng InProgress: câu hiện tại quá hạn / đủ người trả lời mà chưa
+    /// kết thúc, hoặc đã kết thúc đủ RESULT_DISPLAY_SECONDS. Chỉ là bước lọc thô - điều kiện thật được
+    /// kiểm tra lại trong khóa FOR UPDATE khi xử lý từng phòng.
+    /// </summary>
+    Task<IReadOnlyList<DueRoom>> FindDueRoomsAsync(DateTimeOffset now, CancellationToken cancellationToken);
+
     /// <summary>
     /// Thêm người chơi mới: khóa dòng Room bằng FOR UPDATE, nạp snapshot, gọi buildPlayer để quyết định
     /// (kiểm tra Lobby/giới hạn 50 người/tên trùng - ném exception thì rollback), insert, commit.

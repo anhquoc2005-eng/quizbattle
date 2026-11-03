@@ -4,7 +4,7 @@ import { loadAuth } from '../api/tokenStorage'
 import type { AnswerAck, AnswerProgress, GameEnded, GameError, LeaderboardUpdated, PlayerJoined, PlayerLeft, QuestionEnded, QuestionStarted, RoomState } from '../types/game'
 import { GAME_HUB_EVENTS, GAME_HUB_METHODS } from './events'
 import { gameReducer, initialGameState, type GameState } from './gameReducer'
-import { reconnectPolicy } from './retryPolicy'
+import { nextRetryDelayMs, reconnectPolicy } from './retryPolicy'
 import { shouldIgnoreError } from './sessionErrors'
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -85,22 +85,40 @@ export function GameConnectionProvider({
 
     connectionRef.current = connection
 
-    connection
-      .start()
-      .then(() => {
-        if (stopped) return
-        setConnectionStatus('connected')
-        return connection.invoke(GAME_HUB_METHODS.JOIN_ROOM, code, sessionToken ?? null)
-      })
-      .catch(() => {
-        // Nếu start() còn đang negotiate lúc bị stop() hủy (xem cleanup bên dưới), promise reject với lỗi
-        // "stopped during negotiation" - không phải lỗi kết nối thật, bỏ qua khi đã chủ động dừng.
-        if (stopped) return
-        setConnectionStatus('disconnected')
-      })
+    // withAutomaticReconnect chỉ áp dụng cho kết nối đã mở được; lần start() đầu thất bại (backend chưa
+    // chạy / đang khởi động) phải tự thử lại theo cùng nhịp, đo thời gian từ lúc bắt đầu thử.
+    const firstAttemptAt = Date.now()
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+
+    const tryStart = (attempt: number) => {
+      connection.start().then(
+        () => {
+          if (stopped) return
+          setConnectionStatus('connected')
+          return connection.invoke(GAME_HUB_METHODS.JOIN_ROOM, code, sessionToken ?? null).catch(() => {
+            if (!stopped) setConnectionStatus('disconnected')
+          })
+        },
+        () => {
+          // Nếu start() còn đang negotiate lúc bị stop() hủy (xem cleanup bên dưới), promise reject với lỗi
+          // "stopped during negotiation" - không phải lỗi kết nối thật, bỏ qua khi đã chủ động dừng.
+          if (stopped) return
+          const delay = nextRetryDelayMs(attempt, Date.now() - firstAttemptAt)
+          if (delay === null) {
+            setConnectionStatus('disconnected')
+            return
+          }
+          setConnectionStatus('reconnecting')
+          retryTimer = setTimeout(() => tryStart(attempt + 1), delay)
+        },
+      )
+    }
+
+    tryStart(0)
 
     return () => {
       stopped = true
+      clearTimeout(retryTimer)
       void connection.stop()
     }
   }, [code, sessionToken, retryTick])

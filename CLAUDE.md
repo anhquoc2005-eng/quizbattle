@@ -184,6 +184,7 @@ Giao diện dùng skill `taste-skill` (cài ở tài khoản người dùng).
   `feat: tạo phòng và sinh mã phòng`, `fix: chặn trả lời trùng`, `test: thêm test tính điểm`.
 - Không commit file `.env`, `bin/`, `obj/`, `node_modules/`.
 - Nhánh: `main` luôn chạy được; làm tính năng trên nhánh `feat/<tên>` rồi merge.
+- Không pipe lệnh build/test qua `tail`/`head`/`Select-Object` khi nối với `git push` bằng `&&`; kiểm tra exit code (`$LASTEXITCODE` trên PowerShell) trước khi push.
 
 ## Quy ước đặt tên
 

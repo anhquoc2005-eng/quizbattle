@@ -138,6 +138,15 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Phải đứng đầu: rate limiter/CORS/auth phía sau cần IP và scheme thật của khách. Chỉ bật ở Production (sau proxy của host).
+if (app.Environment.IsProduction())
+{
+    var clientIpHeader = builder.Configuration["ForwardedHeaders:ClientIpHeader"];
+    var forwardedHeadersOptions = ClientIpForwarding.CreateOptions(clientIpHeader);
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+    app.Logger.LogInformation("ForwardedHeaders bật, đọc IP khách từ header {Header}", forwardedHeadersOptions.ForwardedForHeaderName);
+}
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseCors(FrontendCorsPolicy);

@@ -7,8 +7,14 @@ export function Countdown({ deadline, offsetMs, totalSeconds }: { deadline: stri
 
   useEffect(() => {
     setRemainingMs(getRemainingMs(deadline, offsetMs))
-    const interval = setInterval(() => setRemainingMs(getRemainingMs(deadline, offsetMs)), 250)
-    return () => clearInterval(interval)
+    const update = () => setRemainingMs(getRemainingMs(deadline, offsetMs))
+    const interval = setInterval(update, 250)
+    // Tab nền bị trình duyệt giãn nhịp setInterval: tính lại ngay khi tab hiện lại.
+    document.addEventListener('visibilitychange', update)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', update)
+    }
   }, [deadline, offsetMs])
 
   const remainingSeconds = Math.ceil(remainingMs / 1000)

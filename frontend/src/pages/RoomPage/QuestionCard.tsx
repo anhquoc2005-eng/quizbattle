@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useReducer, useState } from 'react'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { canConfirm, confirmReducer, initialConfirmState } from '../../components/confirmReducer'
 import { describeApiError } from '../../api/apiError'
 import { approveQuestion, deleteQuestion } from '../../api/questions'
 import { QUESTION_REVIEW_STATUS_LABEL, type Question } from '../../types/question'
@@ -10,6 +12,7 @@ export function QuestionCard({ code, question, readOnly }: { code: string; quest
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState(false)
   const [formError, setFormError] = useState<string>()
+  const [confirm, dispatchConfirm] = useReducer(confirmReducer, initialConfirmState)
 
   const approveMutation = useMutation({
     mutationFn: () => approveQuestion(code, question.id),
@@ -64,9 +67,20 @@ export function QuestionCard({ code, question, readOnly }: { code: string; quest
           <button className="btn btn-ghost" type="button" onClick={() => setEditing(true)}>
             Sửa
           </button>
-          <button className="btn btn-ghost" type="button" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
+          <button className="btn btn-ghost" type="button" onClick={() => dispatchConfirm({ type: 'open', targetId: question.id })} disabled={deleteMutation.isPending}>
             Xóa
           </button>
+          <ConfirmDialog
+            open={confirm.targetId !== null}
+            title="Xóa câu hỏi?"
+            message="Câu hỏi sẽ bị xóa khỏi phòng và không khôi phục được."
+            confirmLabel="Xóa"
+            onCancel={() => dispatchConfirm({ type: 'cancel' })}
+            onConfirm={() => {
+              if (canConfirm(confirm, question.id)) deleteMutation.mutate()
+              dispatchConfirm({ type: 'cancel' })
+            }}
+          />
         </div>
       )}
     </div>

@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { describeApiError } from '../../api/apiError'
 import { generateQuestions } from '../../api/questions'
+import { useQuestions } from '../../hooks/useQuestions'
+import { shouldShowGenerateError, type GenerateError } from './generateError'
 import { validateGenerateCount } from '../../validation/questionForm'
 
 /** Khối sinh câu hỏi bằng AI, chỉ hiện khi phòng còn ở Draft (RoomPage kiểm tra trước khi render). */
@@ -10,7 +12,8 @@ export function GenerateQuestionsPanel({ code }: { code: string }) {
   const [count, setCount] = useState(5)
   const [countError, setCountError] = useState<string>()
   const [resultMessage, setResultMessage] = useState<string>()
-  const [formError, setFormError] = useState<string>()
+  const [formError, setFormError] = useState<GenerateError>()
+  const questionCount = useQuestions(code).data?.length
 
   const mutation = useMutation({
     mutationFn: () => generateQuestions(code, count),
@@ -22,7 +25,7 @@ export function GenerateQuestionsPanel({ code }: { code: string }) {
     },
     onError: (error: unknown) => {
       setResultMessage(undefined)
-      setFormError(describeApiError(error, { 429: 'Bạn đã sinh câu hỏi quá nhiều, thử lại sau.' }))
+      setFormError({ message: describeApiError(error, { 429: 'Bạn đã sinh câu hỏi quá nhiều, thử lại sau.' }), atCount: questionCount })
     },
   })
 
@@ -30,6 +33,7 @@ export function GenerateQuestionsPanel({ code }: { code: string }) {
     event.preventDefault()
     const error = validateGenerateCount(count)
     setCountError(error)
+    setFormError(undefined)
     setResultMessage(undefined)
     if (!error) {
       mutation.mutate()
@@ -56,9 +60,9 @@ export function GenerateQuestionsPanel({ code }: { code: string }) {
         </button>
       </form>
       {countError && <p className="error">{countError}</p>}
-      {formError && (
+      {shouldShowGenerateError(formError, questionCount) && (
         <p className="error" role="alert">
-          {formError}
+          {formError?.message}
         </p>
       )}
       {resultMessage && <p className="text-muted">{resultMessage}</p>}

@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useReducer, useState } from 'react'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { canConfirm, confirmReducer, initialConfirmState } from '../../components/confirmReducer'
 import { Countdown } from '../../components/Countdown'
 import { Leaderboard } from '../../components/Leaderboard'
 import { NextQuestionIn } from '../../components/NextQuestionIn'
@@ -9,6 +11,7 @@ export function LiveQuestion({ state }: { state: GameState }) {
   const { endQuestion, nextQuestion } = useGameConnection()
   const [pending, setPending] = useState(false)
   const [offline, setOffline] = useState(false)
+  const [confirm, dispatchConfirm] = useReducer(confirmReducer, initialConfirmState)
   const question = state.currentQuestion
 
   if (!question) {
@@ -31,7 +34,13 @@ export function LiveQuestion({ state }: { state: GameState }) {
     }
   }
 
-  const handleEnd = () => runAction(endQuestion)
+  // Hộp tự đóng khi câu đã ended/đổi câu (activeId null/khác), và khi đó Đồng ý không gửi lệnh nữa.
+  const activeId = question.ended ? null : question.questionId
+  const confirmOpen = canConfirm(confirm, activeId)
+  const handleConfirmEnd = () => {
+    dispatchConfirm({ type: 'cancel' })
+    if (confirmOpen) void runAction(endQuestion)
+  }
   const handleNext = () => runAction(nextQuestion)
 
   return (
@@ -63,9 +72,24 @@ export function LiveQuestion({ state }: { state: GameState }) {
       {offline && <p className="error" role="alert">Mất kết nối, thử lại khi đã kết nối lại.</p>}
 
       {!question.ended ? (
-        <button className="btn btn-primary justify-self-start" type="button" onClick={handleEnd} disabled={pending}>
-          {pending ? 'Đang kết thúc…' : 'Kết thúc sớm'}
-        </button>
+        <>
+          <button
+            className="btn btn-primary justify-self-start"
+            type="button"
+            onClick={() => dispatchConfirm({ type: 'open', targetId: question.questionId })}
+            disabled={pending}
+          >
+            {pending ? 'Đang kết thúc…' : 'Kết thúc sớm'}
+          </button>
+          <ConfirmDialog
+            open={confirmOpen}
+            title="Kết thúc câu hỏi sớm?"
+            message="Người chơi chưa trả lời sẽ không được tính điểm cho câu này."
+            confirmLabel="Kết thúc"
+            onCancel={() => dispatchConfirm({ type: 'cancel' })}
+            onConfirm={handleConfirmEnd}
+          />
+        </>
       ) : (
         <>
           <div className="grid gap-3 border-t border-rule pt-4">

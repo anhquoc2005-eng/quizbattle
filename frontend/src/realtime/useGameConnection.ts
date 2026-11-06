@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { GameConnectionContext } from './GameConnectionProvider'
+import { GameConnectionContext } from './gameConnectionContext'
 
 export function useGameConnection() {
   const context = useContext(GameConnectionContext)

@@ -17,7 +17,8 @@ public sealed class PlayerConfiguration : IEntityTypeConfiguration<Player>
         builder.Property(p => p.Score).HasDefaultValue(0);
         builder.Property(p => p.JoinedAt).HasColumnType("timestamptz");
 
-        builder.HasIndex(p => new { p.RoomId, p.DisplayName }).IsUnique();
+        // Unique (RoomId, lower(DisplayName)) là index theo biểu thức, EF không khai báo được bằng fluent API:
+        // tạo bằng SQL thô trong migration UseCaseInsensitivePlayerName.
         builder.HasIndex(p => p.SessionTokenHash).IsUnique();
 
         builder.HasMany(p => p.Answers)

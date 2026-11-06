@@ -89,7 +89,16 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
         var player = buildPlayer(snapshot); // ném exception -> rollback, không insert gì
 
         db.Players.Add(player);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_Players_RoomId_lower_DisplayName" })
+        {
+            // Đã khóa phòng nên hiếm khi tới đây; vẫn trả cùng lỗi như tên trùng ở GameService.
+            throw new ConflictException("Tên hiển thị đã có người dùng trong phòng.");
+        }
+
         await transaction.CommitAsync(cancellationToken);
         return player;
     }

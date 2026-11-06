@@ -15,7 +15,7 @@ public sealed class RoomsController(IRoomService roomService) : ControllerBase
     public async Task<ActionResult<RoomResponse>> Create(CreateRoomRequest request, CancellationToken cancellationToken)
     {
         var result = await roomService.CreateRoomAsync(User.GetUserId(), request, cancellationToken);
-        return StatusCode(StatusCodes.Status201Created, result);
+        return CreatedAtAction(nameof(Get), new { code = result.Code }, result);
     }
 
     [HttpGet]

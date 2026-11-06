@@ -1,7 +1,8 @@
 import { HubConnectionBuilder, LogLevel, type HubConnection } from '@microsoft/signalr'
-import { createContext, useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 import { loadAuth } from '../api/tokenStorage'
 import type { AnswerAck, AnswerProgress, GameEnded, GameError, LeaderboardUpdated, PlayerJoined, PlayerLeft, QuestionEnded, QuestionStarted, RoomState } from '../types/game'
+import { GameConnectionContext } from './gameConnectionContext'
 import { GAME_HUB_EVENTS, GAME_HUB_METHODS } from './events'
 import { gameReducer, initialGameState, type GameState } from './gameReducer'
 import { nextRetryDelayMs, reconnectPolicy } from './retryPolicy'
@@ -23,8 +24,6 @@ export interface GameConnectionContextValue {
   /** Gọi khi withAutomaticReconnect() đã hết số lần thử (connectionStatus = 'disconnected') hoặc JoinRoom lỗi - tạo lại kết nối từ đầu. */
   reconnect: () => void
 }
-
-export const GameConnectionContext = createContext<GameConnectionContextValue | null>(null)
 
 /**
  * MỘT HubConnection duy nhất cho cả màn chơi - không tạo kết nối trong từng component. Provider này chỉ

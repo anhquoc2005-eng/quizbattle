@@ -90,13 +90,12 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("RoomId");
+
                     b.HasIndex("SessionTokenHash")
                         .IsUnique();
 
                     b.HasIndex("UserId");
-
-                    b.HasIndex("RoomId", "DisplayName")
-                        .IsUnique();
 
                     b.ToTable("Players", (string)null);
                 });

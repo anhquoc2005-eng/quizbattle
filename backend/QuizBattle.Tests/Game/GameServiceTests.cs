@@ -62,6 +62,32 @@ public sealed class GameServiceTests
     }
 
     [Fact]
+    public async Task JoinRoom_DuplicateNameDifferentCase_Conflict()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        repository.Players.Add(NewPlayer(room.Id, "An"));
+        var service = CreateService(repository);
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            service.CreatePlayerAsync(room.Code, new CreatePlayerRequest { DisplayName = "an" }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task JoinRoom_SameNameInAnotherRoom_Succeeds()
+    {
+        var otherRoom = NewRoom(RoomStatus.Lobby);
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        repository.Players.Add(NewPlayer(otherRoom.Id, "An"));
+        var service = CreateService(repository);
+
+        var response = await service.CreatePlayerAsync(room.Code, new CreatePlayerRequest { DisplayName = "an" }, CancellationToken.None);
+
+        Assert.Equal(room.Code, response.RoomCode);
+    }
+
+    [Fact]
     public async Task JoinAsPlayer_Reconnect_KeepsScore()
     {
         var room = NewRoom(RoomStatus.InProgress);
@@ -417,7 +443,7 @@ public sealed class GameServiceTests
             {
                 Room = Room,
                 ApprovedQuestions = approved,
-                Players = Players,
+                Players = Players.Where(p => p.RoomId == Room.Id).ToList(),
                 Answers = Answers,
                 TotalQuestionCount = Questions.Count,
                 AnsweredCountForCurrentQuestion = current is null ? 0 : Answers.Count(a => a.QuestionId == current.Id),

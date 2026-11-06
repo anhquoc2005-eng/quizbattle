@@ -28,7 +28,7 @@ export function DashboardPage() {
   const hasAnyRoom = rooms.length > 0
   const openRooms = rooms.filter((room) => room.status !== 'Finished')
   const finishedRooms = rooms.filter((room) => room.status === 'Finished')
-  const { doneSteps, createRoomStatus } = getSetupProgress(roomsQuery.isPending, hasAnyRoom)
+  const { doneSteps, createRoomStatus } = getSetupProgress(roomsQuery.status, hasAnyRoom)
 
   return (
     <>
@@ -53,7 +53,7 @@ export function DashboardPage() {
           <div>
             <h1>Phòng của tôi</h1>
             <p className="text-muted">
-              {roomsQuery.isPending ? 'Đang tải…' : hasAnyRoom ? `Bạn có ${rooms.length} phòng.` : 'Bạn chưa tạo phòng nào.'}
+              {roomsQuery.isPending ? 'Đang tải…' : roomsQuery.isError ? 'Không tải được danh sách phòng.' : hasAnyRoom ? `Bạn có ${rooms.length} phòng.` : 'Bạn chưa tạo phòng nào.'}
             </p>
           </div>
           <button className="btn btn-primary" type="button" onClick={() => setShowCreateForm((value) => !value)}>
@@ -66,7 +66,7 @@ export function DashboardPage() {
 
           <section className="card col-span-full grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2" aria-labelledby="setup-title">
             <h2 id="setup-title">Bắt đầu với QuizBattle</h2>
-            <span className="justify-self-end text-xs text-faint">{roomsQuery.isPending ? 'Đang tải…' : `${doneSteps} trên ${TOTAL_STEPS} bước`}</span>
+            <span className="justify-self-end text-xs text-faint">{roomsQuery.isPending ? 'Đang tải…' : roomsQuery.isError ? 'Không tải được' : `${doneSteps} trên ${TOTAL_STEPS} bước`}</span>
             <div
               className="col-span-full h-1.5 overflow-hidden rounded-full bg-raised"
               role="progressbar"
@@ -117,6 +117,8 @@ function StepCard({ title, description, status }: { title: string; description?:
       <b className="font-semibold">{title}</b>
       {status === 'done' ? (
         <span className="text-xs text-positive">Đã xong</span>
+      ) : status === 'error' ? (
+        <span className="text-muted">Không tải được</span>
       ) : status === 'loading' ? (
         <span className="text-muted">Đang tải…</span>
       ) : (

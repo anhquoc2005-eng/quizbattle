@@ -1,7 +1,8 @@
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getMe, login as loginRequest, register as registerRequest } from '../api/auth'
 import { setUnauthorizedHandler } from '../api/client'
 import { restoreSession } from '../api/restoreSession'
+import { AuthContext } from './authContext'
 import { clearAuth, loadAuth, saveAuth } from '../api/tokenStorage'
 import type { AuthUser } from '../types/auth'
 
@@ -13,8 +14,6 @@ export interface AuthContextValue {
   register: (email: string, password: string, displayName: string) => Promise<void>
   logout: () => void
 }
-
-export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)

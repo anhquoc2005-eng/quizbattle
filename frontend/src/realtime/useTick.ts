@@ -13,7 +13,12 @@ export function useTick(active: boolean, intervalMs = 500): void {
       return
     }
 
-    const interval = setInterval(() => setTick((t) => t + 1), intervalMs)
-    return () => clearInterval(interval)
+    const update = () => setTick((t) => t + 1)
+    const interval = setInterval(update, intervalMs)
+    document.addEventListener('visibilitychange', update)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', update)
+    }
   }, [active, intervalMs])
 }

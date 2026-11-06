@@ -7,8 +7,13 @@ export function NextQuestionIn({ label, nextQuestionAt, offsetMs }: { label: str
 
   useEffect(() => {
     setSeconds(getRemainingSeconds(nextQuestionAt, offsetMs))
-    const interval = setInterval(() => setSeconds(getRemainingSeconds(nextQuestionAt, offsetMs)), 250)
-    return () => clearInterval(interval)
+    const update = () => setSeconds(getRemainingSeconds(nextQuestionAt, offsetMs))
+    const interval = setInterval(update, 250)
+    document.addEventListener('visibilitychange', update)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', update)
+    }
   }, [nextQuestionAt, offsetMs])
 
   return (

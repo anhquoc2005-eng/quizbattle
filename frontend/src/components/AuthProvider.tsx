@@ -1,6 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getMe, login as loginRequest, register as registerRequest } from '../api/auth'
 import { setUnauthorizedHandler } from '../api/client'
+import { restoreSession } from '../api/restoreSession'
 import { clearAuth, loadAuth, saveAuth } from '../api/tokenStorage'
 import type { AuthUser } from '../types/auth'
 
@@ -38,12 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    getMe()
+    restoreSession(stored, getMe, clearAuth)
       .then(setUser)
-      .catch(() => {
-        clearAuth()
-        setUser(null)
-      })
       .finally(() => setIsLoading(false))
   }, [])
 

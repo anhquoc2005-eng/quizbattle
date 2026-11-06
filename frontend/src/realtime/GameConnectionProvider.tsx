@@ -1,9 +1,10 @@
 import { HubConnectionBuilder, LogLevel, type HubConnection } from '@microsoft/signalr'
-import { createContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 import { loadAuth } from '../api/tokenStorage'
 import type { AnswerAck, AnswerProgress, GameEnded, GameError, LeaderboardUpdated, PlayerJoined, PlayerLeft, QuestionEnded, QuestionStarted, RoomState } from '../types/game'
 import { GAME_HUB_EVENTS, GAME_HUB_METHODS } from './events'
 import { gameReducer, initialGameState, type GameState } from './gameReducer'
+import { nextRetryDelayMs, reconnectPolicy } from './retryPolicy'
 import { shouldIgnoreError } from './sessionErrors'
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -55,7 +56,7 @@ export function GameConnectionProvider({
       // JWT chỉ dành cho chủ phòng: WebSocket gửi token qua query string, trang người chơi không được
       // làm lộ JWT của tài khoản đang đăng nhập trên cùng trình duyệt.
       .withUrl(`${API_URL}/hubs/game`, sessionToken ? {} : { accessTokenFactory: () => loadAuth()?.token ?? '' })
-      .withAutomaticReconnect()
+      .withAutomaticReconnect(reconnectPolicy)
       .configureLogging(LogLevel.Warning)
       .build()
 
@@ -84,25 +85,67 @@ export function GameConnectionProvider({
 
     connectionRef.current = connection
 
-    connection
-      .start()
-      .then(() => {
-        if (stopped) return
-        setConnectionStatus('connected')
-        return connection.invoke(GAME_HUB_METHODS.JOIN_ROOM, code, sessionToken ?? null)
-      })
-      .catch(() => {
-        // Nếu start() còn đang negotiate lúc bị stop() hủy (xem cleanup bên dưới), promise reject với lỗi
-        // "stopped during negotiation" - không phải lỗi kết nối thật, bỏ qua khi đã chủ động dừng.
-        if (stopped) return
-        setConnectionStatus('disconnected')
-      })
+    // withAutomaticReconnect chỉ áp dụng cho kết nối đã mở được; lần start() đầu thất bại (backend chưa
+    // chạy / đang khởi động) phải tự thử lại theo cùng nhịp, đo thời gian từ lúc bắt đầu thử.
+    const firstAttemptAt = Date.now()
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+
+    const tryStart = (attempt: number) => {
+      connection.start().then(
+        () => {
+          if (stopped) return
+          setConnectionStatus('connected')
+          return connection.invoke(GAME_HUB_METHODS.JOIN_ROOM, code, sessionToken ?? null).catch(() => {
+            if (!stopped) setConnectionStatus('disconnected')
+          })
+        },
+        () => {
+          // Nếu start() còn đang negotiate lúc bị stop() hủy (xem cleanup bên dưới), promise reject với lỗi
+          // "stopped during negotiation" - không phải lỗi kết nối thật, bỏ qua khi đã chủ động dừng.
+          if (stopped) return
+          const delay = nextRetryDelayMs(attempt, Date.now() - firstAttemptAt)
+          if (delay === null) {
+            setConnectionStatus('disconnected')
+            return
+          }
+          setConnectionStatus('reconnecting')
+          retryTimer = setTimeout(() => tryStart(attempt + 1), delay)
+        },
+      )
+    }
+
+    tryStart(0)
 
     return () => {
       stopped = true
+      clearTimeout(retryTimer)
       void connection.stop()
     }
   }, [code, sessionToken, retryTick])
+
+  const reconnect = useCallback(() => {
+    // Xóa lỗi cũ để màn quay về "Đang kết nối…" thay vì hiện lại lỗi JoinRoom của lần trước.
+    setLastError(null)
+    setConnectionStatus('connecting')
+    setRetryTick((tick) => tick + 1)
+  }, [])
+
+  // Đã bỏ cuộc sau 10 phút (hoặc JoinRoom lỗi): thử lại 1 lần khi người dùng quay lại tab / có mạng lại.
+  // Chỉ gắn listener khi 'disconnected' - connecting/reconnecting thì bỏ qua, không mở kết nối song song
+  // (reconnect() đổi trạng thái sang 'connecting' nên effect này tự gỡ listener ngay).
+  useEffect(() => {
+    if (connectionStatus !== 'disconnected') return
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reconnect()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', reconnect)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', reconnect)
+    }
+  }, [connectionStatus, reconnect])
 
   const value = useMemo<GameConnectionContextValue>(
     () => ({
@@ -127,14 +170,9 @@ export function GameConnectionProvider({
         }
         return ack
       },
-      reconnect: () => {
-        // Xóa lỗi cũ để màn quay về "Đang kết nối…" thay vì hiện lại lỗi JoinRoom của lần trước.
-        setLastError(null)
-        setConnectionStatus('connecting')
-        setRetryTick((tick) => tick + 1)
-      },
+      reconnect,
     }),
-    [state, connectionStatus, lastError],
+    [state, connectionStatus, lastError, reconnect],
   )
 
   return <GameConnectionContext.Provider value={value}>{children}</GameConnectionContext.Provider>

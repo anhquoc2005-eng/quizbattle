@@ -456,3 +456,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 !.vscode/tasks.json
+
+# SQL migration sinh bởi scripts/migrate-prod.ps1
+scripts/out/

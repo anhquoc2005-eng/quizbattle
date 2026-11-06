@@ -20,6 +20,18 @@ const string JoinRoomRateLimiterPolicy = "join-room";
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (builder.Environment.IsProduction())
+{
+    ProductionConfigValidator.Validate(builder.Configuration);
+}
+
+// Render (và các nơi host tương tự) cấp cổng qua biến PORT; không có thì giữ cấu hình mặc định (dev: launchSettings, cổng 5000).
+var port = builder.Configuration["PORT"];
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -95,11 +107,12 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: httpContext.User.GetUserId().ToString(),
             factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromHours(1) }));
 
-    // Endpoint ẩn danh (người chơi vào phòng, không có JWT) - chỉ chặn được theo IP.
+    // Endpoint ẩn danh (người chơi vào phòng, không có JWT) - chỉ chặn được theo IP. 60/phút vì cả lớp học thường
+    // chung một Wi-Fi (cùng IP); số người mỗi phòng đã bị giới hạn bởi Room.MAX_PLAYERS.
     options.AddPolicy(JoinRoomRateLimiterPolicy, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+            factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
 
     // UseStatusCodePages tự dùng IProblemDetailsService nhưng không tự điền Title - điền ở đây cho đúng format chung.
     options.OnRejected = async (context, cancellationToken) =>
@@ -130,6 +143,15 @@ builder.Services.AddCors(options =>
         .AllowCredentials())); // SignalR cần AllowCredentials
 
 var app = builder.Build();
+
+// Phải đứng đầu: rate limiter/CORS/auth phía sau cần IP và scheme thật của khách. Chỉ bật ở Production (sau proxy của host).
+if (app.Environment.IsProduction())
+{
+    var clientIpHeader = builder.Configuration["ForwardedHeaders:ClientIpHeader"];
+    var forwardedHeadersOptions = ClientIpForwarding.CreateOptions(clientIpHeader);
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+    app.Logger.LogInformation("ForwardedHeaders bật, đọc IP khách từ header {Header}", forwardedHeadersOptions.ForwardedForHeaderName);
+}
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

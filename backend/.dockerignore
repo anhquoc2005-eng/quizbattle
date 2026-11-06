@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+QuizBattle.Tests/
+**/.vs/
+**/*.user
+.env
+*.env
+Dockerfile
+.dockerignore

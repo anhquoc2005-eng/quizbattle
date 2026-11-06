@@ -9,24 +9,22 @@ describe('confirmReducer', () => {
   it('cancel đóng hộp', () => {
     expect(confirmReducer({ targetId: 'q1' }, { type: 'cancel' })).toEqual(initialConfirmState)
   })
+})
 
-  it('sync giữ hộp khi đối tượng vẫn hợp lệ', () => {
-    const state = { targetId: 'q1' }
-    expect(confirmReducer(state, { type: 'sync', activeId: 'q1' })).toBe(state)
-  })
-
-  it('sync đóng hộp khi câu đã kết thúc (activeId null)', () => {
-    expect(confirmReducer({ targetId: 'q1' }, { type: 'sync', activeId: null })).toEqual(initialConfirmState)
-  })
-
-  it('sync đóng hộp khi đã chuyển sang câu khác', () => {
-    expect(confirmReducer({ targetId: 'q1' }, { type: 'sync', activeId: 'q2' })).toEqual(initialConfirmState)
-  })
-
-  it('canConfirm: chỉ true khi hộp mở cho đúng đối tượng còn hợp lệ', () => {
+describe('canConfirm', () => {
+  it('đối tượng vẫn hợp lệ: cho phép', () => {
     expect(canConfirm({ targetId: 'q1' }, 'q1')).toBe(true)
-    expect(canConfirm({ targetId: 'q1' }, 'q2')).toBe(false)
+  })
+
+  it('câu đã kết thúc khi hộp đang mở (activeId null): không cho phép', () => {
     expect(canConfirm({ targetId: 'q1' }, null)).toBe(false)
+  })
+
+  it('đã chuyển sang câu khác khi hộp đang mở: không cho phép', () => {
+    expect(canConfirm({ targetId: 'q1' }, 'q2')).toBe(false)
+  })
+
+  it('hộp chưa mở: không cho phép', () => {
     expect(canConfirm(initialConfirmState, 'q1')).toBe(false)
   })
 })

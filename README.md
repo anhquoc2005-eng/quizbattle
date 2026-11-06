@@ -197,6 +197,7 @@ Thiếu `Cors__AllowedOrigins`, `Ai__*`, `Jwt__*` hoặc connection string thì 
 **Lưu ý**
 
 - `SSL Mode=Require` mã hóa kết nối nhưng không xác minh chuỗi chứng chỉ của server (đã kiểm với Npgsql 8). Tăng cường sau này: `SSL Mode=VerifyFull` kèm root CA của Supabase.
+- `Maximum Pool Size=10` trong chuỗi kết nối: Supabase gói Nano giới hạn khoảng 60 kết nối, trong khi Npgsql mặc định tối đa 100 kết nối mỗi pool nên có thể vượt hạn mức. Chuỗi mẫu chỉ có chỗ giữ `<mật khẩu>`, không chứa mật khẩu thật.
 - Session pooler không cần tắt prepared statement hay thêm `No Reset On Close` (các tùy chọn đó chỉ dành cho Transaction pooler).
 - Render free tự ngủ sau 15 phút không có request, lần đầu gọi lại mất khoảng 1 phút để khởi động; trận đang chơi sẽ rớt kết nối nếu server ngủ giữa chừng.
 - Supabase free tạm dừng project nếu một tuần không hoạt động; vào dashboard để khôi phục.

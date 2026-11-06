@@ -62,7 +62,7 @@ public sealed class GameService(
                 throw new ConflictException($"Phòng đã đủ {Room.MAX_PLAYERS} người chơi.");
             }
 
-            if (snapshot.Players.Any(p => p.DisplayName == displayName))
+            if (snapshot.Players.Any(p => string.Equals(p.DisplayName, displayName, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new ConflictException("Tên hiển thị đã có người dùng trong phòng.");
             }

@@ -174,7 +174,7 @@ Kiến trúc: **Supabase** (PostgreSQL) ← **Render** (backend, Docker) ← **V
 **Thứ tự**
 
 1. **Supabase**: tạo project (region Singapore). Lấy chuỗi **Session pooler** (cổng 5432, không dùng Transaction pooler cổng 6543 và không dùng kết nối trực tiếp). Chỉ dùng Supabase như PostgreSQL, không dùng Auth/REST/Realtime.
-   **Tắt Data API** (Project Settings → Data API) trước khi chạy migration: backend không dùng REST tự sinh của Supabase, và các bảng trong schema `public` chưa bật RLS nên nếu Data API bật thì ai có anon key cũng đọc/ghi được (kể cả `Users`).
+   **Tắt Data API** (Integrations → Data API → tắt Enable Data API) trước khi chạy migration: backend không dùng REST tự sinh của Supabase, và các bảng trong schema `public` chưa bật RLS nên nếu Data API bật thì ai có anon key cũng đọc/ghi được (kể cả `Users`).
 2. **Chạy migration** (làm tay, backend không tự chạy migration): `./scripts/migrate-prod.ps1` sinh `scripts/out/migrate-prod.sql` (idempotent, chạy lại không lỗi). Dán file vào Supabase SQL Editor, hoặc chạy trực tiếp: `./scripts/migrate-prod.ps1 -ConnectionString "postgresql://postgres.<ref>:<mật khẩu>@<host>:5432/postgres?sslmode=require"` (cần `psql`).
 3. **Render**: New Web Service từ repo này, runtime **Docker**, region Singapore, Dockerfile Path `./backend/Dockerfile`, Docker Context `./backend`, Health Check Path `/api/health`. Đặt các biến ở bảng dưới. Render tự cấp `PORT`, backend đọc biến này.
 4. **Vercel**: import repo, Root Directory `frontend`. Đặt `VITE_API_URL` (URL của backend trên Render) **trước khi build** (Vite nhúng giá trị lúc build; đổi sau phải build lại). `frontend/vercel.json` rewrite mọi đường dẫn về `index.html` để vào thẳng `/play/ABC123` không bị 404.

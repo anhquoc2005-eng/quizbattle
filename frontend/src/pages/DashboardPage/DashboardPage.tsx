@@ -5,6 +5,7 @@ import { ErrorRetry } from '../../components/ErrorRetry'
 import { LogoMark } from '../../components/LogoMark'
 import { useAuth } from '../../hooks/useAuth'
 import { useRooms } from '../../hooks/useRooms'
+import { getSetupProgress, type StepStatus } from './setupProgress'
 import { CreateRoomForm } from './CreateRoomForm'
 import { RoomList } from './RoomList'
 
@@ -27,7 +28,7 @@ export function DashboardPage() {
   const hasAnyRoom = rooms.length > 0
   const openRooms = rooms.filter((room) => room.status !== 'Finished')
   const finishedRooms = rooms.filter((room) => room.status === 'Finished')
-  const doneSteps = hasAnyRoom ? 2 : 1
+  const { doneSteps, createRoomStatus } = getSetupProgress(roomsQuery.isPending, hasAnyRoom)
 
   return (
     <>
@@ -65,7 +66,7 @@ export function DashboardPage() {
 
           <section className="card col-span-full grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2" aria-labelledby="setup-title">
             <h2 id="setup-title">Bắt đầu với QuizBattle</h2>
-            <span className="justify-self-end text-xs text-faint">{doneSteps} trên {TOTAL_STEPS} bước</span>
+            <span className="justify-self-end text-xs text-faint">{roomsQuery.isPending ? 'Đang tải…' : `${doneSteps} trên ${TOTAL_STEPS} bước`}</span>
             <div
               className="col-span-full h-1.5 overflow-hidden rounded-full bg-raised"
               role="progressbar"
@@ -77,9 +78,9 @@ export function DashboardPage() {
               <span className="block h-full bg-accent" style={{ width: `${(doneSteps / TOTAL_STEPS) * 100}%` }} />
             </div>
             <div className="col-span-full mt-2 grid grid-cols-1 gap-3.5 min-[861px]:grid-cols-3">
-              <StepCard title="Tạo tài khoản" done />
-              <StepCard title="Tạo phòng đầu tiên" description="Nhập chủ đề, AI soạn câu hỏi" done={hasAnyRoom} />
-              <StepCard title="Mời người chơi" description="Gửi mã phòng cho bạn bè" />
+              <StepCard title="Tạo tài khoản" status="done" />
+              <StepCard title="Tạo phòng đầu tiên" description="Nhập chủ đề, AI soạn câu hỏi" status={createRoomStatus} />
+              <StepCard title="Mời người chơi" description="Gửi mã phòng cho bạn bè" status="todo" />
             </div>
           </section>
 
@@ -110,11 +111,17 @@ export function DashboardPage() {
   )
 }
 
-function StepCard({ title, description, done }: { title: string; description?: string; done?: boolean }) {
+function StepCard({ title, description, status }: { title: string; description?: string; status: StepStatus }) {
   return (
     <div className="grid gap-1 rounded-[14px] bg-raised px-4 py-3.5">
       <b className="font-semibold">{title}</b>
-      {done ? <span className="text-xs text-positive">Đã xong</span> : <span className="text-muted">{description}</span>}
+      {status === 'done' ? (
+        <span className="text-xs text-positive">Đã xong</span>
+      ) : status === 'loading' ? (
+        <span className="text-muted">Đang tải…</span>
+      ) : (
+        <span className="text-muted">{description}</span>
+      )}
     </div>
   )
 }

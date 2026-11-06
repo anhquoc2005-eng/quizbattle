@@ -167,11 +167,45 @@ dotnet tool install --global csharp-ls
 npm install -g typescript-language-server typescript
 ```
 
+## Deploy
+
+Kiến trúc: **Supabase** (PostgreSQL) ← **Render** (backend, Docker) ← **Vercel** (frontend tĩnh). Secret chỉ đặt trong biến môi trường của từng dịch vụ, không commit.
+
+**Thứ tự**
+
+1. **Supabase**: tạo project (region Singapore). Lấy chuỗi **Session pooler** (cổng 5432, không dùng Transaction pooler cổng 6543 và không dùng kết nối trực tiếp). Chỉ dùng Supabase như PostgreSQL, không dùng Auth/REST/Realtime.
+2. **Chạy migration** (làm tay, backend không tự chạy migration): `./scripts/migrate-prod.ps1` sinh `scripts/out/migrate-prod.sql` (idempotent, chạy lại không lỗi). Dán file vào Supabase SQL Editor, hoặc chạy trực tiếp: `./scripts/migrate-prod.ps1 -ConnectionString "postgresql://postgres.<ref>:<mật khẩu>@<host>:5432/postgres?sslmode=require"` (cần `psql`).
+3. **Render**: New Web Service từ repo này, runtime **Docker**, region Singapore, Dockerfile Path `./backend/Dockerfile`, Docker Context `./backend`, Health Check Path `/api/health`. Đặt các biến ở bảng dưới. Render tự cấp `PORT`, backend đọc biến này.
+4. **Vercel**: import repo, Root Directory `frontend`. Đặt `VITE_API_URL` (URL của backend trên Render) **trước khi build** (Vite nhúng giá trị lúc build; đổi sau phải build lại). `frontend/vercel.json` rewrite mọi đường dẫn về `index.html` để vào thẳng `/play/ABC123` không bị 404.
+5. Quay lại Render, đặt `Cors__AllowedOrigins` bằng domain Vercel (ví dụ `https://quizbattle.vercel.app`, nhiều domain cách nhau bằng dấu phẩy) rồi deploy lại backend.
+
+**Biến môi trường**
+
+| Dịch vụ | Biến | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| Render | `ASPNETCORE_ENVIRONMENT` | Có | `Production` (bật ForwardedHeaders và kiểm tra cấu hình lúc khởi động) |
+| Render | `ConnectionStrings__Default` | Có | `Host=<host pooler>;Port=5432;Database=postgres;Username=postgres.<project-ref>;Password=<mật khẩu>;SSL Mode=Require;Maximum Pool Size=10` |
+| Render | `Jwt__Key` | Có | Chuỗi ngẫu nhiên >= 32 byte |
+| Render | `Jwt__Issuer`, `Jwt__Audience` | Có | Ví dụ `quizbattle` |
+| Render | `Ai__ApiKey`, `Ai__Model` | Có (Production) | Khóa và model Gemini |
+| Render | `Cors__AllowedOrigins` | Có (Production) | Domain Vercel, không dùng `*` |
+| Render | `ForwardedHeaders__ClientIpHeader` | Có | `CF-Connecting-IP` (Render đứng sau Cloudflare, `X-Forwarded-For` có 2 IP nên không dùng được cho rate limit) |
+| Vercel | `VITE_API_URL` | Có | URL backend, đặt lúc build |
+
+Thiếu `Cors__AllowedOrigins`, `Ai__*`, `Jwt__*` hoặc connection string thì backend không khởi động và log nêu rõ tên biến thiếu.
+
+**Lưu ý**
+
+- `SSL Mode=Require` mã hóa kết nối nhưng không xác minh chuỗi chứng chỉ của server (đã kiểm với Npgsql 8). Tăng cường sau này: `SSL Mode=VerifyFull` kèm root CA của Supabase.
+- Session pooler không cần tắt prepared statement hay thêm `No Reset On Close` (các tùy chọn đó chỉ dành cho Transaction pooler).
+- Render free tự ngủ sau 15 phút không có request, lần đầu gọi lại mất khoảng 1 phút để khởi động; trận đang chơi sẽ rớt kết nối nếu server ngủ giữa chừng.
+- Supabase free tạm dừng project nếu một tuần không hoạt động; vào dashboard để khôi phục.
+- Backend chỉ chạy đúng với 1 instance (xem "Hạn chế đã biết").
+
 ## Hạn chế đã biết
 
 - **Login không chống timing side-channel**: thời gian xử lý "email không tồn tại" (không hash) khác "sai mật khẩu" (có hash) dù trả về cùng message, nên về lý thuyết kẻ tấn công có thể đo thời gian để dò email tồn tại qua endpoint login. Trên thực tế không tăng rủi ro: `POST /api/auth/register` đã trả 409 ngay khi email tồn tại, tức là cách lộ email tồn tại dễ và rẻ hơn nhiều đã có sẵn. Chặn timing ở riêng login không giải quyết được gốc vấn đề; muốn chặn triệt để cần thêm bước xác minh email (gửi mail, click link) — ngoài phạm vi MVP này.
 - **GameHub chỉ chạy đúng với 1 instance backend**: nhóm SignalR (Groups) và trạng thái kết nối (Context.Items) sống trong bộ nhớ của từng tiến trình. Nếu scale ngang ra nhiều instance, 2 người trong cùng phòng có thể rơi vào 2 instance khác nhau và không nhận được broadcast của nhau. Muốn chạy nhiều instance cần thêm **Redis backplane** cho SignalR (gói `Microsoft.AspNetCore.SignalR.StackExchangeRedis`, gọi `AddStackExchangeRedis(...)` sau `AddSignalR()`) để các instance chia sẻ group/connection qua Redis pub/sub — chưa làm ở bước này.
-- **Tên hiển thị người chơi trùng đang so phân biệt hoa thường**: "Alice" và "alice" được coi là 2 tên khác nhau khi vào cùng phòng (so sánh `==` thường, khớp đúng unique index `(RoomId, DisplayName)` trong DB). Có thể gây nhầm lẫn nhẹ trên bảng xếp hạng nhưng không phải lỗi bảo mật.
 - **JWT của chủ phòng hết hạn giữa trận (60 phút) làm mất kết nối màn điều khiển**: khác với người chơi (dùng `sessionToken` không hết hạn giữa trận), kết nối SignalR của chủ phòng xác thực bằng JWT đăng nhập. Nếu một trận kéo dài quá 60 phút, JWT hết hạn thì `withAutomaticReconnect` sẽ thử nối lại nhưng bị 401 vì token cũ trong `accessTokenFactory` đã hết hạn — màn điều khiển rơi vào trạng thái lỗi, chủ phòng phải đăng nhập lại. Điểm và trạng thái trận ở server không mất (server không phụ thuộc kết nối của chủ phòng), người chơi không bị ảnh hưởng. Chưa xử lý refresh token tự động trong phạm vi MVP này.
 
 ## Quy tắc dự án

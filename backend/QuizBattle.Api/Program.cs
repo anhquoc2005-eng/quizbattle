@@ -20,6 +20,11 @@ const string JoinRoomRateLimiterPolicy = "join-room";
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (builder.Environment.IsProduction())
+{
+    ProductionConfigValidator.Validate(builder.Configuration);
+}
+
 // Render (và các nơi host tương tự) cấp cổng qua biến PORT; không có thì giữ cấu hình mặc định (dev: launchSettings, cổng 5000).
 var port = builder.Configuration["PORT"];
 if (!string.IsNullOrEmpty(port))

@@ -1,0 +1,22 @@
+name: Keepalive
+
+on:
+  schedule:
+    - cron: "17 2 */2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Gọi /api/health (đánh thức Render, chạm DB Supabase)
+        env:
+          HEALTH_URL: ${{ vars.HEALTH_URL || 'https://quizbattle-mh1n.onrender.com/api/health' }}
+        run: |
+          curl --fail --silent --show-error --max-time 120 \
+            --retry 3 --retry-delay 20 --retry-all-errors "$HEALTH_URL"
+          echo

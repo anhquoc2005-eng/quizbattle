@@ -202,6 +202,8 @@ Thiếu `Cors__AllowedOrigins`, `Ai__*`, `Jwt__*` hoặc connection string thì 
 - Session pooler không cần tắt prepared statement hay thêm `No Reset On Close` (các tùy chọn đó chỉ dành cho Transaction pooler).
 - Render free tự ngủ sau 15 phút không có request, lần đầu gọi lại mất khoảng 1 phút để khởi động; trận đang chơi sẽ rớt kết nối nếu server ngủ giữa chừng.
 - Supabase free tạm dừng project nếu một tuần không hoạt động; vào dashboard để khôi phục.
+- Workflow `.github/workflows/keepalive.yml` gọi `GET /api/health` mỗi 2 ngày (và chạy tay được ở tab Actions) để Render thức dậy và Supabase có truy vấn DB, nên không bị tạm dừng. Job fail nếu không nhận 200. Đổi URL bằng biến repo `HEALTH_URL` (Settings → Variables), mặc định là backend trên Render.
+- GitHub tự tắt workflow theo lịch nếu repo không có commit trong 60 ngày. Khi đó vào tab Actions, chọn workflow Keepalive và bật lại.
 - Backend chỉ chạy đúng với 1 instance (xem "Hạn chế đã biết").
 
 ## Hạn chế đã biết

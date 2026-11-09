@@ -26,6 +26,15 @@ public sealed class GlobalExceptionHandlerTests
         Assert.False(problem.Extensions.ContainsKey("code"));
     }
 
+    [Fact]
+    public async Task GlobalExceptionHandler_SessionReplaced_Returns401WithCode()
+    {
+        var (problem, status) = await HandleAsync(new SessionReplacedException("Bạn đã vào phòng từ thiết bị khác."));
+
+        Assert.Equal(StatusCodes.Status401Unauthorized, status);
+        Assert.Equal("session_replaced", problem.Extensions["code"]);
+    }
+
     private static async Task<(ProblemDetails Problem, int Status)> HandleAsync(Exception exception)
     {
         var problemDetails = new CapturingProblemDetailsService();

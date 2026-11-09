@@ -143,6 +143,18 @@ public sealed class GameServiceTests
     }
 
     [Fact]
+    public async Task NextQuestion_AfterFinished_Conflict()
+    {
+        var room = NewRoom(RoomStatus.Finished);
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(NewQuestion(room.Id, 0, startedAt: Now, endedAt: Now.AddSeconds(20)));
+        var service = CreateService(repository);
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            service.NextQuestionAsync(HostUserId, room.Code, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task SubmitAnswer_AfterDeadline_Rejected()
     {
         var room = NewRoom(RoomStatus.InProgress, timeLimitSeconds: 20);

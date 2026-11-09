@@ -158,6 +158,12 @@ public sealed class GameService(
         {
             RequireHost(snapshot, hostUserId);
 
+            // Phòng đã Finished thì câu cuối vẫn có EndedAt: không chặn ở đây thì lần gọi thứ hai sẽ chạy lại nhánh kết thúc trận.
+            if (snapshot.Room.Status != RoomStatus.InProgress)
+            {
+                throw new ConflictException("Trận không đang diễn ra.");
+            }
+
             var current = snapshot.CurrentQuestion;
             if (current is null || current.EndedAt is null)
             {

@@ -20,7 +20,7 @@ public sealed class GlobalExceptionHandler(
         var (status, title, type) = exception switch
         {
             ConflictException => (StatusCodes.Status409Conflict, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.10"),
-            UnauthorizedException => (StatusCodes.Status401Unauthorized, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.2"),
+            UnauthorizedException or SessionReplacedException => (StatusCodes.Status401Unauthorized, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.2"),
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.5"),
             BadGatewayException => (StatusCodes.Status502BadGateway, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.6.3"),
             AiUnavailableException => (StatusCodes.Status503ServiceUnavailable, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.6.4"),
@@ -42,7 +42,13 @@ public sealed class GlobalExceptionHandler(
         };
 
         // Trường mở rộng "code" (không đổi cấu trúc ProblemDetails) để client phân biệt nguyên nhân 401.
-        if (exception is UnauthorizedException { Code: { } code })
+        var code = exception switch
+        {
+            UnauthorizedException { Code: { } c } => c,
+            SessionReplacedException => "session_replaced",
+            _ => null,
+        };
+        if (code is not null)
         {
             problemDetails.Extensions["code"] = code;
         }

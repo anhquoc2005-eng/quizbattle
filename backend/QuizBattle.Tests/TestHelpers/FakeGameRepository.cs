@@ -27,6 +27,9 @@ public sealed class FakeGameRepository : IGameRepository
 
     public List<CoinTransaction> CoinTransactions { get; } = [];
 
+    /// <summary>Gọi sau work, trước khi áp thưởng; ném lỗi để mô phỏng bước lưu thất bại.</summary>
+    public Action? FailBeforeCommit { get; set; }
+
     public Task<GameSnapshot?> FindSnapshotByCodeAsync(string code, CancellationToken cancellationToken) =>
         Task.FromResult(Room.Code == code ? BuildSnapshot() : null);
 
@@ -98,19 +101,54 @@ public sealed class FakeGameRepository : IGameRepository
     private async Task<TResult> RunLockedAsync<TResult>(Func<GameSnapshot, TResult> work, CancellationToken cancellationToken)
     {
         await _roomLock.WaitAsync(cancellationToken);
+        var rollback = CaptureState();
         try
         {
             var snapshot = BuildSnapshot();
             var result = work(snapshot);
 
+            FailBeforeCommit?.Invoke(); // mô phỏng SaveChanges lỗi sau khi work đã sửa entity
             MatchRewards.AddRange(snapshot.NewMatchRewards);
             CoinTransactions.AddRange(snapshot.NewCoinTransactions);
             return result;
+        }
+        catch
+        {
+            rollback(); // như transaction thật: work hoặc SaveChanges lỗi thì không giữ thay đổi nào
+            throw;
         }
         finally
         {
             _roomLock.Release();
         }
+    }
+
+    // Chụp các trường work có thể sửa (entity thật được EF theo dõi nên rollback = bỏ thay đổi chưa lưu).
+    private Action CaptureState()
+    {
+        var (status, startedAt, endedAt) = (Room.Status, Room.StartedAt, Room.EndedAt);
+        var questions = Questions.Select(q => (q, q.StartedAt, q.EndedAt)).ToList();
+        var scores = Players.Select(p => (p, p.Score)).ToList();
+        var users = Users.Select(u => (u, u.TotalXp, u.CoinBalance)).ToList();
+
+        return () =>
+        {
+            (Room.Status, Room.StartedAt, Room.EndedAt) = (status, startedAt, endedAt);
+            foreach (var (q, s, e) in questions)
+            {
+                (q.StartedAt, q.EndedAt) = (s, e);
+            }
+
+            foreach (var (p, score) in scores)
+            {
+                p.Score = score;
+            }
+
+            foreach (var (u, xp, coins) in users)
+            {
+                (u.TotalXp, u.CoinBalance) = (xp, coins);
+            }
+        };
     }
 
     private GameSnapshot BuildSnapshot()

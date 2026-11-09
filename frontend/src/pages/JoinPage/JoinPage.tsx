@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { ApiError, describeApiError, describeJoinAuthError } from '../../api/apiError'
 import { createPlayer } from '../../api/game'
 import { savePlayerSession } from '../../api/playerSession'
@@ -14,9 +14,16 @@ import { validateJoinForm, type JoinFormErrors } from '../../validation/joinForm
 
 const JOIN_FIELDS = ['code', 'displayName'] as const
 
+/** Thông báo do trang trước gửi kèm khi chuyển về /join (ví dụ bị thiết bị khác thay thế). */
+function readNotice(state: unknown): string | null {
+  const notice = typeof state === 'object' && state !== null ? (state as { notice?: unknown }).notice : undefined
+  return typeof notice === 'string' && notice !== '' ? notice : null
+}
+
 /** Màn công khai để người chơi vào phòng bằng mã - không cần tài khoản. */
 export function JoinPage() {
   const navigate = useNavigate()
+  const notice = readNotice(useLocation().state)
   const { sessionExpired, dismissSessionExpired } = useAuth()
   const [searchParams] = useSearchParams()
   const [code, setCode] = useState((searchParams.get('code') ?? '').toUpperCase())
@@ -78,6 +85,11 @@ export function JoinPage() {
             <div>
               <h1 id="join-title">Vào phòng</h1>
               <p className="mt-1 text-muted">Nhập mã phòng chủ phòng đã gửi cho bạn.</p>
+              {notice && (
+                <p className="mt-2" role="status">
+                  {notice}
+                </p>
+              )}
             </div>
             <FormField
               id="code"

@@ -6,7 +6,7 @@ import { GameConnectionContext } from './gameConnectionContext'
 import { GAME_HUB_EVENTS, GAME_HUB_METHODS } from './events'
 import { gameReducer, initialGameState, type GameState } from './gameReducer'
 import { nextRetryDelayMs, reconnectPolicy } from './retryPolicy'
-import { shouldIgnoreError } from './sessionErrors'
+import { isSessionReplaced, shouldIgnoreError } from './sessionErrors'
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -69,6 +69,8 @@ export function GameConnectionProvider({
     connection.on(GAME_HUB_EVENTS.GAME_ENDED, (payload: GameEnded) => dispatch({ type: 'GAME_ENDED', payload }))
     connection.on(GAME_HUB_EVENTS.ERROR, (payload: GameError) => {
       if (!shouldIgnoreError(payload)) setLastError(payload)
+      // Thiết bị khác đã thay thế phiên này: dừng hẳn để withAutomaticReconnect/kết nối lại không dùng token cũ nữa.
+      if (isSessionReplaced(payload)) void connection.stop()
     })
 
     connection.onreconnecting(() => setConnectionStatus('reconnecting'))

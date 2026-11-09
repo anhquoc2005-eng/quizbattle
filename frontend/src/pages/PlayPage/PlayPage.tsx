@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router'
 import { clearPlayerSession, loadPlayerSession } from '../../api/playerSession'
 import { GameConnectionProvider } from '../../realtime/GameConnectionProvider'
 import { getScreen } from '../../realtime/gameScreen'
-import { shouldDiscardSession } from '../../realtime/sessionErrors'
+import { isSessionReplaced, shouldDiscardSession } from '../../realtime/sessionErrors'
 import { useGameConnection } from '../../realtime/useGameConnection'
 import { PlayFinished } from './PlayFinished'
 import { PlayLobby } from './PlayLobby'
@@ -43,7 +43,7 @@ function PlayPageContent({ code }: { code: string }) {
 
     if (shouldDiscardSession(lastError)) {
       clearPlayerSession(code)
-      navigate(`/join?code=${code}`, { replace: true })
+      navigate(`/join?code=${code}`, { replace: true, state: isSessionReplaced(lastError) ? { notice: lastError.message } : undefined })
     }
   }, [lastError, code, navigate])
 

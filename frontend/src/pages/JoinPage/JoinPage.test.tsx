@@ -45,10 +45,10 @@ function LogoutProbe() {
   )
 }
 
-function renderJoin() {
+function renderJoin(state?: unknown) {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false } } })}>
-      <MemoryRouter initialEntries={['/join?code=ABCDEF']}>
+      <MemoryRouter initialEntries={[{ pathname: '/join', search: '?code=ABCDEF', state }]}>
         <AuthProvider>
           <Routes>
             <Route path="/join" element={<JoinPage />} />
@@ -156,6 +156,19 @@ describe('JoinPage: phiên đăng nhập hết hạn', () => {
 
     expect(await screen.findByRole('dialog', { name: 'Phiên đăng nhập đã hết hạn' })).toBeTruthy()
     expect(createPlayer).not.toHaveBeenCalled()
+  })
+
+  it('JoinPage_RedirectedWithNotice_ShowsNotice', () => {
+    // PlayPage chuyển về /join kèm thông báo khi bị thiết bị khác thay thế (session_replaced).
+    renderJoin({ notice: 'Bạn đã vào phòng từ thiết bị khác.' })
+
+    expect(screen.getByRole('status').textContent).toBe('Bạn đã vào phòng từ thiết bị khác.')
+  })
+
+  it('JoinPage_NoNotice_ShowsNoStatus', () => {
+    renderJoin()
+
+    expect(screen.queryByRole('status')).toBeNull()
   })
 
   it('JoinPage_NoStoredAuth_GuestJoinsNormally', async () => {

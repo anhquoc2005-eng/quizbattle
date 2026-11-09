@@ -124,7 +124,7 @@ export interface AnswerAck {
 /** Khớp GameErrorDto - payload sự kiện Error. */
 export interface GameError {
   method: string
-  code: 'unauthorized' | 'not_found' | 'conflict' | 'unknown'
+  code: 'unauthorized' | 'not_found' | 'conflict' | 'session_replaced' | 'unknown'
   message: string
 }
 

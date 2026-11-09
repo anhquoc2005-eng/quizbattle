@@ -42,6 +42,8 @@ export interface RoomState {
   playerId: string | null
   hasAnsweredCurrentQuestion: boolean | null
   serverTime: string
+  /** Có giá trị khi status = Finished (thưởng đã lưu), null ở trạng thái khác. */
+  rewards: PlayerReward[] | null
 }
 
 /** Khớp QuestionStartedDto - KHÔNG có correctIndex. */
@@ -71,9 +73,30 @@ export interface LeaderboardUpdated {
   leaderboard: LeaderboardEntry[]
 }
 
+/** Lý do không nhận thưởng - khớp PlayerRewardDto.NotAwardedReason. */
+export type NotAwardedReason = 'guest' | 'host' | 'no_answers' | 'not_enough_accounts'
+
+/** Khớp PlayerRewardDto - tổng Xu nhận được = coins + rankBonus. totalXp/level* chỉ có khi awarded. */
+export interface PlayerReward {
+  playerId: string
+  awarded: boolean
+  notAwardedReason: NotAwardedReason | null
+  rewardRank: number
+  score: number
+  xp: number
+  coins: number
+  rankBonus: number
+  noRankBonusReason: 'zero_score' | null
+  totalXp: number | null
+  levelBefore: number | null
+  levelAfter: number | null
+  leveledUp: boolean | null
+}
+
 /** Khớp GameEndedDto. */
 export interface GameEnded {
   finalLeaderboard: LeaderboardEntry[]
+  rewards: PlayerReward[]
 }
 
 /** Khớp PlayerJoinedDto. */

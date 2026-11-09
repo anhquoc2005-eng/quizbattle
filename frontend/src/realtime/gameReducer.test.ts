@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { GameEnded, PlayerJoined, PlayerLeft, QuestionEnded, QuestionStarted, RoomState } from '../types/game'
+import type { GameEnded, PlayerJoined, PlayerLeft, PlayerReward, QuestionEnded, QuestionStarted, RoomState } from '../types/game'
 import { gameReducer, initialGameState, type GameState } from './gameReducer'
 
 const ENDED_AT = '2026-01-01T12:00:10.000Z'
@@ -17,8 +17,25 @@ function roomState(overrides: Partial<RoomState> = {}): RoomState {
     playerId: 'p1',
     hasAnsweredCurrentQuestion: null,
     serverTime: new Date().toISOString(),
+    rewards: null,
     ...overrides,
   }
+}
+
+const REWARD: PlayerReward = {
+  playerId: 'p1',
+  awarded: true,
+  notAwardedReason: null,
+  rewardRank: 1,
+  score: 900,
+  xp: 90,
+  coins: 9,
+  rankBonus: 30,
+  noRankBonusReason: null,
+  totalXp: 90,
+  levelBefore: 1,
+  levelAfter: 1,
+  leveledUp: false,
 }
 
 function stateWithQuestion(overrides: Partial<GameState> = {}): GameState {
@@ -130,12 +147,32 @@ describe('gameReducer', () => {
   })
 
   it('GAME_ENDED lưu bảng xếp hạng cuối và chuyển trạng thái Finished', () => {
-    const payload: GameEnded = { finalLeaderboard: [{ playerId: 'p1', displayName: 'Alice', score: 900, rank: 1 }] }
+    const payload: GameEnded = { finalLeaderboard: [{ playerId: 'p1', displayName: 'Alice', score: 900, rank: 1 }], rewards: [REWARD] }
 
     const next = gameReducer(stateWithQuestion(), { type: 'GAME_ENDED', payload })
 
     expect(next.status).toBe('Finished')
     expect(next.finalLeaderboard).toEqual(payload.finalLeaderboard)
     expect(next.leaderboard).toEqual(payload.finalLeaderboard)
+  })
+
+  it('GAME_ENDED lưu rewards của từng người chơi', () => {
+    const payload: GameEnded = { finalLeaderboard: [], rewards: [REWARD] }
+
+    const next = gameReducer(stateWithQuestion(), { type: 'GAME_ENDED', payload })
+
+    expect(next.rewards).toEqual([REWARD])
+  })
+
+  it('ROOM_STATE của phòng đã kết thúc nạp rewards vào state', () => {
+    const next = gameReducer(initialGameState, { type: 'ROOM_STATE', payload: roomState({ status: 'Finished', rewards: [REWARD] }) })
+
+    expect(next.rewards).toEqual([REWARD])
+  })
+
+  it('ROOM_STATE chưa kết thúc thì rewards là null', () => {
+    const next = gameReducer({ ...initialGameState, rewards: [REWARD] }, { type: 'ROOM_STATE', payload: roomState() })
+
+    expect(next.rewards).toBeNull()
   })
 })

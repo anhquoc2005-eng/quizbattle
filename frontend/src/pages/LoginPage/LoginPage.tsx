@@ -113,7 +113,7 @@ export function LoginPage() {
 }
 
 interface LocationState {
-  from?: { pathname: string }
+  from?: { pathname: string; search?: string }
 }
 
 function isLocationState(value: unknown): value is LocationState {
@@ -122,7 +122,8 @@ function isLocationState(value: unknown): value is LocationState {
 
 function getRedirectPath(state: unknown): string {
   if (isLocationState(state) && typeof state.from?.pathname === 'string') {
-    return state.from.pathname
+    // Giữ cả ?query: từ /join quay lại cần mã phòng (?code=...).
+    return state.from.pathname + (typeof state.from.search === 'string' ? state.from.search : '')
   }
   return '/dashboard'
 }

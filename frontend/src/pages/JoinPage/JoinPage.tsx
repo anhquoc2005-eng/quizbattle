@@ -1,11 +1,14 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { ApiError, describeApiError } from '../../api/apiError'
+import { ApiError, describeApiError, describeJoinAuthError } from '../../api/apiError'
 import { createPlayer } from '../../api/game'
 import { savePlayerSession } from '../../api/playerSession'
+import { isSessionExpiredFlagSet, loadAuth, markSessionExpired } from '../../api/tokenStorage'
 import { FormField } from '../../components/FormField'
 import { LogoMark } from '../../components/LogoMark'
+import { SessionExpiredDialog } from '../../components/SessionExpiredDialog'
+import { useAuth } from '../../hooks/useAuth'
 import { hasFormErrors, mapServerErrorsToFields } from '../../validation/authForm'
 import { validateJoinForm, type JoinFormErrors } from '../../validation/joinForm'
 
@@ -14,6 +17,7 @@ const JOIN_FIELDS = ['code', 'displayName'] as const
 /** Màn công khai để người chơi vào phòng bằng mã - không cần tài khoản. */
 export function JoinPage() {
   const navigate = useNavigate()
+  const { sessionExpired, dismissSessionExpired } = useAuth()
   const [searchParams] = useSearchParams()
   const [code, setCode] = useState((searchParams.get('code') ?? '').toUpperCase())
   const [displayName, setDisplayName] = useState('')
@@ -28,7 +32,11 @@ export function JoinPage() {
     },
     onError: (error: unknown) => {
       setFormError(undefined)
-      if (error instanceof ApiError && error.status === 400) {
+      if (error instanceof ApiError && error.status === 401 && describeJoinAuthError(error.problem) === 'expired') {
+        // Token bị server từ chối: request() đã xóa nó. Báo bằng hộp thoại, không bao giờ tự gửi lại như khách.
+        setFieldErrors({})
+        markSessionExpired()
+      } else if (error instanceof ApiError && error.status === 400) {
         setFieldErrors(mapServerErrorsToFields(error.problem?.errors, JOIN_FIELDS))
       } else if (error instanceof ApiError && error.status === 404) {
         setFieldErrors({ code: 'Không tìm thấy phòng.' })
@@ -41,6 +49,13 @@ export function JoinPage() {
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
+    // Token có thể hết hạn khi người dùng đang ở trang: loadAuth() xóa và đặt cờ, rồi không gửi (nếu gửi, request() sẽ
+    // không kèm token và server coi là khách).
+    loadAuth()
+    if (isSessionExpiredFlagSet()) {
+      return
+    }
+
     const errors = validateJoinForm({ code, displayName })
     setFieldErrors(errors)
     setFormError(undefined)
@@ -78,12 +93,20 @@ export function JoinPage() {
                 {formError}
               </p>
             )}
-            <button className="btn btn-primary justify-self-stretch" type="submit" disabled={mutation.isPending}>
+            <button className="btn btn-primary justify-self-stretch" type="submit" disabled={mutation.isPending || sessionExpired}>
               {mutation.isPending ? 'Đang vào…' : 'Vào phòng'}
             </button>
           </form>
         </section>
       </main>
+      {sessionExpired && (
+        <SessionExpiredDialog
+          onLoginAgain={() =>
+            navigate('/login', { state: { from: { pathname: '/join', search: code.trim() ? `?code=${code.trim().toUpperCase()}` : '' } } })
+          }
+          onContinueAsGuest={dismissSessionExpired}
+        />
+      )}
     </>
   )
 }

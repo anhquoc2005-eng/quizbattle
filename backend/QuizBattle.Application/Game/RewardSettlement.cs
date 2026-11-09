@@ -13,6 +13,12 @@ internal static class RewardSettlement
     /// <summary>Tính và áp thưởng lúc kết thúc trận; trả DTO cho mọi người chơi (khách: "guest").</summary>
     public static IReadOnlyList<PlayerRewardDto> Settle(GameSnapshot snapshot, DateTimeOffset now)
     {
+        // Chỉ ở lượt cuối repository mới khóa và theo dõi Users; nếu không, XP cộng vào entity AsNoTracking sẽ tính ra mà không được lưu.
+        if (!snapshot.IsFinalAdvance)
+        {
+            throw new InvalidOperationException("Chỉ được tính thưởng ở lượt kết thúc trận (Users phải được khóa và theo dõi).");
+        }
+
         var room = snapshot.Room;
         var participants = snapshot.Players
             .Select(p => new RewardParticipant(p.Id, p.UserId, p.Score, snapshot.Answers.Count(a => a.PlayerId == p.Id)))
@@ -72,7 +78,9 @@ internal static class RewardSettlement
                 }
             }
 
-            dtos.Add(ToDto(reward, awarded ? user.TotalXp : null, awarded ? LevelCalculator.FromXp(xpBefore) : null));
+            dtos.Add(awarded
+                ? ToDto(reward, user.TotalXp, LevelCalculator.FromXp(xpBefore), LevelCalculator.FromXp(user.TotalXp))
+                : ToDto(reward, null, null, null));
         }
 
         return dtos;
@@ -87,10 +95,9 @@ internal static class RewardSettlement
         {
             if (rewardsByPlayer.TryGetValue(player.Id, out var reward))
             {
-                // shortcut: TotalXp lấy từ số hiện tại của tài khoản, nên nếu người đó chơi thêm trận khác sau đó thì
-                // LevelBefore/LeveledUp có thể lệch; nâng cấp khi cần lưu TotalXp tại thời điểm kết thúc vào MatchReward.
-                int? totalXp = reward.Status == RewardStatus.Awarded && snapshot.Users.TryGetValue(reward.UserId, out var u) ? u.TotalXp : null;
-                dtos.Add(ToDto(reward, totalXp, totalXp is { } t ? LevelCalculator.FromXp(t - reward.Xp) : null));
+                // MatchReward không lưu TotalXp/cấp lúc kết thúc; suy từ TotalXp hiện tại sẽ sai khi người đó đã chơi
+                // thêm trận khác, nên các trường này để null (client không hiện "lên cấp" khi vào lại phòng cũ).
+                dtos.Add(ToDto(reward, null, null, null));
             }
             else if (player.UserId is null)
             {
@@ -104,10 +111,9 @@ internal static class RewardSettlement
     private static PlayerRewardDto Guest(Player player, int rank) =>
         new(player.Id, false, "guest", rank, player.Score, 0, 0, 0, null, null, null, null, null);
 
-    private static PlayerRewardDto ToDto(MatchReward r, int? totalXp, int? levelBefore)
+    private static PlayerRewardDto ToDto(MatchReward r, int? totalXp, int? levelBefore, int? levelAfter)
     {
         var awarded = r.Status == RewardStatus.Awarded;
-        int? levelAfter = totalXp is { } t ? LevelCalculator.FromXp(t) : null;
         return new PlayerRewardDto(
             r.PlayerId ?? Guid.Empty,
             awarded,

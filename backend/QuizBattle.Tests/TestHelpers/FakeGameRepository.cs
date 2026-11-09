@@ -30,6 +30,9 @@ public sealed class FakeGameRepository : IGameRepository
     /// <summary>Gọi sau work, trước khi áp thưởng; ném lỗi để mô phỏng bước lưu thất bại.</summary>
     public Action? FailBeforeCommit { get; set; }
 
+    /// <summary>Ép IsFinalAdvance của snapshot (null = tính như repository thật) để thử đường Users không được khóa.</summary>
+    public bool? ForceIsFinalAdvance { get; set; }
+
     public Task<GameSnapshot?> FindSnapshotByCodeAsync(string code, CancellationToken cancellationToken) =>
         Task.FromResult(Room.Code == code ? BuildSnapshot() : null);
 
@@ -167,8 +170,8 @@ public sealed class FakeGameRepository : IGameRepository
             TotalQuestionCount = Questions.Count,
             AnsweredCountForCurrentQuestion = current is null ? 0 : Answers.Count(a => a.QuestionId == current.Id),
             Users = Users.Where(u => userIds.Contains(u.Id)).ToDictionary(u => u.Id),
-            IsFinalAdvance = Room.Status == RoomStatus.InProgress
-                && approved.LastOrDefault() is { StartedAt: not null, EndedAt: not null },
+            IsFinalAdvance = ForceIsFinalAdvance
+                ?? (Room.Status == RoomStatus.InProgress && approved.LastOrDefault() is { StartedAt: not null, EndedAt: not null }),
             Rewards = Room.Status == RoomStatus.Finished ? MatchRewards.Where(r => r.RoomId == Room.Id).ToList() : [],
         };
     }

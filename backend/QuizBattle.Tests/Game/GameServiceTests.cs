@@ -579,6 +579,47 @@ public sealed class GameServiceTests
     }
 
     [Fact]
+    public async Task RoomState_Finished_AccountGainedMoreXpSince_LevelAndTotalXpAreNull()
+    {
+        // Vào lại phòng cũ sau khi người chơi đã có thêm XP từ trận khác: không được suy lên cấp từ TotalXp hiện tại.
+        var repository = FinalQuestionRoom(out var room);
+        var (a, userA) = AddAccount(repository, room, "A", score: 800, totalXp: 190); // trận này: 190 -> 270, lên cấp 2
+        AddAccount(repository, room, "B", score: 600);
+        var service = CreateService(repository, FinishAt);
+        var live = RewardOf(await service.NextQuestionAsync(HostUserId, room.Code, CancellationToken.None), a);
+        Assert.True(live.LeveledUp); // lúc kết thúc thì vẫn báo đúng
+        userA.TotalXp += 5000; // trận khác sau đó
+
+        var state = await service.JoinAsHostAsync(HostUserId, room.Code, CancellationToken.None);
+
+        var stored = Assert.Single(state.Rewards!, r => r.PlayerId == a.Id);
+        Assert.True(stored.Awarded);
+        Assert.Equal(80, stored.Xp);
+        Assert.Null(stored.TotalXp);
+        Assert.Null(stored.LevelBefore);
+        Assert.Null(stored.LevelAfter);
+        Assert.Null(stored.LeveledUp);
+    }
+
+    [Fact]
+    public async Task AdvanceToFinished_NotFinalAdvanceSnapshot_ThrowsAndRollsBack()
+    {
+        // Users nạp AsNoTracking (không phải lượt cuối) thì XP tính ra sẽ không được lưu: phải dừng thay vì im lặng.
+        var repository = FinalQuestionRoom(out var room);
+        var (_, userA) = AddAccount(repository, room, "A", score: 800);
+        AddAccount(repository, room, "B", score: 600);
+        repository.ForceIsFinalAdvance = false;
+        var service = CreateService(repository, FinishAt);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.NextQuestionAsync(HostUserId, room.Code, CancellationToken.None));
+
+        Assert.Equal(RoomStatus.InProgress, room.Status);
+        Assert.Equal(0, userA.TotalXp);
+        Assert.Empty(repository.MatchRewards);
+    }
+
+    [Fact]
     public async Task RoomState_NotFinished_RewardsIsNull()
     {
         var room = NewRoom(RoomStatus.Lobby);

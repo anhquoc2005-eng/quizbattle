@@ -39,6 +39,12 @@ describe('RewardSummary', () => {
     expect(screen.getByText('Chúc mừng! Bạn đã lên cấp 2.')).toBeTruthy()
   })
 
+  it('leveledUp null thì không hiện dòng lên cấp', () => {
+    render(<RewardSummary reward={reward({ leveledUp: null, levelBefore: null, levelAfter: null, totalXp: null })} />)
+
+    expect(screen.queryByText(/lên cấp/)).toBeNull()
+  })
+
   it('không có thưởng thì hiện lý do, không hiện số nhận', () => {
     render(<RewardSummary reward={reward({ awarded: false, notAwardedReason: 'not_enough_accounts', xp: 0, coins: 0, rankBonus: 0 })} />)
 

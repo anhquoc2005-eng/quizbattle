@@ -60,6 +60,12 @@ describe('describeReward', () => {
     expect(d.levelUpMessage).toBe('Chúc mừng! Bạn đã lên cấp 2.')
   })
 
+  it('leveledUp null (vào lại phòng cũ, không biết cấp lúc đó) thì không có lời chúc dù có levelAfter', () => {
+    const d = describeReward(reward({ leveledUp: null, levelBefore: null, levelAfter: 7, totalXp: null }))
+
+    expect(d.levelUpMessage).toBeNull()
+  })
+
   it('không lên cấp thì không có lời chúc', () => {
     expect(describeReward(reward()).levelUpMessage).toBeNull()
   })

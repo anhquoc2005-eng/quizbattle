@@ -13,5 +13,11 @@ public sealed class User
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>Tổng XP, chỉ tăng. Cấp độ suy ra bằng LevelCalculator, không lưu cột.</summary>
+    public int TotalXp { get; set; }
+
+    /// <summary>Số dư Xu, không âm; luôn bằng tổng CoinTransactions của người dùng.</summary>
+    public int CoinBalance { get; set; }
+
     public ICollection<Room> HostedRooms { get; set; } = [];
 }

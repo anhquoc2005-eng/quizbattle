@@ -59,6 +59,120 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("QuizBattle.Domain.Entities.CoinTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Amount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid?>("MatchRewardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MatchRewardId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CoinTransactions_MatchRewardId")
+                        .HasFilter("\"MatchRewardId\" IS NOT NULL");
+
+                    b.HasIndex("RoomId");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_CoinTransactions_UserId_CreatedAt");
+
+                    b.ToTable("CoinTransactions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CoinTransactions_Amount_NonZero", "\"Amount\" <> 0");
+                        });
+                });
+
+            modelBuilder.Entity("QuizBattle.Domain.Entities.MatchReward", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Coins")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DenialReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("FinishedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid?>("PlayerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RankBonus")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RewardRank")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RoomCode")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
+
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RoomTopic")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Xp")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_MatchRewards_PlayerId");
+
+                    b.HasIndex("RoomId");
+
+                    b.HasIndex("UserId", "FinishedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_MatchRewards_UserId_FinishedAt");
+
+                    b.ToTable("MatchRewards", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MatchRewards_Amounts_NonNegative", "\"Xp\" >= 0 AND \"Coins\" >= 0 AND \"RankBonus\" >= 0");
+
+                            t.HasCheckConstraint("CK_MatchRewards_DenialReason_MatchesStatus", "(\"Status\" = 'Awarded') = (\"DenialReason\" IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("QuizBattle.Domain.Entities.Player", b =>
                 {
                     b.Property<Guid>("Id")
@@ -96,6 +210,11 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("RoomId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Players_RoomId_UserId")
+                        .HasFilter("\"UserId\" IS NOT NULL");
 
                     b.ToTable("Players", (string)null);
                 });
@@ -203,6 +322,11 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("CoinBalance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamptz");
 
@@ -220,14 +344,28 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("TotalXp")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
                         .IsUnique();
 
+                    b.HasIndex("TotalXp", "CreatedAt", "Id")
+                        .IsDescending(true, false, false)
+                        .HasDatabaseName("IX_Users_TotalXp")
+                        .HasFilter("\"TotalXp\" > 0");
+
                     b.ToTable("Users", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Users_CoinBalance_NonNegative", "\"CoinBalance\" >= 0");
+
                             t.HasCheckConstraint("CK_Users_Email_Lowercase", "\"Email\" = lower(\"Email\")");
+
+                            t.HasCheckConstraint("CK_Users_TotalXp_NonNegative", "\"TotalXp\" >= 0");
                         });
                 });
 
@@ -248,6 +386,44 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
                     b.Navigation("Player");
 
                     b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("QuizBattle.Domain.Entities.CoinTransaction", b =>
+                {
+                    b.HasOne("QuizBattle.Domain.Entities.MatchReward", null)
+                        .WithMany()
+                        .HasForeignKey("MatchRewardId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QuizBattle.Domain.Entities.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QuizBattle.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QuizBattle.Domain.Entities.MatchReward", b =>
+                {
+                    b.HasOne("QuizBattle.Domain.Entities.Player", null)
+                        .WithMany()
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QuizBattle.Domain.Entities.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QuizBattle.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("QuizBattle.Domain.Entities.Player", b =>

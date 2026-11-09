@@ -8,7 +8,7 @@ public sealed class Player
 
     public Room? Room { get; set; }
 
-    // Chuẩn bị cho tính năng người chơi có tài khoản sau này - CHƯA dùng ở bước này.
+    // Tài khoản của người chơi; null nghĩa là khách (không nhận thưởng).
     public Guid? UserId { get; set; }
 
     public required string DisplayName { get; set; }

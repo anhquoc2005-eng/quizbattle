@@ -15,6 +15,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<Answer> Answers => Set<Answer>();
 
+    public DbSet<MatchReward> MatchRewards => Set<MatchReward>();
+
+    public DbSet<CoinTransaction> CoinTransactions => Set<CoinTransaction>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Mỗi entity có một lớp cấu hình riêng (IEntityTypeConfiguration) trong project này.

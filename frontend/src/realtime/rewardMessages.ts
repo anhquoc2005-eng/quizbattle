@@ -11,8 +11,8 @@ export interface RewardDescription {
 }
 
 const NOT_AWARDED_MESSAGES: Record<NotAwardedReason, string> = {
-  guest: 'Khách không nhận thưởng.',
-  host: 'Chủ phòng không nhận thưởng trong phòng của mình.',
+  guest: 'Bạn chơi với tư cách khách nên không nhận thưởng.',
+  host: 'Bạn là chủ phòng nên không nhận thưởng trong phòng của mình.',
   no_answers: 'Bạn chưa trả lời câu nào nên không nhận thưởng.',
   not_enough_accounts: 'Trận chưa đủ 2 tài khoản đã tham gia trả lời nên không ai nhận thưởng.',
 }

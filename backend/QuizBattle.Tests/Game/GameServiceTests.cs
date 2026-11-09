@@ -492,6 +492,126 @@ public sealed class GameServiceTests
         Assert.Equal(SessionTokenHasher.Hash("real-token"), hash);
     }
 
+    // ---- Quy tắc trận hợp lệ và chủ phòng (US3) ----
+
+    [Fact]
+    public async Task GameEnded_InvalidMatch_AllRewardsHaveReason()
+    {
+        var repository = FinalQuestionRoom(out var room);
+        var (lonely, userLonely) = AddAccount(repository, room, "Lonely", score: 700);
+        var guest = AddGuest(repository, room, "Khách", score: 900);
+        var service = CreateService(repository, FinishAt);
+
+        var outcome = await service.NextQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.All(outcome.GameEnded!.Rewards, r =>
+        {
+            Assert.False(r.Awarded);
+            Assert.NotNull(r.NotAwardedReason);
+        });
+        Assert.Equal("not_enough_accounts", RewardOf(outcome, lonely).NotAwardedReason);
+        Assert.Equal("guest", RewardOf(outcome, guest).NotAwardedReason);
+        Assert.Equal(0, userLonely.TotalXp);
+        Assert.Equal(0, userLonely.CoinBalance);
+        Assert.Empty(repository.CoinTransactions);
+    }
+
+    [Fact]
+    public async Task GameEnded_HostAsPlayer_HostRewardNotAwarded()
+    {
+        var repository = FinalQuestionRoom(out var room);
+        var (host, userHost) = AddAccount(repository, room, "Host", score: 950, userId: HostUserId); // chủ phòng tự chơi, đứng nhất
+        var (a, userA) = AddAccount(repository, room, "A", score: 800);
+        AddAccount(repository, room, "B", score: 600);
+        var service = CreateService(repository, FinishAt);
+
+        var outcome = await service.NextQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        var hostReward = RewardOf(outcome, host);
+        Assert.False(hostReward.Awarded);
+        Assert.Equal("host", hostReward.NotAwardedReason);
+        Assert.Equal(1, hostReward.RewardRank); // chiếm hạng 1 nhưng không nhận
+        Assert.Equal(0, userHost.TotalXp);
+        var hostRow = repository.MatchRewards.Single(r => r.PlayerId == host.Id);
+        Assert.Equal(RewardStatus.NotAwarded, hostRow.Status);
+        Assert.Equal(RewardDenialReason.Host, hostRow.DenialReason);
+        Assert.True(RewardOf(outcome, a).Awarded);
+        Assert.Equal(80, userA.TotalXp);
+        Assert.Equal(2, RewardOf(outcome, a).RewardRank); // chủ phòng chiếm hạng 1 nên A hạng 2
+    }
+
+    [Fact]
+    public async Task GameEnded_OneAccountAndManyGuests_NoOneRewarded()
+    {
+        var repository = FinalQuestionRoom(out var room);
+        AddAccount(repository, room, "Solo", score: 500);
+        AddGuest(repository, room, "G1", score: 900);
+        AddGuest(repository, room, "G2", score: 800);
+        AddGuest(repository, room, "G3", score: 700);
+        var service = CreateService(repository, FinishAt);
+
+        var outcome = await service.NextQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.All(outcome.GameEnded!.Rewards, r => Assert.False(r.Awarded));
+        Assert.All(repository.MatchRewards, r => Assert.Equal(RewardStatus.NotAwarded, r.Status));
+        Assert.Empty(repository.CoinTransactions);
+    }
+
+    [Fact]
+    public async Task GameEnded_GuestFirstAccountSecond_AccountGetsRank2Bonus()
+    {
+        var repository = FinalQuestionRoom(out var room);
+        AddGuest(repository, room, "Khách", score: 900);
+        var (a, userA) = AddAccount(repository, room, "A", score: 800);
+        AddAccount(repository, room, "B", score: 600);
+        var service = CreateService(repository, FinishAt);
+
+        var outcome = await service.NextQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        var ra = RewardOf(outcome, a);
+        Assert.Equal(2, ra.RewardRank);
+        Assert.Equal(20, ra.RankBonus);
+        Assert.Equal(8 + 20, userA.CoinBalance);
+    }
+
+    [Fact]
+    public async Task GameEnded_GuestPlayer_NoMatchRewardRow()
+    {
+        var repository = FinalQuestionRoom(out var room);
+        var guest = AddGuest(repository, room, "Khách", score: 900);
+        AddAccount(repository, room, "A", score: 800);
+        AddAccount(repository, room, "B", score: 600);
+        var service = CreateService(repository, FinishAt);
+
+        var outcome = await service.NextQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.DoesNotContain(repository.MatchRewards, r => r.PlayerId == guest.Id);
+        Assert.Equal(2, repository.MatchRewards.Count); // chỉ hai tài khoản
+        var guestReward = RewardOf(outcome, guest); // nhưng DTO vẫn có phần tử cho khách
+        Assert.False(guestReward.Awarded);
+        Assert.Equal("guest", guestReward.NotAwardedReason);
+    }
+
+    [Fact]
+    public async Task GameEnded_AccountNeverAnswered_DeniedWithNoAnswers()
+    {
+        var repository = FinalQuestionRoom(out var room);
+        var (a, userA) = AddAccount(repository, room, "A", score: 800);
+        AddAccount(repository, room, "B", score: 600);
+        var (silent, userSilent) = AddAccount(repository, room, "Silent", score: 0, answered: false);
+        var service = CreateService(repository, FinishAt);
+
+        var outcome = await service.NextQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        var rs = RewardOf(outcome, silent);
+        Assert.False(rs.Awarded);
+        Assert.Equal("no_answers", rs.NotAwardedReason);
+        Assert.Equal(0, userSilent.TotalXp);
+        Assert.Equal(RewardDenialReason.NoAnswers, repository.MatchRewards.Single(r => r.PlayerId == silent.Id).DenialReason);
+        Assert.True(RewardOf(outcome, a).Awarded); // hai người đã trả lời vẫn nhận
+        Assert.Equal(80, userA.TotalXp);
+    }
+
     // ---- Thưởng cuối trận (US1) ----
 
     [Fact]
@@ -822,23 +942,40 @@ public sealed class GameServiceTests
     }
 
     // Người chơi có tài khoản, đã trả lời câu duy nhất của phòng (AnsweredCount = 1).
-    private static (Player Player, User User) AddAccount(FakeGameRepository repository, Room room, string name, int score, int totalXp = 0)
+    private static (Player Player, User User) AddAccount(
+        FakeGameRepository repository, Room room, string name, int score, int totalXp = 0, bool answered = true, Guid? userId = null)
     {
         var user = new User
         {
-            Id = Guid.NewGuid(), Email = $"{name}@test.local", PasswordHash = "h", DisplayName = name, CreatedAt = Now, TotalXp = totalXp,
+            Id = userId ?? Guid.NewGuid(), Email = $"{name}@test.local", PasswordHash = "h", DisplayName = name, CreatedAt = Now, TotalXp = totalXp,
         };
         var player = NewPlayer(room.Id, name, tokenHash: $"hash-{name}", score: score);
         player.UserId = user.Id;
         repository.Users.Add(user);
         repository.Players.Add(player);
+        if (answered)
+        {
+            AddAnswer(repository, player, score);
+        }
+
+        return (player, user);
+    }
+
+    // Khách (UserId null) đã trả lời câu duy nhất của phòng.
+    private static Player AddGuest(FakeGameRepository repository, Room room, string name, int score)
+    {
+        var player = NewPlayer(room.Id, name, tokenHash: $"hash-{name}", score: score);
+        repository.Players.Add(player);
+        AddAnswer(repository, player, score);
+        return player;
+    }
+
+    private static void AddAnswer(FakeGameRepository repository, Player player, int score) =>
         repository.Answers.Add(new Answer
         {
             Id = Guid.NewGuid(), PlayerId = player.Id, QuestionId = repository.Questions[0].Id, SelectedIndex = 0,
             AnsweredAt = Now.AddSeconds(1), IsCorrect = score > 0, PointsAwarded = score,
         });
-        return (player, user);
-    }
 
     private static User NewUser(string name) => new()
     {

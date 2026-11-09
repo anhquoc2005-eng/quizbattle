@@ -52,6 +52,19 @@ describe('RewardSummary', () => {
     expect(screen.queryByText(/Bạn nhận/)).toBeNull()
   })
 
+  it.each([
+    ['guest', 'Bạn chơi với tư cách khách nên không nhận thưởng.'],
+    ['host', 'Bạn là chủ phòng nên không nhận thưởng trong phòng của mình.'],
+    ['no_answers', 'Bạn chưa trả lời câu nào nên không nhận thưởng.'],
+    ['not_enough_accounts', 'Trận chưa đủ 2 tài khoản đã tham gia trả lời nên không ai nhận thưởng.'],
+  ] as const)('không có thưởng, lý do %s: hiện đúng câu cho người xem và không hiện số nhận', (code, sentence) => {
+    render(<RewardSummary reward={reward({ awarded: false, notAwardedReason: code, xp: 0, coins: 0, rankBonus: 0, totalXp: null, levelBefore: null, levelAfter: null, leveledUp: null })} />)
+
+    expect(screen.getByText(sentence)).toBeTruthy()
+    expect(screen.queryByText(/Bạn nhận/)).toBeNull()
+    expect(screen.queryByText(/lên cấp/)).toBeNull()
+  })
+
   it('điểm 0 thì ghi chú không có thưởng hạng', () => {
     render(<RewardSummary reward={reward({ score: 0, xp: 0, coins: 0, rankBonus: 0, rewardRank: 1, noRankBonusReason: 'zero_score' })} />)
 

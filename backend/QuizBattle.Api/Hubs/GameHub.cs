@@ -11,20 +11,33 @@ namespace QuizBattle.Api.Hubs;
 /// kết nối) sau khi JoinRoom thành công. Exception từ GameService được GameHubExceptionFilter bắt chung,
 /// không try/catch trong các method dưới đây.
 /// </summary>
-public sealed class GameHub(IGameService gameService, GameBroadcaster broadcaster) : Hub
+public sealed class GameHub(IGameService gameService, GameBroadcaster broadcaster, PlayerConnectionRegistry connections) : Hub
 {
     private const string RoomCodeKey = "roomCode";
     private const string PlayerIdKey = "playerId";
     private const string IsHostKey = "isHost";
+    private const string SessionTokenHashKey = "sessionTokenHash";
 
     public async Task JoinRoom(string code, string? sessionToken)
     {
         if (!string.IsNullOrEmpty(sessionToken))
         {
-            var (state, broadcast) = await gameService.JoinAsPlayerAsync(code, sessionToken, Context.ConnectionAborted);
+            var (state, broadcast, sessionTokenHash) = await gameService.JoinAsPlayerAsync(code, sessionToken, Context.ConnectionAborted);
             Context.Items[RoomCodeKey] = state.Code;
             Context.Items[PlayerIdKey] = state.PlayerId;
             Context.Items[IsHostKey] = false;
+            Context.Items[SessionTokenHashKey] = sessionTokenHash;
+
+            // Cùng tài khoản vừa vào từ thiết bị khác (hash khác): gỡ kết nối cũ khỏi group và báo cho nó. Hub không Abort
+            // được kết nối khác, nên "ngắt" = hết nhận broadcast + mọi hành động ghi bị từ chối (so hash ở SubmitAnswer).
+            var replaced = connections.Register(state.PlayerId!.Value, Context.ConnectionId, sessionTokenHash);
+            if (replaced is not null)
+            {
+                await Groups.RemoveFromGroupAsync(replaced, state.Code);
+                await Clients.Client(replaced).SendAsync(
+                    GameHubEvents.ERROR,
+                    new GameErrorDto(nameof(JoinRoom), "session_replaced", "Bạn đã vào phòng từ thiết bị khác."));
+            }
 
             await Groups.AddToGroupAsync(Context.ConnectionId, state.Code);
             await Clients.Caller.SendAsync(GameHubEvents.ROOM_STATE, state);
@@ -74,7 +87,11 @@ public sealed class GameHub(IGameService gameService, GameBroadcaster broadcaste
         var playerId = RequirePlayerId();
         var code = RequireRoomCode();
 
-        var (ack, progress, roomId) = await gameService.SubmitAnswerAsync(playerId, questionId, selectedIndex, Context.ConnectionAborted);
+        var sessionTokenHash = Context.Items.TryGetValue(SessionTokenHashKey, out var hashValue) && hashValue is string hash
+            ? hash
+            : throw new UnauthorizedException("Chưa vào phòng với vai trò người chơi.");
+
+        var (ack, progress, roomId) = await gameService.SubmitAnswerAsync(playerId, sessionTokenHash, questionId, selectedIndex, Context.ConnectionAborted);
         await Clients.Group(HostGroup(code)).SendAsync(GameHubEvents.ANSWER_PROGRESS, progress);
 
         if (progress.AnsweredCount >= progress.TotalPlayers)
@@ -99,8 +116,10 @@ public sealed class GameHub(IGameService gameService, GameBroadcaster broadcaste
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, HostGroup(code));
         }
-        else if (Context.Items.TryGetValue(PlayerIdKey, out var playerIdValue) && playerIdValue is Guid playerId)
+        else if (Context.Items.TryGetValue(PlayerIdKey, out var playerIdValue) && playerIdValue is Guid playerId
+            && connections.Unregister(playerId, Context.ConnectionId))
         {
+            // Unregister = false: kết nối này đã bị thiết bị khác thay thế, người chơi vẫn online ở đó - không phát PlayerLeft.
             await Clients.Group(code).SendAsync(GameHubEvents.PLAYER_LEFT, new PlayerLeftDto(playerId));
         }
 
@@ -112,7 +131,8 @@ public sealed class GameHub(IGameService gameService, GameBroadcaster broadcaste
         // Rớt mạng (không chủ động LeaveRoom): KHÔNG xóa Player - chỉ báo cho người khác. Điểm/phiên vẫn
         // giữ nguyên để JoinRoom lại bằng sessionToken cũ.
         if (TryGetRoomCode(out var code)
-            && Context.Items.TryGetValue(PlayerIdKey, out var playerIdValue) && playerIdValue is Guid playerId)
+            && Context.Items.TryGetValue(PlayerIdKey, out var playerIdValue) && playerIdValue is Guid playerId
+            && connections.Unregister(playerId, Context.ConnectionId))
         {
             await Clients.Group(code).SendAsync(GameHubEvents.PLAYER_LEFT, new PlayerLeftDto(playerId));
         }

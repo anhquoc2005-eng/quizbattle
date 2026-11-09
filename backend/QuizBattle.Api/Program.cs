@@ -96,6 +96,7 @@ builder.Services.AddAuthorization();
 // dụng IHubFilter chỉ vì nó có trong DI, phải gọi AddFilter() tường minh thì filter mới vào pipeline.
 builder.Services.AddScoped<GameHubExceptionFilter>();
 builder.Services.AddSingleton<GameBroadcaster>();
+builder.Services.AddSingleton<PlayerConnectionRegistry>();
 builder.Services.AddHostedService<GameTimerService>();
 builder.Services.AddSignalR().AddHubOptions<GameHub>(options => options.AddFilter<GameHubExceptionFilter>());
 

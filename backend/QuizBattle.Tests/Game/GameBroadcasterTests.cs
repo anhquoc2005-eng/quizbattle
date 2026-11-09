@@ -36,7 +36,7 @@ public sealed class GameBroadcasterTests
 
         public Task<RoomStateDto> JoinAsHostAsync(Guid hostUserId, string code, CancellationToken cancellationToken) => throw new NotSupportedException();
 
-        public Task<(RoomStateDto State, PlayerJoinedDto Broadcast)> JoinAsPlayerAsync(string code, string sessionToken, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<(RoomStateDto State, PlayerJoinedDto Broadcast, string SessionTokenHash)> JoinAsPlayerAsync(string code, string sessionToken, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<QuestionStartedDto> StartGameAsync(Guid hostUserId, string code, CancellationToken cancellationToken) => throw new NotSupportedException();
 
@@ -44,7 +44,7 @@ public sealed class GameBroadcasterTests
 
         public Task<NextQuestionOutcome> NextQuestionAsync(Guid hostUserId, string code, CancellationToken cancellationToken) => throw new NotSupportedException();
 
-        public Task<(AnswerAckDto Ack, AnswerProgressDto Progress, Guid RoomId)> SubmitAnswerAsync(Guid playerId, Guid questionId, int selectedIndex, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<(AnswerAckDto Ack, AnswerProgressDto Progress, Guid RoomId)> SubmitAnswerAsync(Guid playerId, string sessionTokenHash, Guid questionId, int selectedIndex, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<NextQuestionOutcome?> TryAutoAdvanceAsync(Guid roomId, CancellationToken cancellationToken) => throw new NotSupportedException();
 

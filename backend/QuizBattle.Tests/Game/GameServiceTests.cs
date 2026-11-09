@@ -96,7 +96,7 @@ public sealed class GameServiceTests
         repository.Players.Add(player);
         var service = CreateService(repository);
 
-        var (state, _) = await service.JoinAsPlayerAsync(room.Code, "real-token", CancellationToken.None);
+        var (state, _, _) = await service.JoinAsPlayerAsync(room.Code, "real-token", CancellationToken.None);
 
         Assert.Equal(750, state.Players.Single(p => p.PlayerId == player.Id).Score);
         Assert.Single(repository.Players); // vào lại không tạo thêm Player mới
@@ -166,7 +166,7 @@ public sealed class GameServiceTests
         var service = CreateService(repository, Now.AddSeconds(21));
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            service.SubmitAnswerAsync(player.Id, question.Id, 0, CancellationToken.None));
+            service.SubmitAnswerAsync(player.Id, "hash", question.Id, 0, CancellationToken.None));
 
         Assert.Equal(0, player.Score);
     }
@@ -182,10 +182,10 @@ public sealed class GameServiceTests
         repository.Players.Add(player);
         var service = CreateService(repository, Now.AddSeconds(2));
 
-        await service.SubmitAnswerAsync(player.Id, question.Id, 0, CancellationToken.None);
+        await service.SubmitAnswerAsync(player.Id, "hash", question.Id, 0, CancellationToken.None);
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            service.SubmitAnswerAsync(player.Id, question.Id, 0, CancellationToken.None));
+            service.SubmitAnswerAsync(player.Id, "hash", question.Id, 0, CancellationToken.None));
     }
 
     [Fact]
@@ -200,7 +200,7 @@ public sealed class GameServiceTests
         var service = CreateService(repository, Now.AddSeconds(2));
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            service.SubmitAnswerAsync(player.Id, Guid.NewGuid(), 0, CancellationToken.None));
+            service.SubmitAnswerAsync(player.Id, "hash", Guid.NewGuid(), 0, CancellationToken.None));
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public sealed class GameServiceTests
         var service = CreateService(repository, Now.AddSeconds(2));
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            service.SubmitAnswerAsync(player.Id, question.Id, 0, CancellationToken.None));
+            service.SubmitAnswerAsync(player.Id, "hash", question.Id, 0, CancellationToken.None));
 
         Assert.Equal(0, player.Score);
     }
@@ -307,10 +307,10 @@ public sealed class GameServiceTests
         repository.Players.AddRange([alice, bob]);
         var service = CreateService(repository, Now.AddSeconds(2));
 
-        await service.SubmitAnswerAsync(alice.Id, question.Id, 0, CancellationToken.None);
+        await service.SubmitAnswerAsync(alice.Id, "hash", question.Id, 0, CancellationToken.None);
         Assert.Null(await service.TryAutoEndQuestionAsync(room.Id, CancellationToken.None)); // còn Bob chưa trả lời
 
-        var (_, progress, roomId) = await service.SubmitAnswerAsync(bob.Id, question.Id, 1, CancellationToken.None);
+        var (_, progress, roomId) = await service.SubmitAnswerAsync(bob.Id, "hash", question.Id, 1, CancellationToken.None);
         var result = await service.TryAutoEndQuestionAsync(roomId, CancellationToken.None);
 
         Assert.Equal(progress.TotalPlayers, progress.AnsweredCount);
@@ -440,6 +440,56 @@ public sealed class GameServiceTests
             service.CreatePlayerAsync(room.Code, Guid.NewGuid(), new CreatePlayerRequest { DisplayName = "Ma" }, CancellationToken.None));
 
         Assert.Equal("token_invalid", ex.Code);
+    }
+
+    // ---- Đổi thiết bị (FR-020) ----
+
+    [Fact]
+    public async Task SubmitAnswer_StaleSessionHash_ThrowsSessionReplaced()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var question = NewQuestion(room.Id, 0, startedAt: Now);
+        var player = NewPlayer(room.Id, "Alice", tokenHash: "new-hash"); // thiết bị mới đã xoay token
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.Add(player);
+        var service = CreateService(repository, Now.AddSeconds(2));
+
+        await Assert.ThrowsAsync<SessionReplacedException>(() =>
+            service.SubmitAnswerAsync(player.Id, "old-hash", question.Id, 0, CancellationToken.None));
+
+        Assert.Empty(repository.Answers);
+        Assert.Equal(0, player.Score);
+    }
+
+    [Fact]
+    public async Task SubmitAnswer_CurrentSessionHash_Works()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var question = NewQuestion(room.Id, 0, startedAt: Now);
+        var player = NewPlayer(room.Id, "Alice", tokenHash: "current-hash");
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.Add(player);
+        var service = CreateService(repository, Now.AddSeconds(2));
+
+        var (ack, _, _) = await service.SubmitAnswerAsync(player.Id, "current-hash", question.Id, 0, CancellationToken.None);
+
+        Assert.True(ack.Received);
+        Assert.Single(repository.Answers);
+    }
+
+    [Fact]
+    public async Task JoinAsPlayer_ReturnsCurrentTokenHash()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        repository.Players.Add(NewPlayer(room.Id, "Alice", tokenHash: SessionTokenHasher.Hash("real-token")));
+        var service = CreateService(repository);
+
+        var (_, _, hash) = await service.JoinAsPlayerAsync(room.Code, "real-token", CancellationToken.None);
+
+        Assert.Equal(SessionTokenHasher.Hash("real-token"), hash);
     }
 
     // ---- Thưởng cuối trận (US1) ----

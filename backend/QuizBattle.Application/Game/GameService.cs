@@ -117,7 +117,7 @@ public sealed class GameService(
         return BuildRoomState(snapshot, isHost: true, playerId: null, timeProvider.GetUtcNow());
     }
 
-    public async Task<(RoomStateDto State, PlayerJoinedDto Broadcast)> JoinAsPlayerAsync(string code, string sessionToken, CancellationToken cancellationToken)
+    public async Task<(RoomStateDto State, PlayerJoinedDto Broadcast, string SessionTokenHash)> JoinAsPlayerAsync(string code, string sessionToken, CancellationToken cancellationToken)
     {
         var tokenHash = SessionTokenHasher.Hash(sessionToken);
         var player = await gameRepository.FindPlayerByTokenHashAsync(tokenHash, cancellationToken)
@@ -133,7 +133,7 @@ public sealed class GameService(
 
         var state = BuildRoomState(snapshot, isHost: false, playerId: player.Id, timeProvider.GetUtcNow());
         var broadcast = new PlayerJoinedDto(player.Id, player.DisplayName);
-        return (state, broadcast);
+        return (state, broadcast, tokenHash);
     }
 
     public Task<QuestionStartedDto> StartGameAsync(Guid hostUserId, string code, CancellationToken cancellationToken) =>
@@ -229,9 +229,15 @@ public sealed class GameService(
     public Task<IReadOnlyList<DueRoom>> FindDueRoomsAsync(CancellationToken cancellationToken) =>
         gameRepository.FindDueRoomsAsync(timeProvider.GetUtcNow(), cancellationToken);
 
-    public Task<(AnswerAckDto Ack, AnswerProgressDto Progress, Guid RoomId)> SubmitAnswerAsync(Guid playerId, Guid questionId, int selectedIndex, CancellationToken cancellationToken) =>
+    public Task<(AnswerAckDto Ack, AnswerProgressDto Progress, Guid RoomId)> SubmitAnswerAsync(Guid playerId, string sessionTokenHash, Guid questionId, int selectedIndex, CancellationToken cancellationToken) =>
         gameRepository.SubmitAnswerAsync(playerId, snapshot =>
         {
+            // Player đã nạp sẵn trong transaction nên so hash không thêm truy vấn. Đúng cả khi nhiều instance (chỉ dựa vào DB).
+            if (snapshot.Player.SessionTokenHash != sessionTokenHash)
+            {
+                throw new SessionReplacedException("Bạn đã vào phòng từ thiết bị khác.");
+            }
+
             if (snapshot.Question is null || snapshot.Question.Id != questionId || snapshot.Question.EndedAt is not null)
             {
                 throw new ConflictException("Không phải câu đang chạy.");

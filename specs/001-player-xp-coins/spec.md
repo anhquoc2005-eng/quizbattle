@@ -138,6 +138,7 @@ Cấp độ hiển thị cạnh tên người chơi có tài khoản ở sảnh 
 - Điểm trận > 0 nhưng nhỏ (ví dụ 5 điểm): XP và Xu phần điểm có thể bằng 0 do làm tròn xuống; thưởng hạng vẫn trao nếu thuộc top 3.
 - Hai yêu cầu cộng thưởng đồng thời cho cùng người chơi: chỉ một lần có hiệu lực.
 - Mất mạng đúng lúc trận kết thúc: khi kết nối lại người chơi thấy thưởng đã nhận, đúng một lần.
+- Chủ phòng xóa phòng đã kết thúc: thưởng đã trao KHÔNG bị mất; XP, Xu và lịch sử trận trong hồ sơ vẫn nguyên (mã phòng, chủ đề, thời điểm giữ lại cùng bản ghi thưởng).
 - Người chơi có tài khoản rời phòng giữa chừng: vẫn được thưởng theo điểm đã có nếu đã trả lời ít nhất 1 câu.
 - Điểm trận bằng 0: không có thưởng hạng; XP và Xu theo công thức bằng 0.
 - Hòa điểm (> 0) ở top 1/2/3: cùng nhận thưởng hạng cao hơn.

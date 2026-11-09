@@ -17,7 +17,7 @@ Index mới: `IX_Users_TotalXp` trên `(TotalXp DESC, CreatedAt, Id)`, `WHERE "T
 
 Bất biến:
 - `CoinBalance = SUM(CoinTransactions.Amount WHERE UserId = Users.Id)`
-- `TotalXp = SUM(MatchRewards.Xp WHERE UserId = Users.Id)`
+- `TotalXp = SUM(MatchRewards.Xp WHERE UserId = Users.Id)` (đúng cả sau khi phòng bị xóa: `MatchRewards` không cascade theo phòng/người chơi)
 
 ### Players (sửa)
 
@@ -37,9 +37,12 @@ Kết quả thưởng của **một Player** trong một trận. Có một dòng
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
 | `Id` | `uuid` PK | |
-| `PlayerId` | `uuid NOT NULL` | FK Players `ON DELETE CASCADE`. **Unique** (`IX_MatchRewards_PlayerId`): chặn cộng đôi |
-| `UserId` | `uuid NOT NULL` | FK Users `ON DELETE CASCADE` |
-| `RoomId` | `uuid NOT NULL` | FK Rooms `ON DELETE CASCADE` |
+| `PlayerId` | `uuid NULL` | FK Players `ON DELETE SET NULL` (xóa phòng làm Player bị cascade nhưng thưởng phải còn). **Unique** (`IX_MatchRewards_PlayerId`): chặn cộng đôi; nhiều NULL hợp lệ. Luôn có giá trị lúc tạo |
+| `UserId` | `uuid NOT NULL` | FK Users `ON DELETE CASCADE` (chỉ khi xóa tài khoản) |
+| `RoomId` | `uuid NULL` | FK Rooms `ON DELETE SET NULL`. Luôn có giá trị lúc tạo |
+| `RoomCode` | `varchar(6) NOT NULL` | bản sao `Room.Code` lúc kết thúc, để hồ sơ hiển thị khi phòng đã bị xóa |
+| `RoomTopic` | `varchar(200) NOT NULL` | bản sao `Room.Topic` |
+| `FinishedAt` | `timestamptz NOT NULL` | bản sao `Room.EndedAt` |
 | `Status` | `text NOT NULL` | `Awarded` / `NotAwarded` |
 | `DenialReason` | `text NULL` | `Host` / `NoAnswers` / `NotEnoughAccounts`; NULL khi `Awarded` |
 | `Score` | `int NOT NULL` | điểm trận lúc kết thúc |
@@ -47,10 +50,9 @@ Kết quả thưởng của **một Player** trong một trận. Có một dòng
 | `Xp` | `int NOT NULL` | `floor(Score / 10)`; 0 khi `NotAwarded` |
 | `Coins` | `int NOT NULL` | phần điểm: `floor(Score / 100)`; 0 khi `NotAwarded` |
 | `RankBonus` | `int NOT NULL` | 30/20/10 hoặc 0 |
-| `CreatedAt` | `timestamptz NOT NULL` | |
 
 Ràng buộc: `CHECK ("Xp" >= 0 AND "Coins" >= 0 AND "RankBonus" >= 0)`; `CHECK (("Status" = 'Awarded') = ("DenialReason" IS NULL))`.
-Index: `IX_MatchRewards_UserId_CreatedAt` trên `(UserId, CreatedAt DESC)` cho lịch sử hồ sơ.
+Index: `IX_MatchRewards_UserId_FinishedAt` trên `(UserId, FinishedAt DESC)` cho lịch sử hồ sơ. Hồ sơ chỉ đọc bảng này (không join Rooms/Players), nên không đổi khi phòng bị xóa.
 Tổng Xu của dòng = `Coins + RankBonus`.
 
 ### CoinTransactions
@@ -69,13 +71,13 @@ Sổ cái Xu, chỉ thêm, không sửa/xóa. Mua đồ ở tính năng 2 là d�
 
 Index: `IX_CoinTransactions_UserId_CreatedAt` trên `(UserId, CreatedAt DESC)`.
 
-Dòng `MatchReward` được tạo khi `Coins + RankBonus > 0` cùng `SaveChanges` với cập nhật `Users.CoinBalance`.
+Dòng sổ cái (`Reason = MatchReward`) được tạo khi `Coins + RankBonus > 0` cùng `SaveChanges` với cập nhật `Users.CoinBalance`.
 
 ## Quan hệ
 
 ```text
 Users 1 ──< Players (UserId nullable)   Rooms 1 ──< Players
-Users 1 ──< MatchRewards ──1 Players    Rooms 1 ──< MatchRewards
+Users 1 ──< MatchRewards >── 0..1 Players    MatchRewards >── 0..1 Rooms  (SET NULL khi xóa phòng, thưởng còn)
 Users 1 ──< CoinTransactions >── 0..1 MatchRewards, 0..1 Rooms
 ```
 

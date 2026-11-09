@@ -94,7 +94,19 @@ Host tự vào phòng mình làm người chơi: tạo Player có `UserId = host
 - `UnauthorizedException` thêm tham số `Code` tùy chọn; `GlobalExceptionHandler` ghi vào `ProblemDetails.Extensions["code"]` (đúng format chung của CLAUDE.md: thêm trường mở rộng, không đổi cấu trúc). Hai mã: `token_expired`, `token_invalid`.
 - Token hợp lệ nhưng `User` không còn tồn tại: `token_invalid`.
 
-**Frontend**: `request()` hiện tự `clearAuth()` + `onUnauthorized` khi 401 mà có token. Giữ nguyên (token hết hạn thì xóa là đúng). `JoinPage` đọc `error.problem.code === 'token_expired'`: hiện khối "Phiên đăng nhập đã hết hạn" với hai nút "Đăng nhập lại" (về `/login`, quay lại `/join?code=...`) và "Vào làm khách" (gửi lại; lúc này không còn token nên là khách). `token_invalid` xử lý giống `token_expired`. Có thể kiểm tra trước bằng `isTokenExpired` (đã có ở `src/api`) để báo ngay khi mở trang.
+**Frontend: backend gần như không bao giờ nhận token hết hạn.** `loadAuth()` (`src/api/tokenStorage.ts`) tự xóa token hết hạn rồi trả `null`, và `request()` gọi `loadAuth()` ở mỗi lần gửi. Hệ quả hiện tại: mở `/join` sau 60 phút thì không có `Authorization`, backend thấy một khách bình thường, người dùng không được báo gì. Nên đường `401 token_expired` của backend chỉ là lưới an toàn (lệch đồng hồ giữa client và server, token bị thu hồi/sai chữ ký); đường chính phải nằm ở frontend.
+
+**Thiết kế (hai đường, cùng một hộp thoại):**
+
+1. **Cờ "phiên vừa hết hạn"**: `tokenStorage.ts` thêm khóa `quizbattle.sessionExpired` và các hàm `markSessionExpired()`, `isSessionExpiredFlagSet()`, `clearSessionExpiredFlag()`. `loadAuth()` khi xóa token hết hạn gọi `markSessionExpired()`. Dùng **`localStorage`** (không phải `sessionStorage`): hai tab mở sẵn, tab này xóa token thì tab kia vẫn thấy cờ (qua sự kiện `storage`). Với `sessionStorage`, tab thứ hai gửi request không token và bị coi là khách mà không có thông báo. Mọi đọc/ghi bọc `try/catch` như `saveAuth` hiện tại.
+2. **`AuthProvider` expose `sessionExpired: boolean` và `dismissSessionExpired()`**. State khởi tạo từ cờ sau khi `loadAuth()` chạy, cập nhật khi `markSessionExpired()` được gọi (module phát một sự kiện nhỏ cho `AuthProvider` đăng ký, giống cách `setUnauthorizedHandler` đang làm) và khi nhận sự kiện `storage`. `login()`/`register()` thành công gọi `clearSessionExpiredFlag()`; `logout()` chủ động **không** đặt cờ. `AuthContextValue` ở `AuthProvider.tsx` và `authContext.ts` thêm hai trường; `useAuth` không đổi.
+3. **`JoinPage` hiện hộp "Phiên đăng nhập đã hết hạn" ngay khi `sessionExpired` là `true`** (kể cả lúc mở trang), với hai nút: "Đăng nhập lại" (đi `/login`, giữ đích quay về `/join?code=...` theo đúng cơ chế `state.from` mà `ProtectedRoute` đang dùng; kiểm tra khi triển khai) và "Vào làm khách" (`dismissSessionExpired()`, đóng hộp, form gửi như khách vì token đã xóa). Hộp **không phụ thuộc `user`**: nó chỉ đọc `sessionExpired`, nên khi `AuthProvider` đặt `user = null` sau một 401 (`setUnauthorizedHandler`) hộp vẫn còn. Trong lúc hộp đang mở, nút "Vào phòng" bị vô hiệu (tránh gửi như khách khi chưa chọn).
+4. **Chặn gửi đúng lúc**: token có thể hết hạn khi người dùng đang ở trang (đã mở `/join` lúc còn hạn). `handleSubmit` gọi `loadAuth()` trước khi `mutate`, rồi đọc cờ; nếu cờ bật thì hiện hộp và **không gửi**. Nhờ vậy `request()` không bao giờ gửi một lời gọi vào phòng như khách sau khi vừa xóa token hết hạn.
+5. **Đường 401 từ server** (`token_expired`/`token_invalid` trong `error.problem.code`): `request()` đã `clearAuth()` và gọi `onUnauthorized`; `JoinPage.onError` thêm `markSessionExpired()` rồi bỏ qua việc hiện lỗi form (hộp thoại là thông báo). Hai mã xử lý giống nhau ở UI.
+
+Hàm thuần mới `describeJoinAuthError(problem)` (`src/api/apiError.ts` hoặc cạnh `joinForm`) trả `'expired' | null` theo `code`, để test được bằng Vitest node.
+
+**Kiểm thử cả hai đường** (xem R9/R10): đường 1 (cờ từ `loadAuth`) và đường 2 (401 từ server) đều có test hộp thoại tồn tại sau khi `user = null`, và "Vào làm khách"/đăng nhập lại xóa cờ.
 
 Hub `JoinRoom` cho người chơi dùng `sessionToken`, không dùng JWT, nên không đổi. JWT hết hạn khi chủ phòng `JoinRoom` đã có đường xử lý riêng (`UnauthorizedException`), ngoài phạm vi.
 
@@ -118,9 +130,9 @@ Một migration `AddXpCoinsAndPlayerAccounts` do `dotnet ef migrations add` sinh
 
 Hiện Vitest chạy `environment: 'node'`, `include: ['src/**/*.test.ts']`, đúng CLAUDE.md "chỉ cho logic".
 
-**Quyết định mặc định (không cần thư viện mới)**: đẩy mọi quyết định hiển thị vào hàm thuần và test bằng Vitest node như đang làm: `describeReward(reward)` (mã lý do sang câu tiếng Việt, có/không thưởng hạng, có lên cấp), `levelProgress(...)` chỉ là định dạng dữ liệu server gửi (server tính, client không lặp công thức), `describeJoinAuthError(problem)` (hết hạn/không hợp lệ/khác), mở rộng `sessionErrors.ts` cho `session_replaced`, mở rộng `gameReducer.test.ts` cho `GameEnded.rewards`.
+**Đã duyệt**: logic hiển thị vẫn đẩy vào hàm thuần và test bằng Vitest node như đang làm (`describeReward(reward)`: mã lý do sang câu tiếng Việt, có/không thưởng hạng, có lên cấp; `describeJoinAuthError(problem)`; `sessionErrors.ts` mở rộng cho `session_replaced`; `gameReducer.test.ts` mở rộng cho `GameEnded.rewards`; `tokenStorage.test.ts` mở rộng cho cờ hết hạn). Client không lặp công thức cấp độ: server gửi `level`, `xpIntoLevel`, `xpForNextLevel`.
 
-**Đề xuất cần duyệt**: thêm hạ tầng test component cho ba màn có nhiều trạng thái: `PlayFinished`/`LiveFinished` (khối thưởng, 5 lý do không thưởng), `ProfilePage` (đang tải/lỗi/rỗng/có dữ liệu), `JoinPage` (hộp thoại hết hạn). Gói: `jsdom` và `@testing-library/react` (devDependencies, không vào bản build). Cấu hình: giữ `environment: 'node'` mặc định, mở rộng `include` thêm `src/**/*.test.tsx`, mỗi file component khai báo `// @vitest-environment jsdom`. Lý do nên làm: CLAUDE.md bắt buộc ba trạng thái tải/lỗi/rỗng mà hiện không có cách nào kiểm tra; rủi ro thấp vì chỉ là devDependency. Nếu duyệt, sửa dòng "Vitest (frontend, chỉ cho logic)" trong CLAUDE.md. Nếu không duyệt: giữ phần hàm thuần, ba màn kiểm bằng `quickstart.md` thủ công.
+**Hạ tầng test component (đã duyệt)**: thêm devDependencies `jsdom` và `@testing-library/react` (không vào bản build). Cấu hình `vite.config.ts`: giữ `environment: 'node'` mặc định, mở rộng `include` thêm `src/**/*.test.tsx`, mỗi file component khai báo `// @vitest-environment jsdom`. Ba màn: `PlayFinished`/`LiveFinished` (khối thưởng, các lý do không thưởng, lên cấp), `ProfilePage` (đang tải/lỗi/rỗng/có dữ liệu), `JoinPage` (hộp thoại hết hạn, cả hai đường ở R7). Khi triển khai: sửa dòng "Vitest (frontend, chỉ cho logic)" trong CLAUDE.md, và sửa danh sách mã lỗi SignalR (thêm `session_replaced`).
 
 ## R10. Ma trận test backend
 
@@ -154,6 +166,9 @@ Tên theo mẫu `Method_Điều kiện_KếtQuả`.
 | 019 | `GameEnded_PlayerLeftAfterAnswering_StillRewarded` (LeaveRoom không xóa Player) |
 | 020 | `SubmitAnswer_StaleSessionHash_ThrowsSessionReplaced`; `SubmitAnswer_CurrentSessionHash_Works`; `JoinAsPlayer_ReturnsCurrentTokenHash` |
 | 021 | `CreatePlayer_NoToken_IsGuest` (qua `userId null`) ; `CreatePlayer_UserNoLongerExists_ThrowsTokenInvalid` |
+| 010/012 | `DeleteRoom_FinishedRoom_StillAllowed` (đã có, giữ) |
+
+**Frontend (Vitest)**: `tokenStorage.test.ts`: `loadAuth_ExpiredToken_ClearsTokenAndSetsExpiredFlag`, `loadAuth_ValidToken_DoesNotSetFlag`, `clearSessionExpiredFlag_RemovesFlag`, `logout_DoesNotSetFlag`. `apiError`/join: `describeJoinAuthError_TokenExpired_ReturnsExpired`, `..._TokenInvalid_ReturnsExpired`, `..._Other401_ReturnsNull`. Component (`JoinPage.test.tsx`): đường 1 `JoinPage_FlagSetFromLoadAuth_ShowsExpiredDialogOnMount`; đường 2 `JoinPage_Server401TokenExpired_ShowsDialogAndKeepsItAfterUserBecomesNull`; `JoinPage_ExpiredDialogOpen_SubmitIsDisabledAndNothingIsSent`; `JoinPage_ChooseGuest_ClearsFlagAndClosesDialog`; `JoinPage_LoginAgainSuccess_ClearsFlag`; `JoinPage_TokenExpiresBetweenMountAndSubmit_BlocksSendAndShowsDialog`.
 
 **Api (`Tests/Api/`, không cần DB)**:
 
@@ -174,8 +189,16 @@ Tên theo mẫu `Method_Điều kiện_KếtQuả`.
 | `Players_SameUserSameRoom_ViolatesPartialUnique`; `Players_ManyGuestsSameRoom_Allowed` | index lọc `UserId IS NOT NULL` |
 | `Players_RejoinWithOtherName_DoesNotTouchNameIndex` | R4 |
 | `XpLeaderboard_ExcludesZeroXpAndReturnsTop50InOrder` | FR-016 + index |
+| `DeleteFinishedRoom_RewardsKeptAndProfileAndInvariantsUnchanged` | R12: `RoomService.DeleteRoomAsync` xóa phòng `Finished`, `MatchRewards` còn (`PlayerId`/`RoomId` thành NULL), `GET me/rewards` vẫn trả `roomCode`/`topic`/`playedAt`, `TotalXp == SUM(MatchRewards.Xp)` và `CoinBalance == SUM(CoinTransactions.Amount)` trước và sau |
+| `MatchRewards_MultipleNullPlayerId_AllowedByUniqueIndex` | unique `PlayerId` vẫn cho nhiều NULL sau khi nhiều phòng bị xóa |
 
-Hạ tầng: lớp `RequiresDatabaseFactAttribute : FactAttribute` đặt `Skip` trong constructor khi biến `QUIZBATTLE_TEST_DB` không có (xUnit 2.9 thuần, không thêm package). Mỗi test tạo schema riêng (`CREATE SCHEMA test_<guid>` hoặc DB tạm) rồi `Migrate()`, để cũng kiểm chứng luôn migration chạy từ đầu. CI: thêm `services: postgres:16-alpine` vào job backend của `ci.yml` và đặt biến môi trường. Test cục bộ: dùng DB docker compose (cổng 5433).
+**Hạ tầng (database tạm cho mỗi lần chạy, không dùng schema riêng)**: lý do bỏ `CREATE SCHEMA`: `__EFMigrationsHistory` và index SQL thô (`IX_Players_RoomId_lower_DisplayName`, tạo bằng `migrationBuilder.Sql` ở `public`) mặc định nằm trong `public`, nên `Migrate()` vào schema khác không kiểm chứng đúng migration thật.
+
+- `QUIZBATTLE_TEST_DB` là chuỗi kết nối tới một DB có sẵn (DB `quizbattle` của docker compose, hoặc `postgres` ở CI) bằng role có quyền `CREATEDB`. Trong image `postgres` chính thức, `POSTGRES_USER` là superuser nên đủ quyền.
+- Một `IAsyncLifetime` fixture dùng chung (`[CollectionDefinition]`, một lần cho cả lần chạy test): `CREATE DATABASE "qb_test_<guid>"` qua kết nối quản trị, tạo `AppDbContext` trỏ vào DB đó, `Database.MigrateAsync()` (chạy toàn bộ chuỗi migration thật, kể cả migration mới), và khi xong `NpgsqlConnection.ClearAllPools()` rồi `DROP DATABASE "qb_test_<guid>" WITH (FORCE)` (`FORCE` có từ PostgreSQL 13; image dùng là 16). Nếu `DROP` lỗi, ghi log tên DB để dọn tay, không làm test thất bại.
+- Các test trong collection dùng chung một DB nên tự cô lập bằng dữ liệu riêng (Guid mới cho User/Room/Player); test đồng thời mở nhiều `AppDbContext` riêng trên cùng DB.
+- Lớp `RequiresDatabaseFactAttribute : FactAttribute` đặt `Skip` trong constructor khi thiếu `QUIZBATTLE_TEST_DB` (xUnit 2.9 thuần, không thêm package); khi biến thiếu, fixture không tạo DB.
+- CI (đã duyệt): thêm `services: postgres:16-alpine` (user/mật khẩu qua `env` của job, không phải secret thật) vào job backend của `ci.yml` và đặt `QUIZBATTLE_TEST_DB`. Cục bộ: dùng DB docker compose (cổng 5433).
 
 **Đã có và giữ**: `ScoreCalculatorTests`, chặn trả lời trùng (`IX_Answers_PlayerId_QuestionId`), `AuthServiceTests`, `TokenServiceTests`.
 
@@ -187,3 +210,18 @@ Hạ tầng: lớp `RequiresDatabaseFactAttribute : FactAttribute` đặt `Skip`
 - **/join** (FR-017): thông điệp "tính thưởng" chỉ dựa vào việc đã đăng nhập (client biết), không cần API. Thông điệp không cam kết có thưởng: "XP và Xu được tính khi trận có ít nhất 2 tài khoản tham gia trả lời", vì điều kiện thật chỉ biết khi trận kết thúc.
 - **Rate limit**: `POST .../players` giữ chính sách `join-room` (theo IP). Endpoint đọc hồ sơ/bảng xếp hạng rẻ (đi index, tối đa 50 dòng) nên không thêm chính sách mới.
 - **`Player.UserId` đổi ghi chú**: bỏ comment "CHƯA dùng ở bước này".
+
+## R12. Xóa phòng không được làm mất thưởng
+
+**Hiện trạng**: `RoomService.DeleteRoomAsync` -> `RoomRepository.DeleteDeletableAsync` chạy `ExecuteDeleteAsync` trên phòng `Draft` hoặc `Finished`; `Players`, `Questions` bị xóa theo bằng `ON DELETE CASCADE` ở DB. Nếu `MatchRewards` cascade theo `PlayerId`/`RoomId` thì chủ phòng xóa phòng sẽ làm người chơi mất dòng thưởng, và `TotalXp = SUM(MatchRewards.Xp)` sai.
+
+**Quyết định**:
+
+- `MatchRewards.PlayerId` và `MatchRewards.RoomId` thành **nullable**, FK `ON DELETE SET NULL` (thay cho `CASCADE` ở bản trước của plan).
+- Lưu bản sao để hồ sơ hiển thị không cần bảng `Rooms`: `RoomCode` (`varchar`, bản sao `Room.Code`), `RoomTopic` (bản sao `Room.Topic`), `FinishedAt` (`timestamptz`, bản sao `Room.EndedAt`, cũng là mốc thay cho `CreatedAt`). Sao chép lúc tạo thưởng, trong cùng transaction kết thúc trận.
+- Unique `IX_MatchRewards_PlayerId` giữ nguyên: PostgreSQL coi các NULL là khác nhau nên nhiều dòng `PlayerId = NULL` hợp lệ. Lớp chặn cộng đôi vẫn đúng vì chỉ cần chặn khi `PlayerId` còn.
+- `GET /api/users/me/rewards` đọc `RoomCode`, `RoomTopic`, `FinishedAt` từ chính `MatchRewards`, **không join `Rooms`/`Players`**; vì vậy phòng bị xóa không đổi kết quả (đồng thời bớt một join).
+- `CoinTransactions.RoomId` đã là `SET NULL` (xem data-model); `CoinTransactions.MatchRewardId` giữ nguyên. Hai bảng thưởng/sổ cái chỉ bị xóa theo `UserId` (xóa tài khoản), và cả hai cùng xóa nên bất biến vẫn đúng.
+- Bất biến `TotalXp = SUM(MatchRewards.Xp)` và `CoinBalance = SUM(CoinTransactions.Amount)` vì thế đúng trước và sau khi xóa phòng. Test tích hợp ở R10.
+
+**Loại**: chặn xóa phòng đã có thưởng (đổi hành vi hiện có, ngoài phạm vi, và làm chủ phòng không dọn được); chỉ để `RoomId` `SET NULL` mà `PlayerId` cascade (mất dòng thưởng khi `Player` bị xóa theo phòng).

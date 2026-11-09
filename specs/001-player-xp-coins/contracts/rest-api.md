@@ -66,7 +66,7 @@ Frontend: `request()` vẫn xóa token đã lưu khi gặp 401 có token (đúng
 ]
 ```
 
-Mảng rỗng là trạng thái rỗng hợp lệ (người dùng chưa có trận được thưởng). `coins` là phần điểm; tổng Xu của trận = `coins + rankBonus`.
+Dữ liệu `roomCode`, `topic`, `playedAt` đọc từ bản sao lưu trong `MatchRewards` (`RoomCode`, `RoomTopic`, `FinishedAt`), nên vẫn đủ khi chủ phòng đã xóa phòng. Mảng rỗng là trạng thái rỗng hợp lệ (người dùng chưa có trận được thưởng). `coins` là phần điểm; tổng Xu của trận = `coins + rankBonus`.
 
 ## Mới: `GET /api/leaderboards/xp`
 

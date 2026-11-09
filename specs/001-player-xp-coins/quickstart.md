@@ -17,7 +17,7 @@ npm --prefix frontend run build
 npm --prefix frontend test
 ```
 
-Test tích hợp: đặt `QUIZBATTLE_TEST_DB` là chuỗi kết nối tới DB docker (user có quyền tạo schema). Không đặt thì các test đó hiển thị là bỏ qua, không phải lỗi.
+Test tích hợp: đặt `QUIZBATTLE_TEST_DB` là chuỗi kết nối tới DB docker (role có quyền `CREATEDB`). Mỗi lần chạy tự tạo một database tạm `qb_test_<guid>`, chạy toàn bộ migration, rồi `DROP DATABASE ... WITH (FORCE)` khi xong; không đụng dữ liệu của DB dev. Không đặt biến thì các test đó hiển thị là bỏ qua, không phải lỗi.
 
 ## 2. Kịch bản thủ công (khớp spec)
 
@@ -34,8 +34,12 @@ Test tích hợp: đặt `QUIZBATTLE_TEST_DB` là chuỗi kết nối tới DB d
 | 9 | Khách đứng nhất, A nhì | khách không nhận; A nhận Xu thưởng hạng 2 (+20) |
 | 10 | Điểm toàn 0 (trả sai hết) | `awarded` nhưng XP/Xu 0, ghi chú "không có thưởng hạng" |
 | 11 | A vào phòng ở tab 1, sau đó mở `/join` ở tab 2 (cùng phòng, đang `Lobby`/`InProgress`) | vẫn một Player (không thêm dòng ở bảng người chơi), tab 1 nhận thông báo đã vào từ thiết bị khác và không trả lời được nữa |
-| 12 | Đăng nhập, để JWT hết hạn (rút ngắn `ExpiryMinutes` khi thử, hoặc sửa tay token trong localStorage), vào `/join` | hộp thoại "Phiên đăng nhập đã hết hạn" với hai lựa chọn; không tự thành khách |
-| 13 | Chọn "Vào làm khách" từ hộp thoại | vào được như khách, không có thưởng |
+| 12a | Đăng nhập, để token hết hạn (rút ngắn `ExpiryMinutes` khi thử, hoặc sửa `expiresAt` trong localStorage `quizbattle.auth` về quá khứ), tải lại rồi mở `/join` | hộp thoại "Phiên đăng nhập đã hết hạn" hiện ngay, hai lựa chọn; không tự thành khách; nút vào phòng bị vô hiệu cho tới khi chọn |
+| 12b | Mở `/join` khi còn hạn, sau đó làm token hết hạn (sửa `expiresAt`) rồi bấm "Vào phòng" | không gửi request; hộp thoại hiện; không có người chơi khách nào được tạo |
+| 12c | Hai tab đang mở, tab 1 tải lại sau khi hết hạn (xóa token), chuyển sang tab 2 mở `/join` rồi bấm vào phòng | tab 2 cũng hiện hộp thoại (cờ chia sẻ qua localStorage) |
+| 12d | Làm token vẫn còn hạn ở client nhưng sai ở server (đổi 1 ký tự chữ ký) rồi vào phòng | server trả 401 `token_invalid`; hộp thoại hiện; hộp còn nguyên sau khi `user` thành null |
+| 13 | Chọn "Vào làm khách" từ hộp thoại | hộp đóng, cờ xóa, vào được như khách, không có thưởng; chọn "Đăng nhập lại" rồi đăng nhập xong thì cờ cũng xóa và quay lại `/join` |
+| 14 | Sau trận có thưởng, chủ phòng xóa phòng `Finished` | `/profile` của A, B vẫn có trận đó (mã phòng, chủ đề, thời điểm); Xu và XP không đổi; hai truy vấn bất biến ở mục 3 vẫn trả 0 dòng |
 
 ## 3. Kiểm tra bất biến trong DB
 
@@ -51,7 +55,7 @@ LEFT JOIN (SELECT "UserId", SUM("Xp") s FROM "MatchRewards" GROUP BY "UserId") r
 WHERE u."TotalXp" <> COALESCE(r.s, 0);
 
 -- Không Player nào có hai thưởng (phải trả 0 dòng)
-SELECT "PlayerId" FROM "MatchRewards" GROUP BY "PlayerId" HAVING COUNT(*) > 1;
+SELECT "PlayerId" FROM "MatchRewards" WHERE "PlayerId" IS NOT NULL GROUP BY "PlayerId" HAVING COUNT(*) > 1;
 ```
 
 ## 4. Đồng thời (đã kết thúc chỉ một lần)

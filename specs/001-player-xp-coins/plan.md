@@ -12,11 +12,11 @@ Gắn `Player.UserId` khi người dùng đã đăng nhập vào phòng, và tra
 
 **Language/Version**: C# 12 / .NET 8; TypeScript 5.8 (strict)
 
-**Primary Dependencies**: ASP.NET Core 8, EF Core + Npgsql, SignalR; React 18, TanStack Query, `@microsoft/signalr`. **Không thêm thư viện runtime nào.** Chỉ có đề xuất devDependencies cho test component ở frontend (xem R9, cần bạn duyệt).
+**Primary Dependencies**: ASP.NET Core 8, EF Core + Npgsql, SignalR; React 18, TanStack Query, `@microsoft/signalr`. Không thêm thư viện runtime. DevDependencies mới ở frontend (đã duyệt): `jsdom`, `@testing-library/react`.
 
 **Storage**: PostgreSQL (dev: docker compose, cổng 5433; prod: Supabase Session pooler). 1 migration EF mới.
 
-**Testing**: xUnit (backend), Vitest (frontend). Thêm test tích hợp Postgres (không thêm package, tự bỏ qua khi thiếu biến môi trường).
+**Testing**: xUnit (backend), Vitest (frontend; thêm `jsdom` + `@testing-library/react` cho test component, đã duyệt). Test tích hợp Postgres dùng database tạm cho mỗi lần chạy (không thêm package, tự bỏ qua khi thiếu `QUIZBATTLE_TEST_DB`).
 
 **Target Platform**: Render (backend, một instance), Vercel (frontend)
 
@@ -38,13 +38,13 @@ Gate theo [constitution](../../.specify/memory/constitution.md) (CLAUDE.md thắ
 | 2. Phân lớp, DI qua interface, logic thuần ở Domain có test | Đạt. `RewardCalculator`/`LevelCalculator` ở Domain; thêm `IUserRepository` method và `IProfileService`; Controller/Hub mỏng. |
 | 3. Bảo mật | Đạt. Không secret mới; endpoint hồ sơ `[Authorize]`; bảng xếp hạng chỉ lộ tên hiển thị + XP (không email). |
 | 4. Quy trình | Đạt. Nhánh `feat/player-xp-coins`, commit nhỏ, build + test trước khi merge. |
-| 5. Không thêm thư viện khi chưa hỏi | Đạt với backend. Frontend: **chờ duyệt** (R9). |
+| 5. Không thêm thư viện khi chưa hỏi | Đạt. Backend không thêm gì; frontend thêm devDependencies `jsdom` + `@testing-library/react` (đã được duyệt, R9). |
 
-**Điểm cần bạn quyết (không tự ý làm theo CLAUDE.md)**:
+**Quyết định đã được duyệt (thực hiện khi implement)**:
 
-1. Thêm mã lỗi SignalR `session_replaced` vào `GameErrorDto.Code` (CLAUDE.md đang liệt kê cố định 4 mã). Khuyến nghị: thêm, và sửa CLAUDE.md cùng lúc ([R5](research.md#r5-đổi-thiết-bị-fr-020)).
-2. Test component frontend (CLAUDE.md ghi "Vitest, chỉ cho logic"). Khuyến nghị: duyệt `jsdom` + `@testing-library/react` cho 3 màn, và sửa CLAUDE.md ([R9](research.md#r9-test-frontend)).
-3. Thứ hạng thưởng tính theo **điểm** (hòa điểm cùng hạng), còn bảng điểm hiện tại phân hạng hòa bằng tổng thời gian trả lời đúng. Hai hạng này có thể khác nhau; khuyến nghị giữ nguyên bảng điểm và hiển thị riêng "hạng thưởng" ở khối thưởng ([R3](research.md#r3-thứ-hạng-thưởng-và-hạng-trên-bảng-điểm)).
+1. Thêm mã lỗi SignalR `session_replaced` vào `GameErrorDto.Code` (CLAUDE.md đang liệt kê cố định 4 mã). Đã duyệt: thêm, và sửa danh sách mã trong CLAUDE.md ([R5](research.md#r5-đổi-thiết-bị-fr-020)).
+2. Test component frontend (CLAUDE.md ghi "Vitest, chỉ cho logic"). Đã duyệt: `jsdom` + `@testing-library/react` cho PlayFinished/LiveFinished, ProfilePage, JoinPage; sửa dòng đó trong CLAUDE.md ([R9](research.md#r9-test-frontend)).
+3. Thứ hạng thưởng tính theo **điểm** (hòa điểm cùng hạng), còn bảng điểm hiện tại phân hạng hòa bằng tổng thời gian trả lời đúng. Hai hạng này có thể khác nhau; đã duyệt: giữ nguyên `BuildLeaderboard`, hiển thị riêng "hạng thưởng" ở khối thưởng ([R3](research.md#r3-thứ-hạng-thưởng-và-hạng-trên-bảng-điểm)).
 
 ## Project Structure
 
@@ -84,11 +84,11 @@ backend/
     Middleware/      GlobalExceptionHandler (+extension "code")
   QuizBattle.Tests/  Domain/, Game/, Profile/, Api/, Integration/ (mới)
 frontend/src/
-  api/        profile.ts, leaderboards.ts, game.ts (createPlayer)
+  api/        profile.ts, leaderboards.ts, game.ts (createPlayer), tokenStorage.ts (cờ phiên hết hạn), apiError.ts (describeJoinAuthError)
   types/      profile.ts (mới), game.ts (+level, +rewards), problemDetails.ts (+code)
   hooks/      useProfile.ts, useXpLeaderboard.ts
   pages/      ProfilePage/, XpRankingPage/ (mới); JoinPage, PlayPage/PlayFinished, RoomLivePage/LiveFinished, PlayLobby, LiveLobby (sửa)
-  components/ RewardSummary.tsx, LevelBadge.tsx (mới); PlayerList, Leaderboard (hiện LevelBadge)
+  components/ RewardSummary.tsx, LevelBadge.tsx, SessionExpiredDialog.tsx (mới); PlayerList, Leaderboard (hiện LevelBadge); AuthProvider.tsx + authContext.ts (+sessionExpired, +dismissSessionExpired)
   realtime/   events.ts (không đổi tên sự kiện), sessionErrors.ts (+session_replaced), gameReducer.ts (lưu rewards)
 scripts/migrate-prod.ps1  (không sửa; chỉ kiểm chứng theo quickstart)
 .github/workflows/ci.yml  (thêm service postgres cho test tích hợp)
@@ -97,7 +97,7 @@ CLAUDE.md                 (cập nhật mã lỗi + phạm vi test nếu bạn d
 
 **Structure Decision**: giữ nguyên cấu trúc dự án; không thêm project mới.
 
-## Cách plan xử lý 7 điểm bắt buộc
+## Cách plan xử lý các điểm bắt buộc
 
 | # | Yêu cầu | Quyết định tóm tắt | Chi tiết |
 |---|---|---|---|
@@ -107,7 +107,9 @@ CLAUDE.md                 (cập nhật mã lỗi + phạm vi test nếu bạn d
 | 4 | Ngắt kết nối cũ khi đổi thiết bị | Hash phiên trong `Context.Items` được so với DB ở mỗi `SubmitAnswer` (xác thực chính, đúng cả khi nhiều instance) + `PlayerConnectionRegistry` đẩy lỗi `session_replaced` và gỡ khỏi group (cố gắng tối đa, một instance) | [R5](research.md#r5-đổi-thiết-bị-fr-020) |
 | 5 | Phân biệt "không gửi token" và "token hết hạn" | `OnAuthenticationFailed` ghi lý do vào `HttpContext.Items`; `GetOptionalUserId()` trả `null` khi không có header, ném 401 kèm `code` khi có header mà xác thực hỏng | [R7](research.md#r7-jwt-hết-hạn-khi-vào-phòng-fr-021), [contracts/rest-api.md](contracts/rest-api.md) |
 | 6 | Migration chạy được bằng `migrate-prod.ps1` | Một migration, cột mới có DEFAULT 0, không backfill, không SQL không idempotent; kiểm chứng bằng chạy script hai lần trên DB dữ liệu cũ | [R8](research.md#r8-migration-và-triển-khai-production), [quickstart.md](quickstart.md) |
-| 7 | Test | Danh sách theo từng FR + test đồng thời + hạ tầng test component | [R9](research.md#r9-test-frontend), [R10](research.md#r10-ma-trận-test-backend) |
+| 7 | Test | Danh sách theo từng FR + test đồng thời (database tạm cho mỗi lần chạy) + hạ tầng test component (đã duyệt) | [R9](research.md#r9-test-frontend), [R10](research.md#r10-ma-trận-test-backend) |
+| 8 | Cờ "phiên vừa hết hạn" ở frontend (bổ sung) | `loadAuth` đặt cờ trong localStorage, `AuthProvider` expose, `JoinPage` hiện hộp thoại độc lập với `user`; đường 401 `token_expired` giữ làm lưới an toàn | [R7](research.md#r7-jwt-hết-hạn-khi-vào-phòng-fr-021) |
+| 9 | Xóa phòng không mất thưởng (bổ sung) | `MatchRewards.PlayerId/RoomId` nullable `SET NULL` + bản sao `RoomCode`/`RoomTopic`/`FinishedAt` | [R12](research.md#r12-xóa-phòng-không-được-làm-mất-thưởng) |
 
 ## Complexity Tracking
 
@@ -117,3 +119,5 @@ Không có vi phạm hiến pháp cần biện minh. Hai chỗ phức tạp hơn
 |---|---|---|
 | Khóa hàng `Users` khi kết thúc trận | Hai phòng kết thúc cùng lúc cho cùng một tài khoản sẽ ghi đè số dư của nhau | `UPDATE ... SET x = x + n` thuần cũng được, nhưng `GameService` cần số tổng sau cộng để báo lên cấp và vẫn phải chạy qua snapshot; khóa theo thứ tự `Id` rõ ràng hơn |
 | `PlayerConnectionRegistry` | Đẩy thông báo "đã vào từ thiết bị khác" cho thiết bị cũ ngay | Chỉ kiểm hash khi `SubmitAnswer` đã đủ về an toàn, nhưng thiết bị cũ không biết mình bị đá cho tới khi bấm trả lời |
+
+Đã duyệt thêm: thêm service Postgres vào `ci.yml`; bảng xếp hạng XP giữ `[AllowAnonymous]`.

@@ -14,6 +14,7 @@
 
 - Q: Ngưỡng trận hợp lệ tính những tài khoản nào? → A: Chỉ tính tài khoản (không phải chủ phòng) đã gửi ít nhất 1 câu trả lời trong trận; tài khoản không trả lời câu nào không nhận thưởng.
 - Q: Thưởng hạng top 1/2/3 và hòa điểm xử lý thế nào? → A: Chỉ trao khi điểm trận > 0. Hòa điểm (> 0) thì cùng nhận thưởng hạng cao hơn.
+- Q: Thứ hạng để tính thưởng top 1/2/3 lấy từ đâu? → A: Từ bảng điểm chung của trận, tính cả khách và chủ phòng (nếu chủ phòng tự chơi); khách và chủ phòng chiếm hạng nhưng không nhận thưởng. Hòa điểm xếp kiểu competition ranking (1, 1, 3).
 - Q: Người rời phòng giữa trận có được thưởng không? → A: Có, nếu đã trả lời ít nhất 1 câu; thưởng theo điểm đã có.
 - Q: Công thức XP, Xu, cấp độ, bảng xếp hạng? → A: XP = floor(điểm / 10). Xu = floor(điểm / 100) + thưởng hạng (top 1: 30, top 2: 20, top 3: 10). Lên từ cấp n sang n+1 cần 200 × n XP (cấp 1 bắt đầu ở 0 XP, cấp 2 ở 200, cấp 3 ở 600). Bảng xếp hạng top 50, không hiện tài khoản 0 XP.
 - Q: Cùng tài khoản vào lại phòng từ thiết bị khác? → A: Dùng lại Player cũ, cấp session token mới; thiết bị cũ bị ngắt khỏi Player đó.
@@ -39,6 +40,7 @@ Người chơi đã đăng nhập vào phòng bằng mã phòng, thi đấu cùn
 5. **Given** thưởng đã được cộng cho một người chơi, **When** sự kiện kết thúc bị gửi lặp hoặc người chơi mất mạng rồi kết nối lại, **Then** XP và Xu không bị cộng thêm lần nữa.
 6. **Given** việc cộng thưởng làm tổng XP vượt ngưỡng cấp kế tiếp, **When** màn kết thúc hiển thị, **Then** người chơi thấy thông báo đã lên cấp mới.
 7. **Given** trận bị dừng giữa chừng (không hết câu cuối), **When** phòng đóng, **Then** không ai nhận XP hay Xu.
+8. **Given** một khách đứng nhất và tài khoản A đứng nhì trên bảng điểm chung (A đủ điều kiện nhận thưởng), **When** trận kết thúc, **Then** khách không nhận thưởng và A nhận thưởng hạng 2 (Xu +20).
 
 ---
 
@@ -152,12 +154,12 @@ Cấp độ hiển thị cạnh tên người chơi có tài khoản ở sảnh 
 - **FR-005**: Hệ thống MUST không trao thưởng cho tài khoản chủ phòng trong phòng do chính họ tạo, kể cả khi họ tự vào làm người chơi.
 - **FR-006**: Hệ thống MUST không trao thưởng cho khách.
 - **FR-007**: Hệ thống MUST tính XP = floor(điểm trận / 10).
-- **FR-008**: Hệ thống MUST tính Xu = floor(điểm trận / 100) + thưởng hạng (top 1: 30, top 2: 20, top 3: 10). Thưởng hạng chỉ trao khi điểm trận > 0; người hòa điểm (> 0) cùng nhận thưởng hạng cao hơn.
+- **FR-008**: Hệ thống MUST tính Xu = floor(điểm trận / 100) + thưởng hạng (top 1: 30, top 2: 20, top 3: 10). Thưởng hạng chỉ trao khi điểm trận > 0; người hòa điểm (> 0) cùng nhận thưởng hạng cao hơn. Thứ hạng lấy từ bảng điểm chung của trận, tính cả khách và chủ phòng (nếu chủ phòng tự chơi); khách và chủ phòng chiếm hạng nhưng không nhận thưởng. Hòa điểm xếp kiểu competition ranking (1, 1, 3), nên sau hai người hạng 1 người kế tiếp là hạng 3.
 - **FR-009**: Hệ thống MUST suy ra cấp độ từ tổng XP: lên từ cấp n sang n+1 cần 200 × n XP (cấp 1 từ 0 XP, cấp 2 từ 200, cấp 3 từ 600). Tổng XP MUST không bao giờ giảm.
 - **FR-010**: Hệ thống MUST ghi mỗi thay đổi Xu thành một bản ghi lịch sử gồm lý do, số lượng (dương hoặc âm), trận/phòng liên quan và thời điểm; số dư Xu MUST luôn bằng tổng lịch sử và MUST không bao giờ âm.
 - **FR-011**: Loại bản ghi lịch sử Xu MUST mở rộng được để tính năng cửa hàng ghi khoản trừ Xu mà không đổi cách tính số dư.
 - **FR-012**: Hệ thống MUST không cộng hồi tố cho trận đã kết thúc trước khi tính năng ra mắt, hoặc cho khách đăng nhập sau khi chơi xong.
-- **FR-013**: Màn kết thúc MUST hiển thị XP và Xu vừa nhận và việc có lên cấp hay không; khi không có thưởng MUST nói rõ lý do (chưa đủ 2 tài khoản khác nhau; chủ phòng không nhận thưởng; là khách).
+- **FR-013**: Màn kết thúc MUST hiển thị XP và Xu vừa nhận và việc có lên cấp hay không; khi không có thưởng MUST nói rõ lý do (chưa đủ 2 tài khoản khác nhau; chủ phòng không nhận thưởng; là khách; tài khoản chưa trả lời câu nào; điểm 0 nên không có thưởng hạng). Trường hợp điểm 0 vẫn có thể nhận XP/Xu phần điểm (bằng 0), chỉ nói rõ không có thưởng hạng.
 - **FR-014**: Người dùng đã đăng nhập MUST xem được trang hồ sơ gồm cấp, tổng XP, tiến trình tới cấp sau, số dư Xu và lịch sử thưởng các trận gần đây, với đủ trạng thái đang tải, lỗi, rỗng.
 - **FR-015**: Sảnh chờ và bảng điểm MUST hiển thị cấp độ cạnh tên người chơi có tài khoản.
 - **FR-016**: Hệ thống MUST cung cấp bảng xếp hạng top 50 theo tổng XP, không hiện tài khoản 0 XP, với trạng thái đang tải, lỗi, rỗng.

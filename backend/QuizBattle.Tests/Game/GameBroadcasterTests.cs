@@ -32,7 +32,7 @@ public sealed class GameBroadcasterTests
 
         public Task<QuizBattle.Application.Rooms.RoomResponse> OpenRoomAsync(Guid hostUserId, string code, CancellationToken cancellationToken) => throw new NotSupportedException();
 
-        public Task<CreatePlayerResponse> CreatePlayerAsync(string code, CreatePlayerRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<CreatePlayerResponse> CreatePlayerAsync(string code, Guid? userId, CreatePlayerRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<RoomStateDto> JoinAsHostAsync(Guid hostUserId, string code, CancellationToken cancellationToken) => throw new NotSupportedException();
 

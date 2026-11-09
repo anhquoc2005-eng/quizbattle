@@ -62,6 +62,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
         options.Events = new JwtBearerEvents
         {
+            // Endpoint [AllowAnonymous] bỏ qua lỗi token; ghi lý do để HttpContext.GetOptionalUserId() phân biệt
+            // token hết hạn với khách. Không log và không ghi nội dung token.
+            OnAuthenticationFailed = context =>
+            {
+                context.HttpContext.Items[AuthFailure.ItemKey] = AuthFailure.From(context.Exception);
+                return Task.CompletedTask;
+            },
+
             // SignalR qua WebSocket không gửi được header Authorization - đọc token từ query access_token,
             // nhưng CHỈ cho path /hubs (REST vẫn phải dùng header). Mức log mặc định của
             // "Microsoft.AspNetCore" đã hạ xuống Warning (xem appsettings.Development.json) nên request có

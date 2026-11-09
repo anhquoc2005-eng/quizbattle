@@ -9,8 +9,11 @@ public interface IGameService
     /// <summary>Draft -> Lobby. Cần ít nhất 1 câu Approved, không thì 409.</summary>
     Task<RoomResponse> OpenRoomAsync(Guid hostUserId, string code, CancellationToken cancellationToken);
 
-    /// <summary>Người chơi vào phòng (ẩn danh) - chỉ khi Lobby, chưa đủ 50 người, tên chưa trùng trong phòng.</summary>
-    Task<CreatePlayerResponse> CreatePlayerAsync(string code, CreatePlayerRequest request, CancellationToken cancellationToken);
+    /// <summary>
+    /// Người chơi vào phòng. userId null = khách: chỉ khi Lobby, chưa đủ 50 người, tên chưa trùng. Có userId: tài khoản đã có
+    /// Player trong phòng thì dùng lại (xoay token, bỏ qua tên, cho phép Lobby và InProgress); chưa có thì như khách nhưng gắn UserId.
+    /// </summary>
+    Task<CreatePlayerResponse> CreatePlayerAsync(string code, Guid? userId, CreatePlayerRequest request, CancellationToken cancellationToken);
 
     // --- Hub ---
 

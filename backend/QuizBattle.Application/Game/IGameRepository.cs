@@ -28,10 +28,12 @@ public interface IGameRepository
     Task<IReadOnlyList<DueRoom>> FindDueRoomsAsync(DateTimeOffset now, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Thêm người chơi mới: khóa dòng Room bằng FOR UPDATE, nạp snapshot, gọi buildPlayer để quyết định
-    /// (kiểm tra Lobby/giới hạn 50 người/tên trùng - ném exception thì rollback), insert, commit.
+    /// Vào phòng: khóa dòng Room bằng FOR UPDATE, nạp snapshot (kèm tài khoản userId nếu có, trong snapshot.Users), gọi
+    /// buildOrReusePlayer để quyết định (Lobby/giới hạn 50 người/tên trùng/tài khoản còn tồn tại - ném exception thì
+    /// rollback, không lưu gì). Callback trả Player mới (insert) hoặc Player đã có trong snapshot.Players (vào lại: chỉ
+    /// lưu phần đã sửa, không insert). Commit.
     /// </summary>
-    Task<Player> AddPlayerAsync(string code, Func<GameSnapshot, Player> buildPlayer, CancellationToken cancellationToken);
+    Task<Player> JoinPlayerAsync(string code, Guid? userId, Func<GameSnapshot, Player> buildOrReusePlayer, CancellationToken cancellationToken);
 
     /// <summary>
     /// Nộp đáp án: khóa dòng Room bằng SELECT ... FOR SHARE (không phải FOR UPDATE) - nhiều người trả lời

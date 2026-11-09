@@ -78,7 +78,7 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
         return result;
     }
 
-    public async Task<Player> AddPlayerAsync(string code, Func<GameSnapshot, Player> buildPlayer, CancellationToken cancellationToken)
+    public async Task<Player> JoinPlayerAsync(string code, Guid? userId, Func<GameSnapshot, Player> buildOrReusePlayer, CancellationToken cancellationToken)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
@@ -88,18 +88,28 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy phòng.");
 
-        var snapshot = await LoadSnapshotAsync(room, lockUsersIfFinalAdvance: false, cancellationToken);
-        var player = buildPlayer(snapshot); // ném exception -> rollback, không insert gì
+        var snapshot = await LoadSnapshotAsync(room, lockUsersIfFinalAdvance: false, cancellationToken, extraUserId: userId);
+        var player = buildOrReusePlayer(snapshot); // ném exception -> rollback, không lưu gì
 
-        db.Players.Add(player);
+        // Vào lại: Player đã được EF theo dõi (nạp trong snapshot), SaveChanges chỉ lưu phần đã sửa.
+        if (db.Entry(player).State == EntityState.Detached)
+        {
+            db.Players.Add(player);
+        }
+
         try
         {
             await db.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_Players_RoomId_lower_DisplayName" })
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg)
         {
-            // Đã khóa phòng nên hiếm khi tới đây; vẫn trả cùng lỗi như tên trùng ở GameService.
-            throw new ConflictException("Tên hiển thị đã có người dùng trong phòng.");
+            // Đã khóa phòng nên hiếm khi tới đây; vẫn trả cùng lỗi như kiểm tra ở GameService.
+            throw pg.ConstraintName switch
+            {
+                "IX_Players_RoomId_lower_DisplayName" => new ConflictException("Tên hiển thị đã có người dùng trong phòng."),
+                "IX_Players_RoomId_UserId" => new ConflictException("Bạn đã ở trong phòng này."),
+                _ => ex,
+            };
         }
 
         await transaction.CommitAsync(cancellationToken);
@@ -154,7 +164,7 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
         return result;
     }
 
-    private async Task<GameSnapshot> LoadSnapshotAsync(Room room, bool lockUsersIfFinalAdvance, CancellationToken cancellationToken)
+    private async Task<GameSnapshot> LoadSnapshotAsync(Room room, bool lockUsersIfFinalAdvance, CancellationToken cancellationToken, Guid? extraUserId = null)
     {
         var questions = await db.Questions
             .Where(q => q.RoomId == room.Id)
@@ -175,7 +185,9 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
         var isFinalAdvance = room.Status == RoomStatus.InProgress
             && approvedQuestions.LastOrDefault() is { StartedAt: not null, EndedAt: not null };
 
-        var userIds = players.Where(p => p.UserId is not null).Select(p => p.UserId!.Value).Distinct().ToArray();
+        // extraUserId: tài khoản đang vào phòng (chưa có Player) - để kiểm tra nó còn tồn tại.
+        var userIds = players.Where(p => p.UserId is not null).Select(p => p.UserId!.Value)
+            .Concat(extraUserId is { } extra ? [extra] : []).Distinct().ToArray();
         List<User> users;
         if (userIds.Length == 0)
         {

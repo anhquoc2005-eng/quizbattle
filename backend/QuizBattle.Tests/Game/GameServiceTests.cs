@@ -30,7 +30,7 @@ public sealed class GameServiceTests
         var service = CreateService(repository);
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            service.CreatePlayerAsync(room.Code, new CreatePlayerRequest { DisplayName = "Alice" }, CancellationToken.None));
+            service.CreatePlayerAsync(room.Code, null, new CreatePlayerRequest { DisplayName = "Alice" }, CancellationToken.None));
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public sealed class GameServiceTests
         var service = CreateService(repository);
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            service.CreatePlayerAsync(room.Code, new CreatePlayerRequest { DisplayName = "Người mới" }, CancellationToken.None));
+            service.CreatePlayerAsync(room.Code, null, new CreatePlayerRequest { DisplayName = "Người mới" }, CancellationToken.None));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class GameServiceTests
         var service = CreateService(repository);
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            service.CreatePlayerAsync(room.Code, new CreatePlayerRequest { DisplayName = "Alice" }, CancellationToken.None));
+            service.CreatePlayerAsync(room.Code, null, new CreatePlayerRequest { DisplayName = "Alice" }, CancellationToken.None));
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public sealed class GameServiceTests
         var service = CreateService(repository);
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            service.CreatePlayerAsync(room.Code, new CreatePlayerRequest { DisplayName = "an" }, CancellationToken.None));
+            service.CreatePlayerAsync(room.Code, null, new CreatePlayerRequest { DisplayName = "an" }, CancellationToken.None));
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public sealed class GameServiceTests
         repository.Players.Add(NewPlayer(otherRoom.Id, "An"));
         var service = CreateService(repository);
 
-        var response = await service.CreatePlayerAsync(room.Code, new CreatePlayerRequest { DisplayName = "an" }, CancellationToken.None);
+        var response = await service.CreatePlayerAsync(room.Code, null, new CreatePlayerRequest { DisplayName = "an" }, CancellationToken.None);
 
         Assert.Equal(room.Code, response.RoomCode);
     }
@@ -316,6 +316,130 @@ public sealed class GameServiceTests
         Assert.Equal(progress.TotalPlayers, progress.AnsweredCount);
         Assert.NotNull(result);
         Assert.Equal(Now.AddSeconds(2), question.EndedAt);
+    }
+
+    // ---- Gắn tài khoản khi vào phòng (US2) ----
+
+    [Fact]
+    public async Task CreatePlayer_LoggedInUser_SetsUserId()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        var user = NewUser("Alice");
+        repository.Users.Add(user);
+        var service = CreateService(repository);
+
+        await service.CreatePlayerAsync(room.Code, user.Id, new CreatePlayerRequest { DisplayName = "Alice" }, CancellationToken.None);
+
+        Assert.Equal(user.Id, Assert.Single(repository.Players).UserId);
+    }
+
+    [Fact]
+    public async Task CreatePlayer_GuestWithoutToken_UserIdNull()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        var service = CreateService(repository);
+
+        await service.CreatePlayerAsync(room.Code, null, new CreatePlayerRequest { DisplayName = "Khách" }, CancellationToken.None);
+
+        Assert.Null(Assert.Single(repository.Players).UserId);
+    }
+
+    [Fact]
+    public async Task CreatePlayer_SameAccountAgain_ReusesPlayerAndRotatesToken()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        var user = NewUser("Alice");
+        repository.Users.Add(user);
+        var service = new GameService(repository, new SequenceTokenGenerator("t1", "t2"), new FakeTimeProvider(Now));
+        var request = new CreatePlayerRequest { DisplayName = "Alice" };
+
+        var first = await service.CreatePlayerAsync(room.Code, user.Id, request, CancellationToken.None);
+        var second = await service.CreatePlayerAsync(room.Code, user.Id, request, CancellationToken.None);
+
+        var player = Assert.Single(repository.Players);
+        Assert.Equal(first.PlayerId, second.PlayerId);
+        Assert.Equal(SessionTokenHasher.Hash("t2"), player.SessionTokenHash);
+        Assert.Null(await repository.FindPlayerByTokenHashAsync(SessionTokenHasher.Hash("t1"), CancellationToken.None)); // token cũ vô hiệu
+    }
+
+    [Fact]
+    public async Task CreatePlayer_RejoinWithDifferentName_KeepsOriginalName()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        var user = NewUser("Alice");
+        repository.Users.Add(user);
+        repository.Players.Add(NewPlayer(room.Id, "Bob", tokenHash: "bob-hash"));
+        var service = CreateService(repository);
+        await service.CreatePlayerAsync(room.Code, user.Id, new CreatePlayerRequest { DisplayName = "Alice" }, CancellationToken.None);
+
+        // Tên gửi lên khi vào lại bị bỏ qua - kể cả khi trùng tên người khác (không đụng index tên, không 409).
+        await service.CreatePlayerAsync(room.Code, user.Id, new CreatePlayerRequest { DisplayName = "Bob" }, CancellationToken.None);
+
+        Assert.Equal(2, repository.Players.Count);
+        Assert.Equal("Alice", repository.Players.Single(p => p.UserId == user.Id).DisplayName);
+    }
+
+    [Fact]
+    public async Task CreatePlayer_RejoinDuringInProgress_Allowed()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var repository = new FakeGameRepository { Room = room };
+        var user = NewUser("Alice");
+        repository.Users.Add(user);
+        var existing = NewPlayer(room.Id, "Alice", tokenHash: "old");
+        existing.UserId = user.Id;
+        repository.Players.Add(existing);
+        var service = CreateService(repository);
+
+        var response = await service.CreatePlayerAsync(room.Code, user.Id, new CreatePlayerRequest { DisplayName = "Alice" }, CancellationToken.None);
+
+        Assert.Equal(existing.Id, response.PlayerId);
+        Assert.NotEqual("old", existing.SessionTokenHash);
+    }
+
+    [Fact]
+    public async Task CreatePlayer_NewAccountDuringInProgress_Conflict()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var repository = new FakeGameRepository { Room = room };
+        var user = NewUser("Alice");
+        repository.Users.Add(user);
+        var service = CreateService(repository);
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            service.CreatePlayerAsync(room.Code, user.Id, new CreatePlayerRequest { DisplayName = "Alice" }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreatePlayer_RejoinWhenFinished_Conflict()
+    {
+        var room = NewRoom(RoomStatus.Finished);
+        var repository = new FakeGameRepository { Room = room };
+        var user = NewUser("Alice");
+        repository.Users.Add(user);
+        var existing = NewPlayer(room.Id, "Alice");
+        existing.UserId = user.Id;
+        repository.Players.Add(existing);
+        var service = CreateService(repository);
+
+        await Assert.ThrowsAsync<ConflictException>(() =>
+            service.CreatePlayerAsync(room.Code, user.Id, new CreatePlayerRequest { DisplayName = "Alice" }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreatePlayer_UserNoLongerExists_ThrowsTokenInvalid()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var service = CreateService(new FakeGameRepository { Room = room });
+
+        var ex = await Assert.ThrowsAsync<UnauthorizedException>(() =>
+            service.CreatePlayerAsync(room.Code, Guid.NewGuid(), new CreatePlayerRequest { DisplayName = "Ma" }, CancellationToken.None));
+
+        Assert.Equal("token_invalid", ex.Code);
     }
 
     // ---- Thưởng cuối trận (US1) ----
@@ -664,6 +788,18 @@ public sealed class GameServiceTests
             AnsweredAt = Now.AddSeconds(1), IsCorrect = score > 0, PointsAwarded = score,
         });
         return (player, user);
+    }
+
+    private static User NewUser(string name) => new()
+    {
+        Id = Guid.NewGuid(), Email = $"{name}@test.local", PasswordHash = "h", DisplayName = name, CreatedAt = Now,
+    };
+
+    private sealed class SequenceTokenGenerator(params string[] tokens) : ISessionTokenGenerator
+    {
+        private int _next;
+
+        public string Generate() => tokens[_next++];
     }
 
     private static PlayerRewardDto RewardOf(NextQuestionOutcome outcome, Player player) =>

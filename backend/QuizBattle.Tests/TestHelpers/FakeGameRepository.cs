@@ -62,15 +62,19 @@ public sealed class FakeGameRepository : IGameRepository
     public Task<IReadOnlyList<DueRoom>> FindDueRoomsAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
         throw new NotSupportedException(); // truy vấn SQL thật, không mô phỏng ở lớp giả
 
-    public Task<Player> AddPlayerAsync(string code, Func<GameSnapshot, Player> buildPlayer, CancellationToken cancellationToken)
+    public Task<Player> JoinPlayerAsync(string code, Guid? userId, Func<GameSnapshot, Player> buildOrReusePlayer, CancellationToken cancellationToken)
     {
         if (Room.Code != code)
         {
             throw new NotFoundException("Không tìm thấy phòng.");
         }
 
-        var player = buildPlayer(BuildSnapshot());
-        Players.Add(player);
+        var player = buildOrReusePlayer(BuildSnapshot(extraUserId: userId));
+        if (!Players.Contains(player))
+        {
+            Players.Add(player);
+        }
+
         return Task.FromResult(player);
     }
 
@@ -154,12 +158,16 @@ public sealed class FakeGameRepository : IGameRepository
         };
     }
 
-    private GameSnapshot BuildSnapshot()
+    private GameSnapshot BuildSnapshot(Guid? extraUserId = null)
     {
         var approved = Questions.Where(q => q.ReviewStatus == QuestionReviewStatus.Approved).OrderBy(q => q.OrderIndex).ToList();
         var current = approved.Where(q => q.StartedAt is not null).OrderByDescending(q => q.StartedAt).FirstOrDefault();
         var players = Players.Where(p => p.RoomId == Room.Id).ToList();
         var userIds = players.Where(p => p.UserId is not null).Select(p => p.UserId!.Value).ToHashSet();
+        if (extraUserId is { } extra)
+        {
+            userIds.Add(extra);
+        }
 
         return new GameSnapshot
         {

@@ -42,7 +42,7 @@ public sealed class GameService(
                 snapshot.Players.Count);
         }, cancellationToken);
 
-    public async Task<CreatePlayerResponse> CreatePlayerAsync(string code, CreatePlayerRequest request, CancellationToken cancellationToken)
+    public async Task<CreatePlayerResponse> CreatePlayerAsync(string code, Guid? userId, CreatePlayerRequest request, CancellationToken cancellationToken)
     {
         var normalizedCode = code.ToUpperInvariant();
         var displayName = request.DisplayName.Trim();
@@ -50,8 +50,30 @@ public sealed class GameService(
         var tokenHash = SessionTokenHasher.Hash(token);
         var joinedAt = timeProvider.GetUtcNow();
 
-        var player = await gameRepository.AddPlayerAsync(normalizedCode, snapshot =>
+        var player = await gameRepository.JoinPlayerAsync(normalizedCode, userId, snapshot =>
         {
+            if (userId is { } accountId)
+            {
+                if (!snapshot.Users.ContainsKey(accountId))
+                {
+                    throw new UnauthorizedException("Tài khoản không còn tồn tại.", "token_invalid");
+                }
+
+                // Mỗi tài khoản một Player mỗi phòng: vào lại (kể cả giữa trận, từ thiết bị khác) dùng Player cũ,
+                // xoay token (token cũ vô hiệu), bỏ qua tên gửi lên nên không bao giờ đụng index tên.
+                var existing = snapshot.Players.FirstOrDefault(p => p.UserId == accountId);
+                if (existing is not null)
+                {
+                    if (snapshot.Room.Status is not (RoomStatus.Lobby or RoomStatus.InProgress))
+                    {
+                        throw new ConflictException("Phòng chưa mở hoặc đã kết thúc, không thể vào.");
+                    }
+
+                    existing.SessionTokenHash = tokenHash;
+                    return existing;
+                }
+            }
+
             if (snapshot.Room.Status != RoomStatus.Lobby)
             {
                 throw new ConflictException("Phòng chưa mở hoặc đã bắt đầu, không thể vào.");
@@ -71,6 +93,7 @@ public sealed class GameService(
             {
                 Id = Guid.NewGuid(),
                 RoomId = snapshot.Room.Id,
+                UserId = userId,
                 DisplayName = displayName,
                 SessionTokenHash = tokenHash,
                 Score = 0,

@@ -271,7 +271,10 @@ public sealed class GameService(
         snapshot.Room.Status = RoomStatus.Finished;
         snapshot.Room.EndedAt = now;
         var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
-        return new NextQuestionOutcome(null, new GameEndedDto(leaderboard));
+
+        // Thưởng được tạo ngay trong transaction đang giữ khóa Room, cùng SaveChanges với Status = Finished.
+        var rewards = RewardSettlement.Settle(snapshot, now);
+        return new NextQuestionOutcome(null, new GameEndedDto(leaderboard, rewards));
     }
 
     private static void RequireHost(GameSnapshot snapshot, Guid hostUserId)
@@ -325,7 +328,8 @@ public sealed class GameService(
             isHost,
             playerId,
             hasAnswered,
-            now);
+            now,
+            snapshot.Room.Status == RoomStatus.Finished ? RewardSettlement.FromStored(snapshot) : null);
     }
 
     // Hòa điểm: tổng thời gian trả lời đúng ít hơn đứng trên - chỉ tính các câu đã trả lời đúng.

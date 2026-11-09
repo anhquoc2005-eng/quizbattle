@@ -13,4 +13,6 @@ public sealed record RoomStateDto(
     bool? HasAnsweredCurrentQuestion,
     // Đồng hồ client có thể lệch vài giây - client tự tính offset = ServerTime - Date.now() lúc nhận, rồi
     // dùng offset đó để suy ra "server nghĩ bây giờ là mấy giờ" thay vì tin thẳng đồng hồ máy mình.
-    DateTimeOffset ServerTime);
+    DateTimeOffset ServerTime,
+    // Có giá trị khi phòng Finished (đọc từ thưởng đã lưu, không tính lại); null ở trạng thái khác.
+    IReadOnlyList<PlayerRewardDto>? Rewards);

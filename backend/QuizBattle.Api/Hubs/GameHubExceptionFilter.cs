@@ -17,10 +17,11 @@ public sealed class GameHubExceptionFilter(IHubContext<GameHub> hubContext, ILog
         {
             return await next(invocationContext);
         }
-        catch (Exception ex) when (ex is ConflictException or UnauthorizedException or NotFoundException)
+        catch (Exception ex) when (ex is ConflictException or UnauthorizedException or NotFoundException or SessionReplacedException)
         {
             var code = ex switch
             {
+                SessionReplacedException => "session_replaced",
                 UnauthorizedException => "unauthorized",
                 NotFoundException => "not_found",
                 ConflictException => "conflict",

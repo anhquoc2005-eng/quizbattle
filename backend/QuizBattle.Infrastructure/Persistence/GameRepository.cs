@@ -13,7 +13,7 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
     public async Task<GameSnapshot?> FindSnapshotByCodeAsync(string code, CancellationToken cancellationToken)
     {
         var room = await db.Rooms.AsNoTracking().SingleOrDefaultAsync(r => r.Code == code, cancellationToken);
-        return room is null ? null : await LoadSnapshotAsync(room, cancellationToken);
+        return room is null ? null : await LoadSnapshotAsync(room, lockUsersIfFinalAdvance: false, cancellationToken);
     }
 
     public async Task<Player?> FindPlayerByTokenHashAsync(string sessionTokenHash, CancellationToken cancellationToken) =>
@@ -67,9 +67,12 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy phòng.");
 
-        var snapshot = await LoadSnapshotAsync(room, cancellationToken);
+        var snapshot = await LoadSnapshotAsync(room, lockUsersIfFinalAdvance: true, cancellationToken);
         var result = work(snapshot); // ném exception -> rollback khi transaction Dispose, không lưu gì
 
+        // Thưởng cuối trận đi cùng SaveChanges (1 transaction) với Room.Status = Finished và cộng Users.
+        db.MatchRewards.AddRange(snapshot.NewMatchRewards);
+        db.CoinTransactions.AddRange(snapshot.NewCoinTransactions);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return result;
@@ -85,7 +88,7 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy phòng.");
 
-        var snapshot = await LoadSnapshotAsync(room, cancellationToken);
+        var snapshot = await LoadSnapshotAsync(room, lockUsersIfFinalAdvance: false, cancellationToken);
         var player = buildPlayer(snapshot); // ném exception -> rollback, không insert gì
 
         db.Players.Add(player);
@@ -151,7 +154,7 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
         return result;
     }
 
-    private async Task<GameSnapshot> LoadSnapshotAsync(Room room, CancellationToken cancellationToken)
+    private async Task<GameSnapshot> LoadSnapshotAsync(Room room, bool lockUsersIfFinalAdvance, CancellationToken cancellationToken)
     {
         var questions = await db.Questions
             .Where(q => q.RoomId == room.Id)
@@ -168,6 +171,33 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
             .FirstOrDefault();
         var answeredCount = current is null ? 0 : answers.Count(a => a.QuestionId == current.Id);
 
+        // Đúng điều kiện để lần AdvanceFrom kế tiếp rơi vào nhánh kết thúc trận.
+        var isFinalAdvance = room.Status == RoomStatus.InProgress
+            && approvedQuestions.LastOrDefault() is { StartedAt: not null, EndedAt: not null };
+
+        var userIds = players.Where(p => p.UserId is not null).Select(p => p.UserId!.Value).Distinct().ToArray();
+        List<User> users;
+        if (userIds.Length == 0)
+        {
+            users = [];
+        }
+        else if (isFinalAdvance && lockUsersIfFinalAdvance)
+        {
+            // Khóa dòng Users theo thứ tự Id cố định (sau khi đã khóa Room): hai phòng cùng kết thúc cho cùng một
+            // tài khoản không ghi đè số dư của nhau và không deadlock. Có theo dõi để service cộng trực tiếp.
+            users = await db.Users
+                .FromSqlInterpolated($"SELECT * FROM \"Users\" WHERE \"Id\" = ANY({userIds}) ORDER BY \"Id\" FOR UPDATE")
+                .ToListAsync(cancellationToken);
+        }
+        else
+        {
+            users = await db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToListAsync(cancellationToken);
+        }
+
+        var rewards = room.Status == RoomStatus.Finished
+            ? await db.MatchRewards.AsNoTracking().Where(r => r.RoomId == room.Id).ToListAsync(cancellationToken)
+            : [];
+
         return new GameSnapshot
         {
             Room = room,
@@ -176,6 +206,9 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
             Answers = answers,
             TotalQuestionCount = questions.Count,
             AnsweredCountForCurrentQuestion = answeredCount,
+            Users = users.ToDictionary(u => u.Id),
+            IsFinalAdvance = isFinalAdvance,
+            Rewards = rewards,
         };
     }
 }

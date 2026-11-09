@@ -34,16 +34,24 @@ public sealed class GlobalExceptionHandler(
 
         httpContext.Response.StatusCode = status;
 
+        var problemDetails = new ProblemDetails
+        {
+            Status = status,
+            Title = title,
+            Type = type,
+        };
+
+        // Trường mở rộng "code" (không đổi cấu trúc ProblemDetails) để client phân biệt nguyên nhân 401.
+        if (exception is UnauthorizedException { Code: { } code })
+        {
+            problemDetails.Extensions["code"] = code;
+        }
+
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = new ProblemDetails
-            {
-                Status = status,
-                Title = title,
-                Type = type,
-            },
+            ProblemDetails = problemDetails,
         });
     }
 }

@@ -24,6 +24,23 @@ public sealed class GameSnapshot
 
     public int AnsweredCountForCurrentQuestion { get; init; }
 
+    /// <summary>Tài khoản của những người chơi có UserId, theo User.Id. Khách không có trong từ điển.</summary>
+    public IReadOnlyDictionary<Guid, User> Users { get; init; } = new Dictionary<Guid, User>();
+
+    /// <summary>
+    /// Phòng đang InProgress và câu đã duyệt cuối cùng đã StartedAt + EndedAt - lần AdvanceFrom kế tiếp sẽ kết thúc
+    /// trận. Chỉ khi đó repository mới nạp <see cref="Users"/> có khóa FOR UPDATE và theo dõi để cộng thưởng.
+    /// </summary>
+    public bool IsFinalAdvance { get; init; }
+
+    /// <summary>Thưởng đã lưu của trận (chỉ nạp khi phòng Finished); trận cũ trước tính năng thì rỗng.</summary>
+    public IReadOnlyList<MatchReward> Rewards { get; init; } = [];
+
+    /// <summary>Service thêm vào khi kết thúc trận; repository lưu cùng SaveChanges với Room.Status = Finished.</summary>
+    public List<MatchReward> NewMatchRewards { get; } = [];
+
+    public List<CoinTransaction> NewCoinTransactions { get; } = [];
+
     /// <summary>
     /// Câu mới bắt đầu gần nhất - có thể đang chạy (EndedAt null) hoặc vừa kết thúc nhưng chủ phòng chưa
     /// bấm câu tiếp (EndedAt có giá trị). Dùng broadened definition này để người vào lại phòng ngay sau khi

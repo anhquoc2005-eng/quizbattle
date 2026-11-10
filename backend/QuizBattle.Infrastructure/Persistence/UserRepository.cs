@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using QuizBattle.Application.Auth;
 using QuizBattle.Application.Common;
+using QuizBattle.Application.Profile;
 using QuizBattle.Domain.Entities;
+using QuizBattle.Domain.Enums;
 
 namespace QuizBattle.Infrastructure.Persistence;
 
@@ -28,4 +30,20 @@ public sealed class UserRepository(AppDbContext db) : IUserRepository
             throw new ConflictException("Email đã được sử dụng.");
         }
     }
+
+    public async Task<IReadOnlyList<RewardHistoryItemDto>> GetRewardHistoryAsync(Guid userId, int limit, CancellationToken cancellationToken) =>
+        await db.MatchRewards.AsNoTracking()
+            .Where(r => r.UserId == userId && r.Status == RewardStatus.Awarded)
+            .OrderByDescending(r => r.FinishedAt)
+            .Take(limit)
+            .Select(r => new RewardHistoryItemDto(r.RoomCode, r.RoomTopic, r.FinishedAt, r.Score, r.RewardRank, r.Xp, r.Coins, r.RankBonus))
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<XpRankRow>> GetTopByXpAsync(int count, CancellationToken cancellationToken) =>
+        await db.Users.AsNoTracking()
+            .Where(u => u.TotalXp > 0)
+            .OrderByDescending(u => u.TotalXp).ThenBy(u => u.CreatedAt).ThenBy(u => u.Id)
+            .Take(count)
+            .Select(u => new XpRankRow(u.DisplayName, u.TotalXp))
+            .ToListAsync(cancellationToken);
 }

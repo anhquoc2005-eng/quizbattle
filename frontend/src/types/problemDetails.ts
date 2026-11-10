@@ -5,4 +5,6 @@ export interface ProblemDetails {
   status?: number
   detail?: string
   errors?: Record<string, string[]>
+  /** Mã lỗi máy đọc được (vd token_expired) - trường mở rộng của backend, không phải chuẩn RFC 9457. */
+  code?: string
 }

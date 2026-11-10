@@ -5,6 +5,8 @@ export interface PlayerSummary {
   playerId: string
   displayName: string
   score: number
+  /** Cấp của tài khoản; null với khách. */
+  level: number | null
 }
 
 /** Khớp CurrentQuestionStateDto - correctIndex chỉ có giá trị khi ended = true. */
@@ -28,6 +30,7 @@ export interface LeaderboardEntry {
   displayName: string
   score: number
   rank: number
+  level: number | null
 }
 
 /** Khớp RoomStateDto - gửi riêng cho người vừa JoinRoom (lần đầu hoặc vào lại sau khi rớt mạng). */
@@ -42,6 +45,8 @@ export interface RoomState {
   playerId: string | null
   hasAnsweredCurrentQuestion: boolean | null
   serverTime: string
+  /** Có giá trị khi status = Finished (thưởng đã lưu), null ở trạng thái khác. */
+  rewards: PlayerReward[] | null
 }
 
 /** Khớp QuestionStartedDto - KHÔNG có correctIndex. */
@@ -71,15 +76,37 @@ export interface LeaderboardUpdated {
   leaderboard: LeaderboardEntry[]
 }
 
+/** Lý do không nhận thưởng - khớp PlayerRewardDto.NotAwardedReason. */
+export type NotAwardedReason = 'guest' | 'host' | 'no_answers' | 'not_enough_accounts'
+
+/** Khớp PlayerRewardDto - tổng Xu nhận được = coins + rankBonus. totalXp/level* chỉ có khi awarded. */
+export interface PlayerReward {
+  playerId: string
+  awarded: boolean
+  notAwardedReason: NotAwardedReason | null
+  rewardRank: number
+  score: number
+  xp: number
+  coins: number
+  rankBonus: number
+  noRankBonusReason: 'zero_score' | null
+  totalXp: number | null
+  levelBefore: number | null
+  levelAfter: number | null
+  leveledUp: boolean | null
+}
+
 /** Khớp GameEndedDto. */
 export interface GameEnded {
   finalLeaderboard: LeaderboardEntry[]
+  rewards: PlayerReward[]
 }
 
 /** Khớp PlayerJoinedDto. */
 export interface PlayerJoined {
   playerId: string
   displayName: string
+  level: number | null
 }
 
 /** Khớp PlayerLeftDto. */
@@ -101,7 +128,7 @@ export interface AnswerAck {
 /** Khớp GameErrorDto - payload sự kiện Error. */
 export interface GameError {
   method: string
-  code: 'unauthorized' | 'not_found' | 'conflict' | 'unknown'
+  code: 'unauthorized' | 'not_found' | 'conflict' | 'session_replaced' | 'unknown'
   message: string
 }
 

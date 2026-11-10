@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ApiError, describeApiError, parseProblemDetails } from './apiError'
+import { ApiError, describeApiError, describeJoinAuthError, parseProblemDetails } from './apiError'
 
 describe('parseProblemDetails', () => {
   it('trả về null khi body không phải object', () => {
@@ -63,5 +63,36 @@ describe('describeApiError', () => {
 
   it('lỗi không phải ApiError (mất mạng) trả về câu chung', () => {
     expect(describeApiError(new TypeError('Failed to fetch'))).toBe('Không kết nối được máy chủ.')
+  })
+})
+
+describe('parseProblemDetails: code', () => {
+  it('giữ trường mở rộng code (401 token_expired) để client phân biệt nguyên nhân', () => {
+    const problem = parseProblemDetails({ title: 'Phiên đăng nhập đã hết hạn.', status: 401, code: 'token_expired' })
+
+    expect(problem?.code).toBe('token_expired')
+  })
+
+  it('bỏ qua code không phải chuỗi', () => {
+    expect(parseProblemDetails({ title: 'x', code: 5 })?.code).toBeUndefined()
+  })
+})
+
+describe('describeJoinAuthError', () => {
+  it('describeJoinAuthError_TokenExpired_ReturnsExpired', () => {
+    expect(describeJoinAuthError({ status: 401, code: 'token_expired' })).toBe('expired')
+  })
+
+  it('describeJoinAuthError_TokenInvalid_ReturnsExpired', () => {
+    expect(describeJoinAuthError({ status: 401, code: 'token_invalid' })).toBe('expired')
+  })
+
+  it('describeJoinAuthError_Other401_ReturnsNull', () => {
+    expect(describeJoinAuthError({ status: 401, title: 'Sai mật khẩu.' })).toBeNull()
+    expect(describeJoinAuthError({ status: 401, code: 'khac' })).toBeNull()
+  })
+
+  it('không có problem thì null', () => {
+    expect(describeJoinAuthError(null)).toBeNull()
   })
 })

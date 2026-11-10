@@ -20,7 +20,8 @@ public sealed class GlobalExceptionHandler(
         var (status, title, type) = exception switch
         {
             ConflictException => (StatusCodes.Status409Conflict, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.10"),
-            UnauthorizedException => (StatusCodes.Status401Unauthorized, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.2"),
+            UnauthorizedException or SessionReplacedException => (StatusCodes.Status401Unauthorized, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.2"),
+            RequestValidationException => (StatusCodes.Status400BadRequest, "Dữ liệu không hợp lệ.", "https://tools.ietf.org/html/rfc9110#section-15.5.1"),
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.5"),
             BadGatewayException => (StatusCodes.Status502BadGateway, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.6.3"),
             AiUnavailableException => (StatusCodes.Status503ServiceUnavailable, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.6.4"),
@@ -34,16 +35,36 @@ public sealed class GlobalExceptionHandler(
 
         httpContext.Response.StatusCode = status;
 
+        var problemDetails = new ProblemDetails
+        {
+            Status = status,
+            Title = title,
+            Type = type,
+        };
+
+        // Trường mở rộng "code" (không đổi cấu trúc ProblemDetails) để client phân biệt nguyên nhân 401.
+        var code = exception switch
+        {
+            UnauthorizedException { Code: { } c } => c,
+            SessionReplacedException => "session_replaced",
+            _ => null,
+        };
+        if (code is not null)
+        {
+            problemDetails.Extensions["code"] = code;
+        }
+
+        // Cùng dạng với lỗi validate model của ASP.NET: errors = { trường: [thông điệp] } (frontend mapServerErrorsToFields).
+        if (exception is RequestValidationException validation)
+        {
+            problemDetails.Extensions["errors"] = new Dictionary<string, string[]> { [validation.Field] = [validation.Message] };
+        }
+
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = new ProblemDetails
-            {
-                Status = status,
-                Title = title,
-                Type = type,
-            },
+            ProblemDetails = problemDetails,
         });
     }
 }

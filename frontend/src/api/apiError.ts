@@ -35,7 +35,16 @@ export function parseProblemDetails(body: unknown): ProblemDetails | null {
     status: typeof candidate.status === 'number' ? candidate.status : undefined,
     detail: typeof candidate.detail === 'string' ? candidate.detail : undefined,
     errors: isValidationErrors(candidate.errors) ? candidate.errors : undefined,
+    code: typeof candidate.code === 'string' ? candidate.code : undefined,
   }
+}
+
+/**
+ * 401 khi vào phòng kèm Authorization: 'expired' nếu token hết hạn hoặc không hợp lệ (người dùng phải chọn đăng nhập lại
+ * hoặc vào làm khách, không được tự thành khách); null cho mọi lỗi khác.
+ */
+export function describeJoinAuthError(problem: ProblemDetails | null): 'expired' | null {
+  return problem?.code === 'token_expired' || problem?.code === 'token_invalid' ? 'expired' : null
 }
 
 /**

@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
 import { ApiError } from '../../api/apiError'
 import { FormField } from '../../components/FormField'
 import { HowItWorksCard } from '../../components/HowItWorksCard'
@@ -13,15 +13,15 @@ const LOGIN_FIELDS = ['email', 'password'] as const
 export function LoginPage() {
   const { login, user, isLoading: authLoading } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fieldErrors, setFieldErrors] = useState<LoginFormErrors>({})
   const [formError, setFormError] = useState<string | undefined>()
 
   const mutation = useMutation({
+    // Không điều hướng ở đây: login() gán user nên nhánh "đã có user" bên dưới là đường điều hướng duy nhất
+    // (nếu có thêm navigate() ở onSuccess, hai đường đua nhau và đường nào chạy sau sẽ thắng).
     mutationFn: () => login(email, password),
-    onSuccess: () => navigate(getRedirectPath(location.state), { replace: true }),
     onError: (error: unknown) => {
       setFormError(undefined)
 
@@ -46,7 +46,7 @@ export function LoginPage() {
   })
 
   if (!authLoading && user) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={getRedirectPath(location.state)} replace />
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -113,7 +113,7 @@ export function LoginPage() {
 }
 
 interface LocationState {
-  from?: { pathname: string }
+  from?: { pathname: string; search?: string }
 }
 
 function isLocationState(value: unknown): value is LocationState {
@@ -122,7 +122,8 @@ function isLocationState(value: unknown): value is LocationState {
 
 function getRedirectPath(state: unknown): string {
   if (isLocationState(state) && typeof state.from?.pathname === 'string') {
-    return state.from.pathname
+    // Giữ cả ?query: từ /join quay lại cần mã phòng (?code=...).
+    return state.from.pathname + (typeof state.from.search === 'string' ? state.from.search : '')
   }
   return '/dashboard'
 }

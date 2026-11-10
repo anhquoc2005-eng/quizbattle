@@ -106,6 +106,12 @@ public sealed class AuthServiceTests
             _users.Add(user);
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<QuizBattle.Application.Profile.RewardHistoryItemDto>> GetRewardHistoryAsync(Guid userId, int limit, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<XpRankRow>> GetTopByXpAsync(int count, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class FakePasswordHasher : IPasswordHasher

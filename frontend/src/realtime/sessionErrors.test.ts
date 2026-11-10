@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { GameError } from '../types/game'
-import { shouldDiscardSession, shouldIgnoreError } from './sessionErrors'
+import { isSessionReplaced, shouldDiscardSession, shouldIgnoreError } from './sessionErrors'
 
 function error(overrides: Partial<GameError> = {}): GameError {
   return { method: 'JoinRoom', code: 'unauthorized', message: 'Phiên không hợp lệ.', ...overrides }
@@ -25,6 +25,25 @@ describe('shouldDiscardSession', () => {
 
   it('SubmitAnswer + unauthorized (không phải JoinRoom) -> KHÔNG xóa phiên', () => {
     expect(shouldDiscardSession(error({ method: 'SubmitAnswer', code: 'unauthorized' }))).toBe(false)
+  })
+})
+
+describe('session_replaced (cùng tài khoản vào lại từ thiết bị khác)', () => {
+  it('JoinRoom + session_replaced -> xóa phiên đã lưu', () => {
+    expect(shouldDiscardSession(error({ method: 'JoinRoom', code: 'session_replaced' }))).toBe(true)
+  })
+
+  it('SubmitAnswer + session_replaced -> xóa phiên đã lưu (khác các lỗi SubmitAnswer khác)', () => {
+    expect(shouldDiscardSession(error({ method: 'SubmitAnswer', code: 'session_replaced' }))).toBe(true)
+  })
+
+  it('isSessionReplaced chỉ đúng với mã session_replaced', () => {
+    expect(isSessionReplaced(error({ code: 'session_replaced' }))).toBe(true)
+    expect(isSessionReplaced(error({ code: 'unauthorized' }))).toBe(false)
+  })
+
+  it('session_replaced không bị bỏ qua như conflict của EndQuestion/NextQuestion', () => {
+    expect(shouldIgnoreError(error({ method: 'NextQuestion', code: 'session_replaced' }))).toBe(false)
   })
 })
 

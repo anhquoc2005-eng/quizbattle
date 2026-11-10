@@ -6,7 +6,15 @@ import type { GameError } from '../types/game'
  * người chơi bị đẩy về /join rồi gặp 409 vì phòng không còn Lobby nữa - mất quyền vào lại trận đang diễn ra.
  */
 export function shouldDiscardSession(error: GameError): boolean {
-  return error.method === 'JoinRoom' && (error.code === 'unauthorized' || error.code === 'not_found')
+  return isSessionReplaced(error) || (error.method === 'JoinRoom' && (error.code === 'unauthorized' || error.code === 'not_found'))
+}
+
+/**
+ * Cùng tài khoản vừa vào lại phòng từ thiết bị khác: token của thiết bị này đã vô hiệu (mọi method, kể cả SubmitAnswer),
+ * nên phải xóa phiên đã lưu và dừng tự kết nối lại - kết nối lại với token cũ chỉ bị từ chối tiếp.
+ */
+export function isSessionReplaced(error: GameError): boolean {
+  return error.code === 'session_replaced'
 }
 
 /**

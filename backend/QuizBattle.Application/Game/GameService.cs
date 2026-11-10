@@ -42,7 +42,7 @@ public sealed class GameService(
                 snapshot.Players.Count);
         }, cancellationToken);
 
-    public async Task<CreatePlayerResponse> CreatePlayerAsync(string code, CreatePlayerRequest request, CancellationToken cancellationToken)
+    public async Task<CreatePlayerResponse> CreatePlayerAsync(string code, Guid? userId, CreatePlayerRequest request, CancellationToken cancellationToken)
     {
         var normalizedCode = code.ToUpperInvariant();
         var displayName = request.DisplayName.Trim();
@@ -50,8 +50,30 @@ public sealed class GameService(
         var tokenHash = SessionTokenHasher.Hash(token);
         var joinedAt = timeProvider.GetUtcNow();
 
-        var player = await gameRepository.AddPlayerAsync(normalizedCode, snapshot =>
+        var player = await gameRepository.JoinPlayerAsync(normalizedCode, userId, snapshot =>
         {
+            if (userId is { } accountId)
+            {
+                if (!snapshot.Users.ContainsKey(accountId))
+                {
+                    throw new UnauthorizedException("Tài khoản không còn tồn tại.", "token_invalid");
+                }
+
+                // Mỗi tài khoản một Player mỗi phòng: vào lại (kể cả giữa trận, từ thiết bị khác) dùng Player cũ,
+                // xoay token (token cũ vô hiệu), bỏ qua tên gửi lên nên không bao giờ đụng index tên.
+                var existing = snapshot.Players.FirstOrDefault(p => p.UserId == accountId);
+                if (existing is not null)
+                {
+                    if (snapshot.Room.Status is not (RoomStatus.Lobby or RoomStatus.InProgress))
+                    {
+                        throw new ConflictException("Phòng chưa mở hoặc đã kết thúc, không thể vào.");
+                    }
+
+                    existing.SessionTokenHash = tokenHash;
+                    return existing;
+                }
+            }
+
             if (snapshot.Room.Status != RoomStatus.Lobby)
             {
                 throw new ConflictException("Phòng chưa mở hoặc đã bắt đầu, không thể vào.");
@@ -71,6 +93,7 @@ public sealed class GameService(
             {
                 Id = Guid.NewGuid(),
                 RoomId = snapshot.Room.Id,
+                UserId = userId,
                 DisplayName = displayName,
                 SessionTokenHash = tokenHash,
                 Score = 0,
@@ -94,7 +117,7 @@ public sealed class GameService(
         return BuildRoomState(snapshot, isHost: true, playerId: null, timeProvider.GetUtcNow());
     }
 
-    public async Task<(RoomStateDto State, PlayerJoinedDto Broadcast)> JoinAsPlayerAsync(string code, string sessionToken, CancellationToken cancellationToken)
+    public async Task<(RoomStateDto State, PlayerJoinedDto Broadcast, string SessionTokenHash)> JoinAsPlayerAsync(string code, string sessionToken, CancellationToken cancellationToken)
     {
         var tokenHash = SessionTokenHasher.Hash(sessionToken);
         var player = await gameRepository.FindPlayerByTokenHashAsync(tokenHash, cancellationToken)
@@ -109,8 +132,8 @@ public sealed class GameService(
         }
 
         var state = BuildRoomState(snapshot, isHost: false, playerId: player.Id, timeProvider.GetUtcNow());
-        var broadcast = new PlayerJoinedDto(player.Id, player.DisplayName);
-        return (state, broadcast);
+        var broadcast = new PlayerJoinedDto(player.Id, player.DisplayName, LevelOf(snapshot.Users, player));
+        return (state, broadcast, tokenHash);
     }
 
     public Task<QuestionStartedDto> StartGameAsync(Guid hostUserId, string code, CancellationToken cancellationToken) =>
@@ -158,6 +181,12 @@ public sealed class GameService(
         {
             RequireHost(snapshot, hostUserId);
 
+            // Phòng đã Finished thì câu cuối vẫn có EndedAt: không chặn ở đây thì lần gọi thứ hai sẽ chạy lại nhánh kết thúc trận.
+            if (snapshot.Room.Status != RoomStatus.InProgress)
+            {
+                throw new ConflictException("Trận không đang diễn ra.");
+            }
+
             var current = snapshot.CurrentQuestion;
             if (current is null || current.EndedAt is null)
             {
@@ -200,9 +229,15 @@ public sealed class GameService(
     public Task<IReadOnlyList<DueRoom>> FindDueRoomsAsync(CancellationToken cancellationToken) =>
         gameRepository.FindDueRoomsAsync(timeProvider.GetUtcNow(), cancellationToken);
 
-    public Task<(AnswerAckDto Ack, AnswerProgressDto Progress, Guid RoomId)> SubmitAnswerAsync(Guid playerId, Guid questionId, int selectedIndex, CancellationToken cancellationToken) =>
+    public Task<(AnswerAckDto Ack, AnswerProgressDto Progress, Guid RoomId)> SubmitAnswerAsync(Guid playerId, string sessionTokenHash, Guid questionId, int selectedIndex, CancellationToken cancellationToken) =>
         gameRepository.SubmitAnswerAsync(playerId, snapshot =>
         {
+            // Player đã nạp sẵn trong transaction nên so hash không thêm truy vấn. Đúng cả khi nhiều instance (chỉ dựa vào DB).
+            if (snapshot.Player.SessionTokenHash != sessionTokenHash)
+            {
+                throw new SessionReplacedException("Bạn đã vào phòng từ thiết bị khác.");
+            }
+
             if (snapshot.Question is null || snapshot.Question.Id != questionId || snapshot.Question.EndedAt is not null)
             {
                 throw new ConflictException("Không phải câu đang chạy.");
@@ -246,7 +281,7 @@ public sealed class GameService(
         var ended = new QuestionEndedDto(
             current.Id, current.CorrectIndex, snapshot.AnsweredCountForCurrentQuestion, snapshot.Players.Count,
             now, now.AddSeconds(Room.RESULT_DISPLAY_SECONDS));
-        var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
+        var leaderboard = BuildLeaderboard(snapshot);
         return (ended, new LeaderboardUpdatedDto(leaderboard));
     }
 
@@ -264,8 +299,12 @@ public sealed class GameService(
 
         snapshot.Room.Status = RoomStatus.Finished;
         snapshot.Room.EndedAt = now;
-        var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
-        return new NextQuestionOutcome(null, new GameEndedDto(leaderboard));
+
+        // Thưởng được tạo ngay trong transaction đang giữ khóa Room, cùng SaveChanges với Status = Finished.
+        // Phải tính TRƯỚC khi dựng bảng xếp hạng để Level là cấp sau khi cộng XP trận này.
+        var rewards = RewardSettlement.Settle(snapshot, now);
+        var leaderboard = BuildLeaderboard(snapshot);
+        return new NextQuestionOutcome(null, new GameEndedDto(leaderboard, rewards));
     }
 
     private static void RequireHost(GameSnapshot snapshot, Guid hostUserId)
@@ -288,7 +327,7 @@ public sealed class GameService(
 
     private static RoomStateDto BuildRoomState(GameSnapshot snapshot, bool isHost, Guid? playerId, DateTimeOffset now)
     {
-        var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
+        var leaderboard = BuildLeaderboard(snapshot);
         var current = snapshot.CurrentQuestion;
         CurrentQuestionStateDto? currentDto = null;
         bool? hasAnswered = null;
@@ -313,20 +352,21 @@ public sealed class GameService(
             snapshot.Room.Code,
             snapshot.Room.Status.ToString(),
             snapshot.Room.QuestionTimeLimitSeconds,
-            snapshot.Players.Select(p => new PlayerSummaryDto(p.Id, p.DisplayName, p.Score)).ToList(),
+            snapshot.Players.Select(p => new PlayerSummaryDto(p.Id, p.DisplayName, p.Score, LevelOf(snapshot.Users, p))).ToList(),
             currentDto,
             leaderboard,
             isHost,
             playerId,
             hasAnswered,
-            now);
+            now,
+            snapshot.Room.Status == RoomStatus.Finished ? RewardSettlement.FromStored(snapshot) : null);
     }
 
     // Hòa điểm: tổng thời gian trả lời đúng ít hơn đứng trên - chỉ tính các câu đã trả lời đúng.
-    private static IReadOnlyList<LeaderboardEntryDto> BuildLeaderboard(
-        IReadOnlyList<Player> players, IReadOnlyList<Answer> answers, IReadOnlyList<Question> questions)
+    private static IReadOnlyList<LeaderboardEntryDto> BuildLeaderboard(GameSnapshot snapshot)
     {
-        var startedAtByQuestionId = questions
+        var (players, answers) = (snapshot.Players, snapshot.Answers);
+        var startedAtByQuestionId = snapshot.ApprovedQuestions
             .Where(q => q.StartedAt is not null)
             .ToDictionary(q => q.Id, q => q.StartedAt!.Value);
 
@@ -340,7 +380,11 @@ public sealed class GameService(
             })
             .OrderByDescending(x => x.Player.Score)
             .ThenBy(x => x.TotalCorrectMs)
-            .Select((x, i) => new LeaderboardEntryDto(x.Player.Id, x.Player.DisplayName, x.Player.Score, i + 1))
+            .Select((x, i) => new LeaderboardEntryDto(x.Player.Id, x.Player.DisplayName, x.Player.Score, i + 1, LevelOf(snapshot.Users, x.Player)))
             .ToList();
     }
+
+    /// <summary>Cấp của người chơi có tài khoản; khách (hoặc tài khoản không có trong snapshot) là null.</summary>
+    private static int? LevelOf(IReadOnlyDictionary<Guid, User> users, Player player) =>
+        player.UserId is { } id && users.TryGetValue(id, out var user) ? LevelCalculator.FromXp(user.TotalXp) : null;
 }

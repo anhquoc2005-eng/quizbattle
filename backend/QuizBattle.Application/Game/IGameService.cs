@@ -9,14 +9,18 @@ public interface IGameService
     /// <summary>Draft -> Lobby. Cần ít nhất 1 câu Approved, không thì 409.</summary>
     Task<RoomResponse> OpenRoomAsync(Guid hostUserId, string code, CancellationToken cancellationToken);
 
-    /// <summary>Người chơi vào phòng (ẩn danh) - chỉ khi Lobby, chưa đủ 50 người, tên chưa trùng trong phòng.</summary>
-    Task<CreatePlayerResponse> CreatePlayerAsync(string code, CreatePlayerRequest request, CancellationToken cancellationToken);
+    /// <summary>
+    /// Người chơi vào phòng. userId null = khách: chỉ khi Lobby, chưa đủ 50 người, tên chưa trùng. Có userId: tài khoản đã có
+    /// Player trong phòng thì dùng lại (xoay token, bỏ qua tên, cho phép Lobby và InProgress); chưa có thì như khách nhưng gắn UserId.
+    /// </summary>
+    Task<CreatePlayerResponse> CreatePlayerAsync(string code, Guid? userId, CreatePlayerRequest request, CancellationToken cancellationToken);
 
     // --- Hub ---
 
     Task<RoomStateDto> JoinAsHostAsync(Guid hostUserId, string code, CancellationToken cancellationToken);
 
-    Task<(RoomStateDto State, PlayerJoinedDto Broadcast)> JoinAsPlayerAsync(string code, string sessionToken, CancellationToken cancellationToken);
+    /// <summary>Trả thêm hash phiên hiện tại của Player để Hub gắn vào kết nối và so sánh ở mỗi SubmitAnswer.</summary>
+    Task<(RoomStateDto State, PlayerJoinedDto Broadcast, string SessionTokenHash)> JoinAsPlayerAsync(string code, string sessionToken, CancellationToken cancellationToken);
 
     Task<QuestionStartedDto> StartGameAsync(Guid hostUserId, string code, CancellationToken cancellationToken);
 
@@ -24,7 +28,8 @@ public interface IGameService
 
     Task<NextQuestionOutcome> NextQuestionAsync(Guid hostUserId, string code, CancellationToken cancellationToken);
 
-    Task<(AnswerAckDto Ack, AnswerProgressDto Progress, Guid RoomId)> SubmitAnswerAsync(Guid playerId, Guid questionId, int selectedIndex, CancellationToken cancellationToken);
+    /// <summary>sessionTokenHash khác hash hiện tại của Player (đã vào lại từ thiết bị khác) thì ném SessionReplacedException.</summary>
+    Task<(AnswerAckDto Ack, AnswerProgressDto Progress, Guid RoomId)> SubmitAnswerAsync(Guid playerId, string sessionTokenHash, Guid questionId, int selectedIndex, CancellationToken cancellationToken);
 
     // --- Thao tác hệ thống (GameTimerService, SubmitAnswer người cuối): không cần host, null = không đủ điều kiện ---
 

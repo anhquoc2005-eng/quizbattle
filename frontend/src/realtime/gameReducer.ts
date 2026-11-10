@@ -6,6 +6,7 @@ import type {
   LeaderboardUpdated,
   PlayerJoined,
   PlayerLeft,
+  PlayerReward,
   QuestionEnded,
   QuestionStarted,
   RoomState,
@@ -17,6 +18,7 @@ export interface PlayerPresence {
   playerId: string
   displayName: string
   score: number
+  level: number | null
   /** false khi đã nhận PlayerLeft (rớt mạng) - KHÔNG xóa khỏi danh sách, chỉ đánh dấu. */
   online: boolean
 }
@@ -40,6 +42,8 @@ export interface GameState {
   playerId: string | null
   answerProgress: AnswerProgress | null
   finalLeaderboard: LeaderboardEntry[] | null
+  /** Thưởng của mọi người chơi khi trận kết thúc (server tính); null khi chưa kết thúc. */
+  rewards: PlayerReward[] | null
   /** serverTime - Date.now() tại lần nhận gần nhất (RoomState/QuestionStarted) - xem src/realtime/serverTime.ts. */
   clockOffsetMs: number
 }
@@ -57,6 +61,7 @@ export const initialGameState: GameState = {
   playerId: null,
   answerProgress: null,
   finalLeaderboard: null,
+  rewards: null,
   clockOffsetMs: 0,
 }
 
@@ -90,6 +95,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         playerId: s.playerId,
         answerProgress: null,
         finalLeaderboard: s.status === 'Finished' ? s.leaderboard : null,
+        rewards: s.rewards,
         clockOffsetMs: computeClockOffsetMs(s.serverTime),
       }
     }
@@ -99,8 +105,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         players: alreadyIn
-          ? state.players.map((p) => (p.playerId === action.payload.playerId ? { ...p, online: true } : p))
-          : [...state.players, { playerId: action.payload.playerId, displayName: action.payload.displayName, score: 0, online: true }],
+          ? state.players.map((p) => (p.playerId === action.payload.playerId ? { ...p, online: true, level: action.payload.level } : p))
+          : [...state.players, { playerId: action.payload.playerId, displayName: action.payload.displayName, score: 0, level: action.payload.level, online: true }],
       }
     }
 
@@ -159,6 +165,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         status: 'Finished',
         leaderboard: action.payload.finalLeaderboard,
         finalLeaderboard: action.payload.finalLeaderboard,
+        rewards: action.payload.rewards,
       }
 
     case 'ANSWER_SUBMITTED':

@@ -26,7 +26,7 @@ public sealed class GameController(IGameService gameService) : ControllerBase
     [ProducesResponseType<CreatePlayerResponse>(StatusCodes.Status201Created)]
     public async Task<ActionResult<CreatePlayerResponse>> CreatePlayer(string code, CreatePlayerRequest request, CancellationToken cancellationToken)
     {
-        var result = await gameService.CreatePlayerAsync(code, request, cancellationToken);
+        var result = await gameService.CreatePlayerAsync(code, HttpContext.GetOptionalUserId(), request, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, result);
     }
 }

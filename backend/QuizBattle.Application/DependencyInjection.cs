@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using QuizBattle.Application.Auth;
 using QuizBattle.Application.Game;
 using QuizBattle.Application.Health;
+using QuizBattle.Application.Profile;
 using QuizBattle.Application.Questions;
 using QuizBattle.Application.Rooms;
 
@@ -17,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<IRoomService, RoomService>();
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IGameService, GameService>();
+        services.AddScoped<IProfileService, ProfileService>();
         return services;
     }
 }

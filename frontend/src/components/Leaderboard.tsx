@@ -1,4 +1,5 @@
 import type { LeaderboardEntry } from '../types/game'
+import { LevelBadge } from './LevelBadge'
 
 /** Bảng xếp hạng dùng chung cho màn người chơi và màn điều khiển - làm nổi dòng của chính mình nếu truyền highlightPlayerId. */
 export function Leaderboard({ entries, highlightPlayerId }: { entries: LeaderboardEntry[]; highlightPlayerId?: string | null }) {
@@ -18,6 +19,7 @@ export function Leaderboard({ entries, highlightPlayerId }: { entries: Leaderboa
             <span className="flex items-center gap-3">
               <span className="w-6 text-right tabular-nums text-faint">{entry.rank}</span>
               <span className={isSelf ? 'font-semibold' : undefined}>{entry.displayName}</span>
+              <LevelBadge level={entry.level} />
             </span>
             <span className="tabular-nums text-muted">{entry.score}</span>
           </li>

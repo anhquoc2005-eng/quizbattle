@@ -13,6 +13,23 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      # Test tích hợp tự tạo/xóa database tạm trên service này (POSTGRES_USER là superuser nên có CREATEDB).
+      QUIZBATTLE_TEST_DB: Host=localhost;Port=5432;Database=postgres;Username=ci;Password=ci
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

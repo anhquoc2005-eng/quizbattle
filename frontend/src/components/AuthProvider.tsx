@@ -1,9 +1,16 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { getMe, login as loginRequest, register as registerRequest } from '../api/auth'
 import { setUnauthorizedHandler } from '../api/client'
 import { restoreSession } from '../api/restoreSession'
 import { AuthContext } from './authContext'
-import { clearAuth, loadAuth, saveAuth } from '../api/tokenStorage'
+import {
+  clearAuth,
+  clearSessionExpiredFlag,
+  isSessionExpiredFlagSet,
+  loadAuth,
+  saveAuth,
+  subscribeSessionExpired,
+} from '../api/tokenStorage'
 import type { AuthUser } from '../types/auth'
 
 export interface AuthContextValue {
@@ -13,11 +20,15 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, displayName: string) => Promise<void>
   logout: () => void
+  /** true khi phiên đăng nhập vừa hết hạn (độc lập với user: vẫn true sau khi user = null) cho tới khi đăng nhập lại hoặc chọn vào làm khách. */
+  sessionExpired: boolean
+  dismissSessionExpired: () => void
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const sessionExpired = useSyncExternalStore(subscribeSessionExpired, isSessionExpiredFlagSet, () => false)
 
   const logout = useCallback(() => {
     clearAuth()
@@ -46,18 +57,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const result = await loginRequest({ email, password })
     saveAuth(result)
+    clearSessionExpiredFlag()
     setUser(result.user)
   }, [])
 
   const register = useCallback(async (email: string, password: string, displayName: string) => {
     const result = await registerRequest({ email, password, displayName })
     saveAuth(result)
+    clearSessionExpiredFlag()
     setUser(result.user)
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, login, register, logout }),
-    [user, isLoading, login, register, logout],
+    () => ({ user, isLoading, login, register, logout, sessionExpired, dismissSessionExpired: clearSessionExpiredFlag }),
+    [user, isLoading, login, register, logout, sessionExpired],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

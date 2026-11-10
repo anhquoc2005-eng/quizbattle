@@ -8,8 +8,10 @@ export default defineConfig({
     port: 5173,
   },
   test: {
-    // Vitest chỉ dùng cho logic thuần (không test giao diện), nên chạy trong môi trường Node.
+    // Mặc định môi trường Node cho logic thuần; test component khai báo `// @vitest-environment jsdom` ở đầu file.
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // api/client.ts ném lỗi khi thiếu VITE_API_URL; test component nạp nó gián tiếp qua AuthProvider.
+    env: { VITE_API_URL: 'http://localhost:5000' },
   },
 })

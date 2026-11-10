@@ -24,10 +24,13 @@ function readNotice(state: unknown): string | null {
 export function JoinPage() {
   const navigate = useNavigate()
   const notice = readNotice(useLocation().state)
-  const { sessionExpired, dismissSessionExpired } = useAuth()
+  const { user, isLoading, sessionExpired, dismissSessionExpired } = useAuth()
   const [searchParams] = useSearchParams()
   const [code, setCode] = useState((searchParams.get('code') ?? '').toUpperCase())
-  const [displayName, setDisplayName] = useState('')
+  // null = người dùng chưa gõ: ô tên hiện tên tài khoản (khi AuthProvider xong) và không bao giờ ghi đè tên đã gõ.
+  const [typedName, setTypedName] = useState<string | null>(null)
+  const displayName = typedName ?? user?.displayName ?? ''
+  const setDisplayName = setTypedName
   const [fieldErrors, setFieldErrors] = useState<JoinFormErrors>({})
   const [formError, setFormError] = useState<string>()
 
@@ -100,6 +103,13 @@ export function JoinPage() {
               hint="6 ký tự."
             />
             <FormField id="displayName" label="Tên hiển thị" value={displayName} onChange={setDisplayName} error={fieldErrors.displayName} />
+            {!isLoading && (
+              <p className="text-xs text-faint">
+                {user
+                  ? 'XP và Xu được tính khi trận có ít nhất 2 tài khoản tham gia trả lời.'
+                  : 'Vào làm khách sẽ không nhận XP và Xu. Đăng nhập để được tính thưởng.'}
+              </p>
+            )}
             {formError && (
               <p className="error" role="alert">
                 {formError}

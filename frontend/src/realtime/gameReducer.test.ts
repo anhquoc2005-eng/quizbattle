@@ -10,7 +10,7 @@ function roomState(overrides: Partial<RoomState> = {}): RoomState {
     code: 'ABCDEF',
     status: 'InProgress',
     questionTimeLimitSeconds: 20,
-    players: [{ playerId: 'p1', displayName: 'Alice', score: 500 }],
+    players: [{ playerId: 'p1', displayName: 'Alice', score: 500, level: 2 }],
     currentQuestion: null,
     leaderboard: [],
     isHost: false,
@@ -60,39 +60,39 @@ function stateWithQuestion(overrides: Partial<GameState> = {}): GameState {
 
 describe('gameReducer', () => {
   it('ROOM_STATE thay toàn bộ state', () => {
-    const dirty: GameState = { ...stateWithQuestion(), players: [{ playerId: 'x', displayName: 'Cũ', score: 1, online: true }] }
+    const dirty: GameState = { ...stateWithQuestion(), players: [{ playerId: 'x', displayName: 'Cũ', score: 1, level: null, online: true }] }
 
     const next = gameReducer(dirty, { type: 'ROOM_STATE', payload: roomState() })
 
-    expect(next.players).toEqual([{ playerId: 'p1', displayName: 'Alice', score: 500, online: true }])
+    expect(next.players).toEqual([{ playerId: 'p1', displayName: 'Alice', score: 500, level: 2, online: true }])
     expect(next.currentQuestion).toBeNull()
   })
 
   it('PLAYER_JOINED với playerId đã có không nhân đôi, chỉ đánh dấu online', () => {
     const state: GameState = {
       ...initialGameState,
-      players: [{ playerId: 'p1', displayName: 'Alice', score: 100, online: false }],
+      players: [{ playerId: 'p1', displayName: 'Alice', score: 100, level: 2, online: false }],
     }
-    const payload: PlayerJoined = { playerId: 'p1', displayName: 'Alice' }
+    const payload: PlayerJoined = { playerId: 'p1', displayName: 'Alice', level: 2 }
 
     const next = gameReducer(state, { type: 'PLAYER_JOINED', payload })
 
     expect(next.players).toHaveLength(1)
-    expect(next.players[0]).toEqual({ playerId: 'p1', displayName: 'Alice', score: 100, online: true })
+    expect(next.players[0]).toEqual({ playerId: 'p1', displayName: 'Alice', score: 100, level: 2, online: true })
   })
 
   it('PLAYER_JOINED với playerId mới thì thêm vào danh sách', () => {
-    const payload: PlayerJoined = { playerId: 'p2', displayName: 'Bob' }
+    const payload: PlayerJoined = { playerId: 'p2', displayName: 'Bob', level: null }
 
     const next = gameReducer(initialGameState, { type: 'PLAYER_JOINED', payload })
 
-    expect(next.players).toEqual([{ playerId: 'p2', displayName: 'Bob', score: 0, online: true }])
+    expect(next.players).toEqual([{ playerId: 'p2', displayName: 'Bob', score: 0, level: null, online: true }])
   })
 
   it('PLAYER_LEFT đánh dấu offline, KHÔNG xóa khỏi danh sách', () => {
     const state: GameState = {
       ...initialGameState,
-      players: [{ playerId: 'p1', displayName: 'Alice', score: 100, online: true }],
+      players: [{ playerId: 'p1', displayName: 'Alice', score: 100, level: 2, online: true }],
     }
     const payload: PlayerLeft = { playerId: 'p1' }
 
@@ -147,7 +147,7 @@ describe('gameReducer', () => {
   })
 
   it('GAME_ENDED lưu bảng xếp hạng cuối và chuyển trạng thái Finished', () => {
-    const payload: GameEnded = { finalLeaderboard: [{ playerId: 'p1', displayName: 'Alice', score: 900, rank: 1 }], rewards: [REWARD] }
+    const payload: GameEnded = { finalLeaderboard: [{ playerId: 'p1', displayName: 'Alice', score: 900, rank: 1, level: 2 }], rewards: [REWARD] }
 
     const next = gameReducer(stateWithQuestion(), { type: 'GAME_ENDED', payload })
 

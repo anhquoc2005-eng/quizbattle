@@ -41,7 +41,10 @@ export function DashboardPage() {
           <Link className="hide-sm" to="/dashboard" aria-current="page">
             Phòng của tôi
           </Link>
-          <span className="text-muted">{user?.displayName}</span>
+          <Link className="hide-sm" to="/ranking">
+            Xếp hạng
+          </Link>
+          <Link to="/profile">{user?.displayName}</Link>
           <button className="btn btn-ghost" type="button" onClick={handleLogout}>
             Đăng xuất
           </button>

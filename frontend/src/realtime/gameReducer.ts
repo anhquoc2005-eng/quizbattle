@@ -18,6 +18,7 @@ export interface PlayerPresence {
   playerId: string
   displayName: string
   score: number
+  level: number | null
   /** false khi đã nhận PlayerLeft (rớt mạng) - KHÔNG xóa khỏi danh sách, chỉ đánh dấu. */
   online: boolean
 }
@@ -104,8 +105,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         players: alreadyIn
-          ? state.players.map((p) => (p.playerId === action.payload.playerId ? { ...p, online: true } : p))
-          : [...state.players, { playerId: action.payload.playerId, displayName: action.payload.displayName, score: 0, online: true }],
+          ? state.players.map((p) => (p.playerId === action.payload.playerId ? { ...p, online: true, level: action.payload.level } : p))
+          : [...state.players, { playerId: action.payload.playerId, displayName: action.payload.displayName, score: 0, level: action.payload.level, online: true }],
       }
     }
 

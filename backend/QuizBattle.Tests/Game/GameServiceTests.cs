@@ -925,6 +925,94 @@ public sealed class GameServiceTests
     }
 
     [Fact]
+    public async Task RoomState_AccountPlayer_HasLevel()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        var (player, _) = AddAccount(repository, room, "Alice", score: 0, totalXp: 250, answered: false);
+        var service = CreateService(repository);
+
+        var state = await service.JoinAsHostAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.Equal(2, state.Players.Single(p => p.PlayerId == player.Id).Level);
+        Assert.Equal(2, state.Leaderboard.Single(e => e.PlayerId == player.Id).Level);
+    }
+
+    [Fact]
+    public async Task RoomState_Guest_LevelNull()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        var guest = NewPlayer(room.Id, "Khách");
+        repository.Players.Add(guest);
+        var service = CreateService(repository);
+
+        var state = await service.JoinAsHostAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.Null(state.Players.Single().Level);
+        Assert.Null(state.Leaderboard.Single().Level);
+    }
+
+    [Fact]
+    public async Task PlayerJoined_AccountPlayer_HasLevel()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        var (player, _) = AddAccount(repository, room, "Alice", score: 0, totalXp: 640, answered: false);
+        player.SessionTokenHash = SessionTokenHasher.Hash("real-token");
+        var service = CreateService(repository);
+
+        var (_, broadcast, _) = await service.JoinAsPlayerAsync(room.Code, "real-token", CancellationToken.None);
+
+        Assert.Equal(3, broadcast.Level);
+    }
+
+    [Fact]
+    public async Task PlayerJoined_Guest_LevelNull()
+    {
+        var room = NewRoom(RoomStatus.Lobby);
+        var repository = new FakeGameRepository { Room = room };
+        repository.Players.Add(NewPlayer(room.Id, "Khách", SessionTokenHasher.Hash("real-token")));
+        var service = CreateService(repository);
+
+        var (_, broadcast, _) = await service.JoinAsPlayerAsync(room.Code, "real-token", CancellationToken.None);
+
+        Assert.Null(broadcast.Level);
+    }
+
+    [Fact]
+    public async Task Leaderboard_EntriesCarryLevel()
+    {
+        var repository = FinalQuestionRoom(out var room);
+        repository.Questions[0].EndedAt = null; // câu đang chạy; chủ phòng kết thúc câu để nhận LeaderboardUpdated
+        var (account, _) = AddAccount(repository, room, "Alice", score: 500, totalXp: 250);
+        var guest = AddGuest(repository, room, "Khách", score: 100);
+        var service = CreateService(repository, Now.AddSeconds(5));
+
+        var (_, leaderboard) = await service.EndQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.Equal(2, leaderboard.Leaderboard.Single(e => e.PlayerId == account.Id).Level);
+        Assert.Null(leaderboard.Leaderboard.Single(e => e.PlayerId == guest.Id).Level);
+    }
+
+    [Fact]
+    public async Task GameEnded_LeaderboardLevel_ReflectsAwardedXp()
+    {
+        var repository = FinalQuestionRoom(out var room);
+        // 150 XP = cấp 1; trận này cho 100 XP (điểm 1000) nên 250 XP = cấp 2. Cần ≥ 2 tài khoản để trận hợp lệ.
+        var (a, userA) = AddAccount(repository, room, "A", score: 1000, totalXp: 150);
+        AddAccount(repository, room, "B", score: 600);
+        var service = CreateService(repository, FinishAt);
+
+        var outcome = await service.NextQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.Equal(250, userA.TotalXp);
+        var entry = outcome.GameEnded!.FinalLeaderboard.Single(e => e.PlayerId == a.Id);
+        Assert.Equal(2, entry.Level);
+        Assert.Equal(2, RewardOf(outcome, a).LevelAfter); // khớp khối thưởng "lên cấp"
+    }
+
+    [Fact]
     public void QuestionStartedDto_DoesNotExposeCorrectIndex()
     {
         Assert.Null(typeof(QuestionStartedDto).GetProperty("CorrectIndex"));

@@ -173,19 +173,19 @@ description: "Danh sách task triển khai: Tài khoản người chơi, XP và 
 
 ### Tests for User Story 4 (viết trước, phải FAIL)
 
-- [ ] T066 [P] [US4] Test `backend/QuizBattle.Tests/Profile/ProfileServiceTests.cs` (repo giả): `GetProfile_ComputesLevelAndProgressFromTotalXp`, `GetProfile_NewUser_Level1ZeroXpZeroCoins`, `GetRewards_OnlyAwardedNewestFirst`, `GetRewards_LimitOutOfRange_Validation`, `GetProfile_UserNotFound_NotFound`
-- [ ] T067 [P] [US4] Test tích hợp `backend/QuizBattle.Tests/Integration/ProfileRewardsTests.cs` (cần `QUIZBATTLE_TEST_DB`): `DeleteFinishedRoom_RewardsKeptAndProfileAndInvariantsUnchanged` (gọi `RoomService.DeleteRoomAsync`; `MatchRewards` còn với `PlayerId`/`RoomId` NULL; `GET me/rewards` vẫn trả `roomCode`/`topic`/`playedAt`; `TotalXp == SUM(MatchRewards.Xp)` và `CoinBalance == SUM(CoinTransactions.Amount)` trước và sau)
-- [ ] T068 [P] [US4] Test Vitest cho hàm thuần hiển thị tiến trình (nếu có) và `frontend/src/pages/ProfilePage/ProfilePage.test.tsx` (`// @vitest-environment jsdom`): đang tải, lỗi (nút thử lại), rỗng (chưa có trận), có dữ liệu (cấp, XP, thanh tiến trình, Xu, danh sách)
+- [x] T066 [P] [US4] Test `backend/QuizBattle.Tests/Profile/ProfileServiceTests.cs` (repo giả): `GetProfile_ComputesLevelAndProgressFromTotalXp`, `GetProfile_NewUser_Level1ZeroXpZeroCoins`, `GetRewards_OnlyAwardedNewestFirst`, `GetRewards_LimitOutOfRange_Validation`, `GetProfile_UserNotFound_NotFound`
+- [x] T067 [P] [US4] Test tích hợp `backend/QuizBattle.Tests/Integration/ProfileRewardsTests.cs` (cần `QUIZBATTLE_TEST_DB`): `DeleteFinishedRoom_RewardsKeptAndProfileAndInvariantsUnchanged` (gọi `RoomService.DeleteRoomAsync`; `MatchRewards` còn với `PlayerId`/`RoomId` NULL; `GET me/rewards` vẫn trả `roomCode`/`topic`/`playedAt`; `TotalXp == SUM(MatchRewards.Xp)` và `CoinBalance == SUM(CoinTransactions.Amount)` trước và sau)
+- [x] T068 [P] [US4] Test Vitest cho hàm thuần hiển thị tiến trình (nếu có) và `frontend/src/pages/ProfilePage/ProfilePage.test.tsx` (`// @vitest-environment jsdom`): đang tải, lỗi (nút thử lại), rỗng (chưa có trận), có dữ liệu (cấp, XP, thanh tiến trình, Xu, danh sách)
 
 ### Implementation for User Story 4
 
-- [ ] T069 [P] [US4] Tạo DTO trong `backend/QuizBattle.Application/Profile/`: `ProfileDto` (`userId`, `displayName`, `level`, `totalXp`, `xpIntoLevel`, `xpForNextLevel`, `coinBalance`) và `RewardHistoryItemDto` (`roomCode`, `topic`, `playedAt`, `score`, `rewardRank`, `xp`, `coins`, `rankBonus`) khớp [contracts/rest-api.md](contracts/rest-api.md)
-- [ ] T070 [US4] Sửa `backend/QuizBattle.Application/Auth/IUserRepository.cs` + `backend/QuizBattle.Infrastructure/Persistence/UserRepository.cs`: truy vấn `AsNoTracking`, projection một câu SQL cho hồ sơ và cho lịch sử từ chính `MatchRewards` (`WHERE UserId = @id AND Status = 'Awarded' ORDER BY FinishedAt DESC LIMIT @limit`), không join `Rooms`/`Players`
-- [ ] T071 [US4] Tạo `backend/QuizBattle.Application/Profile/IProfileService.cs` + `ProfileService.cs` (dùng `LevelCalculator`), đăng ký DI trong `backend/QuizBattle.Application/DependencyInjection.cs`; `limit` 1–50 mặc định 20, ngoài khoảng trả lỗi validate theo ProblemDetails (làm T066 PASS)
-- [ ] T072 [US4] Tạo `backend/QuizBattle.Api/Controllers/UsersController.cs`: `[Authorize] GET /api/users/me` và `GET /api/users/me/rewards?limit=`; Controller chỉ gọi `IProfileService`; làm T067 PASS
-- [ ] T073 [P] [US4] Tạo `frontend/src/types/profile.ts` (`Profile`, `RewardHistoryItem`), `frontend/src/api/profile.ts` (`getProfile`, `getRewards` qua `request()`), `frontend/src/hooks/useProfile.ts` (TanStack Query, không lưu bản sao vào `useState`)
-- [ ] T074 [US4] Tạo `frontend/src/pages/ProfilePage/ProfilePage.tsx` (+ tách `ProfileSummary.tsx`, `RewardHistory.tsx` nếu vượt ~150 dòng): đủ 3 trạng thái tải/lỗi/rỗng, thanh tiến trình dùng `bg-accent` (dữ liệu), số dùng `tabular-nums`, responsive điện thoại; làm T068 PASS
-- [ ] T075 [US4] Sửa `frontend/src/App.tsx`: thêm route `/profile` bọc `ProtectedRoute`; sửa header `frontend/src/pages/DashboardPage/DashboardPage.tsx` thêm liên kết tới hồ sơ (không dùng `accent` cho link)
+- [x] T069 [P] [US4] Tạo DTO trong `backend/QuizBattle.Application/Profile/`: `ProfileDto` (`userId`, `displayName`, `level`, `totalXp`, `xpIntoLevel`, `xpForNextLevel`, `coinBalance`) và `RewardHistoryItemDto` (`roomCode`, `topic`, `playedAt`, `score`, `rewardRank`, `xp`, `coins`, `rankBonus`) khớp [contracts/rest-api.md](contracts/rest-api.md)
+- [x] T070 [US4] Sửa `backend/QuizBattle.Application/Auth/IUserRepository.cs` + `backend/QuizBattle.Infrastructure/Persistence/UserRepository.cs`: truy vấn `AsNoTracking`, projection một câu SQL cho hồ sơ và cho lịch sử từ chính `MatchRewards` (`WHERE UserId = @id AND Status = 'Awarded' ORDER BY FinishedAt DESC LIMIT @limit`), không join `Rooms`/`Players`
+- [x] T071 [US4] Tạo `backend/QuizBattle.Application/Profile/IProfileService.cs` + `ProfileService.cs` (dùng `LevelCalculator`), đăng ký DI trong `backend/QuizBattle.Application/DependencyInjection.cs`; `limit` 1–50 mặc định 20, ngoài khoảng trả lỗi validate theo ProblemDetails (làm T066 PASS)
+- [x] T072 [US4] Tạo `backend/QuizBattle.Api/Controllers/UsersController.cs`: `[Authorize] GET /api/users/me` và `GET /api/users/me/rewards?limit=`; Controller chỉ gọi `IProfileService`; làm T067 PASS
+- [x] T073 [P] [US4] Tạo `frontend/src/types/profile.ts` (`Profile`, `RewardHistoryItem`), `frontend/src/api/profile.ts` (`getProfile`, `getRewards` qua `request()`), `frontend/src/hooks/useProfile.ts` (TanStack Query, không lưu bản sao vào `useState`)
+- [x] T074 [US4] Tạo `frontend/src/pages/ProfilePage/ProfilePage.tsx` (+ tách `ProfileSummary.tsx`, `RewardHistory.tsx` nếu vượt ~150 dòng): đủ 3 trạng thái tải/lỗi/rỗng, thanh tiến trình dùng `bg-accent` (dữ liệu), số dùng `tabular-nums`, responsive điện thoại; làm T068 PASS
+- [x] T075 [US4] Sửa `frontend/src/App.tsx`: thêm route `/profile` bọc `ProtectedRoute`; sửa header `frontend/src/pages/DashboardPage/DashboardPage.tsx` thêm liên kết tới hồ sơ (không dùng `accent` cho link)
 
 **Checkpoint**: US4 chạy độc lập; xóa phòng không làm mất lịch sử.
 
@@ -199,18 +199,18 @@ description: "Danh sách task triển khai: Tài khoản người chơi, XP và 
 
 ### Tests for User Story 5 (viết trước, phải FAIL)
 
-- [ ] T076 [P] [US5] Test service trong `backend/QuizBattle.Tests/Game/GameServiceTests.cs`: `RoomState_AccountPlayer_HasLevel`, `RoomState_Guest_LevelNull`, `PlayerJoined_AccountPlayer_HasLevel`, `Leaderboard_EntriesCarryLevel`
-- [ ] T077 [P] [US5] Test `backend/QuizBattle.Tests/Profile/XpLeaderboardServiceTests.cs` (repo giả): `GetTop_ExcludesZeroXp`, `GetTop_OrderedByXpDescThenCreatedAt`, `GetTop_Max50`, `GetTop_ComputesLevel`; và tích hợp `backend/QuizBattle.Tests/Integration/XpLeaderboardTests.cs` (cần `QUIZBATTLE_TEST_DB`): `XpLeaderboard_ExcludesZeroXpAndReturnsTop50InOrder`
-- [ ] T078 [P] [US5] Test component `frontend/src/pages/XpRankingPage/XpRankingPage.test.tsx` (`// @vitest-environment jsdom`): đang tải, lỗi, rỗng, có dữ liệu; và `frontend/src/components/LevelBadge.test.tsx`: hiện cấp, không hiện gì khi `level = null`
+- [x] T076 [P] [US5] Test service trong `backend/QuizBattle.Tests/Game/GameServiceTests.cs`: `RoomState_AccountPlayer_HasLevel`, `RoomState_Guest_LevelNull`, `PlayerJoined_AccountPlayer_HasLevel`, `Leaderboard_EntriesCarryLevel`
+- [x] T077 [P] [US5] Test `backend/QuizBattle.Tests/Profile/XpLeaderboardServiceTests.cs` (repo giả): `GetTop_ExcludesZeroXp`, `GetTop_OrderedByXpDescThenCreatedAt`, `GetTop_Max50`, `GetTop_ComputesLevel`; và tích hợp `backend/QuizBattle.Tests/Integration/XpLeaderboardTests.cs` (cần `QUIZBATTLE_TEST_DB`): `XpLeaderboard_ExcludesZeroXpAndReturnsTop50InOrder`
+- [x] T078 [P] [US5] Test component `frontend/src/pages/XpRankingPage/XpRankingPage.test.tsx` (`// @vitest-environment jsdom`): đang tải, lỗi, rỗng, có dữ liệu; và `frontend/src/components/LevelBadge.test.tsx`: hiện cấp, không hiện gì khi `level = null`
 
 ### Implementation for User Story 5
 
-- [ ] T079 [US5] Sửa DTO `backend/QuizBattle.Application/Game/PlayerSummaryDto.cs`, `PlayerJoinedDto.cs`, `LeaderboardEntryDto.cs`: thêm `Level` (`int?`, `null` với khách); sửa `GameService.cs` (`BuildRoomState`, `BuildLeaderboard`, `JoinAsPlayerAsync`) dùng `LevelCalculator` trên `snapshot.Users` (làm T076 PASS; phụ thuộc T025)
-- [ ] T080 [P] [US5] Tạo `backend/QuizBattle.Application/Profile/XpLeaderboardEntryDto.cs`, thêm vào `IProfileService`/`ProfileService` hàm lấy top 50 (`displayName`, `level`, `totalXp`, `rank` = thứ tự 1..N); sửa `UserRepository`: `WHERE TotalXp > 0 ORDER BY TotalXp DESC, CreatedAt, Id LIMIT 50`, `AsNoTracking`, projection (làm T077 PASS)
-- [ ] T081 [US5] Tạo `backend/QuizBattle.Api/Controllers/LeaderboardsController.cs`: `[AllowAnonymous] GET /api/leaderboards/xp`, chỉ trả `displayName`, `level`, `totalXp`, `rank` (không email, không Id người dùng)
-- [ ] T082 [P] [US5] Sửa `frontend/src/types/game.ts`: thêm `level: number | null` vào `PlayerSummary`, `LeaderboardEntry`, `PlayerJoined`; tạo `frontend/src/types/profile.ts` thêm `XpLeaderboardEntry`; tạo `frontend/src/api/leaderboards.ts` và `frontend/src/hooks/useXpLeaderboard.ts`
-- [ ] T083 [P] [US5] Tạo `frontend/src/components/LevelBadge.tsx` (chữ nhỏ "Cấp N", không chỉ dựa vào màu, không dùng `accent`); sửa `frontend/src/components/PlayerList.tsx` và `frontend/src/components/Leaderboard.tsx` hiển thị `LevelBadge` cạnh tên; kiểm tra `frontend/src/pages/PlayPage/PlayLobby.tsx` và `frontend/src/pages/RoomLivePage/LiveLobby.tsx` truyền đủ dữ liệu; sửa `frontend/src/realtime/gameReducer.ts` để `PlayerJoined` mang `level`
-- [ ] T084 [US5] Tạo `frontend/src/pages/XpRankingPage/XpRankingPage.tsx` (đủ 3 trạng thái; số `tabular-nums`; responsive); sửa `frontend/src/App.tsx` thêm route `/ranking` (công khai); thêm liên kết từ `frontend/src/pages/HomePage/HomePage.tsx` hoặc header dùng chung (làm T078 PASS)
+- [x] T079 [US5] Sửa DTO `backend/QuizBattle.Application/Game/PlayerSummaryDto.cs`, `PlayerJoinedDto.cs`, `LeaderboardEntryDto.cs`: thêm `Level` (`int?`, `null` với khách); sửa `GameService.cs` (`BuildRoomState`, `BuildLeaderboard`, `JoinAsPlayerAsync`) dùng `LevelCalculator` trên `snapshot.Users` (làm T076 PASS; phụ thuộc T025)
+- [x] T080 [P] [US5] Tạo `backend/QuizBattle.Application/Profile/XpLeaderboardEntryDto.cs`, thêm vào `IProfileService`/`ProfileService` hàm lấy top 50 (`displayName`, `level`, `totalXp`, `rank` = thứ tự 1..N); sửa `UserRepository`: `WHERE TotalXp > 0 ORDER BY TotalXp DESC, CreatedAt, Id LIMIT 50`, `AsNoTracking`, projection (làm T077 PASS)
+- [x] T081 [US5] Tạo `backend/QuizBattle.Api/Controllers/LeaderboardsController.cs`: `[AllowAnonymous] GET /api/leaderboards/xp`, chỉ trả `displayName`, `level`, `totalXp`, `rank` (không email, không Id người dùng)
+- [x] T082 [P] [US5] Sửa `frontend/src/types/game.ts`: thêm `level: number | null` vào `PlayerSummary`, `LeaderboardEntry`, `PlayerJoined`; tạo `frontend/src/types/profile.ts` thêm `XpLeaderboardEntry`; tạo `frontend/src/api/leaderboards.ts` và `frontend/src/hooks/useXpLeaderboard.ts`
+- [x] T083 [P] [US5] Tạo `frontend/src/components/LevelBadge.tsx` (chữ nhỏ "Cấp N", không chỉ dựa vào màu, không dùng `accent`); sửa `frontend/src/components/PlayerList.tsx` và `frontend/src/components/Leaderboard.tsx` hiển thị `LevelBadge` cạnh tên; kiểm tra `frontend/src/pages/PlayPage/PlayLobby.tsx` và `frontend/src/pages/RoomLivePage/LiveLobby.tsx` truyền đủ dữ liệu; sửa `frontend/src/realtime/gameReducer.ts` để `PlayerJoined` mang `level`
+- [x] T084 [US5] Tạo `frontend/src/pages/XpRankingPage/XpRankingPage.tsx` (đủ 3 trạng thái; số `tabular-nums`; responsive); sửa `frontend/src/App.tsx` thêm route `/ranking` (công khai); thêm liên kết từ `frontend/src/pages/HomePage/HomePage.tsx` hoặc header dùng chung (làm T078 PASS)
 
 **Checkpoint**: US5 chạy độc lập.
 
@@ -224,11 +224,11 @@ description: "Danh sách task triển khai: Tài khoản người chơi, XP và 
 
 ### Tests for User Story 6 (viết trước, phải FAIL)
 
-- [ ] T085 [P] [US6] Mở rộng `frontend/src/pages/JoinPage/JoinPage.test.tsx`: `JoinPage_LoggedIn_PrefillsDisplayNameEditableAndShowsRewardNote`, `JoinPage_LoggedIn_RewardNoteDoesNotPromiseReward` (nêu điều kiện ≥ 2 tài khoản), `JoinPage_Guest_ShowsGuestNoRewardHint`, `JoinPage_UserTypesNewName_UsesTypedName`
+- [x] T085 [P] [US6] Mở rộng `frontend/src/pages/JoinPage/JoinPage.test.tsx`: `JoinPage_LoggedIn_PrefillsDisplayNameEditableAndShowsRewardNote`, `JoinPage_LoggedIn_RewardNoteDoesNotPromiseReward` (nêu điều kiện ≥ 2 tài khoản), `JoinPage_Guest_ShowsGuestNoRewardHint`, `JoinPage_UserTypesNewName_UsesTypedName`
 
 ### Implementation for User Story 6
 
-- [ ] T086 [US6] Sửa `frontend/src/pages/JoinPage/JoinPage.tsx`: khởi tạo `displayName` từ `user.displayName` khi đã đăng nhập (đồng bộ khi `AuthProvider` xong `isLoading`, không ghi đè khi người dùng đã gõ), thêm dòng thông báo tính thưởng ("XP và Xu được tính khi trận có ít nhất 2 tài khoản tham gia trả lời") hoặc gợi ý khách không nhận thưởng; sửa `frontend/src/validation/joinForm.ts` nếu cần (làm T085 PASS)
+- [x] T086 [US6] Sửa `frontend/src/pages/JoinPage/JoinPage.tsx`: khởi tạo `displayName` từ `user.displayName` khi đã đăng nhập (đồng bộ khi `AuthProvider` xong `isLoading`, không ghi đè khi người dùng đã gõ), thêm dòng thông báo tính thưởng ("XP và Xu được tính khi trận có ít nhất 2 tài khoản tham gia trả lời") hoặc gợi ý khách không nhận thưởng; sửa `frontend/src/validation/joinForm.ts` nếu cần (làm T085 PASS)
 
 **Checkpoint**: cả 6 story hoạt động.
 

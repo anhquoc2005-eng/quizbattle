@@ -6,7 +6,9 @@ import { JoinPage } from './pages/JoinPage/JoinPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
 import { PlayPage } from './pages/PlayPage/PlayPage'
+import { ProfilePage } from './pages/ProfilePage/ProfilePage'
 import { RegisterPage } from './pages/RegisterPage/RegisterPage'
+import { XpRankingPage } from './pages/XpRankingPage/XpRankingPage'
 import { RoomLivePage } from './pages/RoomLivePage/RoomLivePage'
 import { RoomPage } from './pages/RoomPage/RoomPage'
 
@@ -18,6 +20,15 @@ export function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/join" element={<JoinPage />} />
       <Route path="/play/:code" element={<PlayPage />} />
+      <Route path="/ranking" element={<XpRankingPage />} />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={

@@ -5,6 +5,8 @@ export interface PlayerSummary {
   playerId: string
   displayName: string
   score: number
+  /** Cấp của tài khoản; null với khách. */
+  level: number | null
 }
 
 /** Khớp CurrentQuestionStateDto - correctIndex chỉ có giá trị khi ended = true. */
@@ -28,6 +30,7 @@ export interface LeaderboardEntry {
   displayName: string
   score: number
   rank: number
+  level: number | null
 }
 
 /** Khớp RoomStateDto - gửi riêng cho người vừa JoinRoom (lần đầu hoặc vào lại sau khi rớt mạng). */
@@ -103,6 +106,7 @@ export interface GameEnded {
 export interface PlayerJoined {
   playerId: string
   displayName: string
+  level: number | null
 }
 
 /** Khớp PlayerLeftDto. */

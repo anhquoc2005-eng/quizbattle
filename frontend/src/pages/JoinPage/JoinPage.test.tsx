@@ -182,3 +182,43 @@ describe('JoinPage: phiên đăng nhập hết hạn', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 })
+
+describe('JoinPage: tên hiển thị và thưởng', () => {
+  it('JoinPage_LoggedIn_PrefillsDisplayNameEditableAndShowsRewardNote', async () => {
+    saveAuth(auth(60_000))
+    renderJoin()
+
+    const input = (await screen.findByDisplayValue('Alice')) as HTMLInputElement
+    expect(input.id).toBe('displayName')
+    expect(input.disabled).toBe(false) // vẫn sửa được
+    expect(screen.getByText(/XP và Xu được tính khi trận có ít nhất 2 tài khoản/)).toBeTruthy()
+  })
+
+  it('JoinPage_LoggedIn_RewardNoteDoesNotPromiseReward', async () => {
+    saveAuth(auth(60_000))
+    renderJoin()
+
+    const note = await screen.findByText(/XP và Xu được tính khi/)
+    expect(note.textContent).toContain('ít nhất 2 tài khoản') // nêu điều kiện, không hứa chắc
+    expect(note.textContent).not.toMatch(/bạn sẽ nhận|chắc chắn/i)
+  })
+
+  it('JoinPage_Guest_ShowsGuestNoRewardHint', async () => {
+    renderJoin()
+
+    expect(await screen.findByText(/Vào làm khách sẽ không nhận XP và Xu/)).toBeTruthy()
+    expect((screen.getByLabelText('Tên hiển thị') as HTMLInputElement).value).toBe('')
+  })
+
+  it('JoinPage_UserTypesNewName_UsesTypedName', async () => {
+    saveAuth(auth(60_000))
+    vi.mocked(createPlayer).mockResolvedValue({ playerId: 'p1', sessionToken: 's', roomCode: 'ABCDEF' })
+    renderJoin()
+    await screen.findByDisplayValue('Alice')
+
+    fillName('Biệt danh')
+    submit()
+
+    await waitFor(() => expect(createPlayer).toHaveBeenCalledWith('ABCDEF', { displayName: 'Biệt danh' }))
+  })
+})

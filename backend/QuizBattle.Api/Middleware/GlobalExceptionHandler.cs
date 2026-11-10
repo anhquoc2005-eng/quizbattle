@@ -21,6 +21,7 @@ public sealed class GlobalExceptionHandler(
         {
             ConflictException => (StatusCodes.Status409Conflict, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.10"),
             UnauthorizedException or SessionReplacedException => (StatusCodes.Status401Unauthorized, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.2"),
+            RequestValidationException => (StatusCodes.Status400BadRequest, "Dữ liệu không hợp lệ.", "https://tools.ietf.org/html/rfc9110#section-15.5.1"),
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.5"),
             BadGatewayException => (StatusCodes.Status502BadGateway, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.6.3"),
             AiUnavailableException => (StatusCodes.Status503ServiceUnavailable, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.6.4"),
@@ -51,6 +52,12 @@ public sealed class GlobalExceptionHandler(
         if (code is not null)
         {
             problemDetails.Extensions["code"] = code;
+        }
+
+        // Cùng dạng với lỗi validate model của ASP.NET: errors = { trường: [thông điệp] } (frontend mapServerErrorsToFields).
+        if (exception is RequestValidationException validation)
+        {
+            problemDetails.Extensions["errors"] = new Dictionary<string, string[]> { [validation.Field] = [validation.Message] };
         }
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext

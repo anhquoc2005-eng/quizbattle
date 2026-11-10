@@ -132,7 +132,7 @@ public sealed class GameService(
         }
 
         var state = BuildRoomState(snapshot, isHost: false, playerId: player.Id, timeProvider.GetUtcNow());
-        var broadcast = new PlayerJoinedDto(player.Id, player.DisplayName);
+        var broadcast = new PlayerJoinedDto(player.Id, player.DisplayName, LevelOf(snapshot.Users, player));
         return (state, broadcast, tokenHash);
     }
 
@@ -281,7 +281,7 @@ public sealed class GameService(
         var ended = new QuestionEndedDto(
             current.Id, current.CorrectIndex, snapshot.AnsweredCountForCurrentQuestion, snapshot.Players.Count,
             now, now.AddSeconds(Room.RESULT_DISPLAY_SECONDS));
-        var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
+        var leaderboard = BuildLeaderboard(snapshot);
         return (ended, new LeaderboardUpdatedDto(leaderboard));
     }
 
@@ -299,10 +299,11 @@ public sealed class GameService(
 
         snapshot.Room.Status = RoomStatus.Finished;
         snapshot.Room.EndedAt = now;
-        var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
 
         // Thưởng được tạo ngay trong transaction đang giữ khóa Room, cùng SaveChanges với Status = Finished.
+        // Phải tính TRƯỚC khi dựng bảng xếp hạng để Level là cấp sau khi cộng XP trận này.
         var rewards = RewardSettlement.Settle(snapshot, now);
+        var leaderboard = BuildLeaderboard(snapshot);
         return new NextQuestionOutcome(null, new GameEndedDto(leaderboard, rewards));
     }
 
@@ -326,7 +327,7 @@ public sealed class GameService(
 
     private static RoomStateDto BuildRoomState(GameSnapshot snapshot, bool isHost, Guid? playerId, DateTimeOffset now)
     {
-        var leaderboard = BuildLeaderboard(snapshot.Players, snapshot.Answers, snapshot.ApprovedQuestions);
+        var leaderboard = BuildLeaderboard(snapshot);
         var current = snapshot.CurrentQuestion;
         CurrentQuestionStateDto? currentDto = null;
         bool? hasAnswered = null;
@@ -351,7 +352,7 @@ public sealed class GameService(
             snapshot.Room.Code,
             snapshot.Room.Status.ToString(),
             snapshot.Room.QuestionTimeLimitSeconds,
-            snapshot.Players.Select(p => new PlayerSummaryDto(p.Id, p.DisplayName, p.Score)).ToList(),
+            snapshot.Players.Select(p => new PlayerSummaryDto(p.Id, p.DisplayName, p.Score, LevelOf(snapshot.Users, p))).ToList(),
             currentDto,
             leaderboard,
             isHost,
@@ -362,10 +363,10 @@ public sealed class GameService(
     }
 
     // Hòa điểm: tổng thời gian trả lời đúng ít hơn đứng trên - chỉ tính các câu đã trả lời đúng.
-    private static IReadOnlyList<LeaderboardEntryDto> BuildLeaderboard(
-        IReadOnlyList<Player> players, IReadOnlyList<Answer> answers, IReadOnlyList<Question> questions)
+    private static IReadOnlyList<LeaderboardEntryDto> BuildLeaderboard(GameSnapshot snapshot)
     {
-        var startedAtByQuestionId = questions
+        var (players, answers) = (snapshot.Players, snapshot.Answers);
+        var startedAtByQuestionId = snapshot.ApprovedQuestions
             .Where(q => q.StartedAt is not null)
             .ToDictionary(q => q.Id, q => q.StartedAt!.Value);
 
@@ -379,7 +380,11 @@ public sealed class GameService(
             })
             .OrderByDescending(x => x.Player.Score)
             .ThenBy(x => x.TotalCorrectMs)
-            .Select((x, i) => new LeaderboardEntryDto(x.Player.Id, x.Player.DisplayName, x.Player.Score, i + 1))
+            .Select((x, i) => new LeaderboardEntryDto(x.Player.Id, x.Player.DisplayName, x.Player.Score, i + 1, LevelOf(snapshot.Users, x.Player)))
             .ToList();
     }
+
+    /// <summary>Cấp của người chơi có tài khoản; khách (hoặc tài khoản không có trong snapshot) là null.</summary>
+    private static int? LevelOf(IReadOnlyDictionary<Guid, User> users, Player player) =>
+        player.UserId is { } id && users.TryGetValue(id, out var user) ? LevelCalculator.FromXp(user.TotalXp) : null;
 }

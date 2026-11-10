@@ -10,7 +10,7 @@ Mục đích: dự án portfolio xin thực tập fullstack C#. Code phải sạ
 - Frontend: React 18 + TypeScript + Vite, Tailwind CSS, React Router
 - Gọi API: một API client dùng chung; state server dùng TanStack Query
 - Real-time phía client: `@microsoft/signalr`
-- Test: xUnit (backend), Vitest (frontend, chỉ cho logic)
+- Test: xUnit (backend), Vitest (frontend: logic thuần; màn có trạng thái tải/lỗi/rỗng thì test component bằng `jsdom` + `@testing-library/react`, đặt `// @vitest-environment jsdom` ở đầu file)
 - Muốn thêm thư viện mới: hỏi trước, nêu lý do.
 
 ## Cấu trúc thư mục
@@ -55,6 +55,7 @@ docker-compose.yml
 - Mọi thay đổi schema đi qua EF Core migration. Không sửa DB bằng tay.
 - Truy vấn chỉ đọc dùng `AsNoTracking()`. Tránh N+1: dùng `Include` hoặc projection.
 - Thao tác nhiều bước phải nhất quán (ví dụ lưu kết quả trận) thì bọc trong transaction.
+- Khi kết thúc trận, các dòng `Users` của người chơi bị khóa `SELECT ... FOR UPDATE` theo thứ tự `Id` (sau khi đã khóa `Room`) để cộng XP/Xu không mất cập nhật và không deadlock. Tính năng nào khác ghi vào `Users` (ví dụ cửa hàng trừ Xu) phải khóa theo cùng thứ tự đó, và giữ bất biến `CoinBalance` = tổng `CoinTransactions`, `TotalXp` = tổng `MatchRewards.Xp`.
 
 ### Bảo mật
 - Mật khẩu băm bằng thư viện chuẩn (ASP.NET Identity PasswordHasher hoặc BCrypt). Không tự viết.
@@ -69,7 +70,7 @@ docker-compose.yml
 - Danh sách sự kiện cố định, đặt tên thống nhất, ghi trong `src/realtime/events.ts` và hằng số tương ứng ở backend:
   - Client → Server: `JoinRoom`, `StartGame`, `EndQuestion`, `NextQuestion`, `SubmitAnswer`, `LeaveRoom`
   - Server → Client: `RoomState`, `PlayerJoined`, `PlayerLeft`, `QuestionStarted`, `QuestionEnded`, `LeaderboardUpdated`, `GameEnded`, `AnswerProgress`, `Error`
-  - Payload `Error` là `{ method, code, message }` (`GameErrorDto`), không phải chuỗi đơn: `method` là tên Hub method gây lỗi, `code` là `"unauthorized" | "not_found" | "conflict" | "unknown"` để client tự quyết định xử lý (ví dụ chỉ xóa phiên đã lưu khi `method="JoinRoom"` và `code` là `unauthorized`/`not_found`), `message` để hiển thị.
+  - Payload `Error` là `{ method, code, message }` (`GameErrorDto`), không phải chuỗi đơn: `method` là tên Hub method gây lỗi, `code` là `"unauthorized" | "not_found" | "conflict" | "session_replaced" | "unknown"` để client tự quyết định xử lý (ví dụ chỉ xóa phiên đã lưu khi `method="JoinRoom"` và `code` là `unauthorized`/`not_found`), `message` để hiển thị. `session_replaced` (mọi method) nghĩa là cùng tài khoản vừa vào lại phòng từ thiết bị khác và token của thiết bị này đã vô hiệu: client xóa phiên đã lưu, dừng tự kết nối lại và đưa người chơi về `/join` kèm thông báo.
 - Server là nguồn sự thật duy nhất: thời gian bắt đầu câu, thời gian trả lời, điểm số đều tính ở server. Client chỉ hiển thị.
 - Trận tự chạy như Kahoot: `GameTimerService` (BackgroundService ở `QuizBattle.Api`) quét DB mỗi giây, tự kết thúc câu quá hạn / đủ người trả lời và tự chuyển câu sau `Room.RESULT_DISPLAY_SECONDS` (6 giây); không giữ timer trong RAM. Chủ phòng vẫn bấm `EndQuestion`/`NextQuestion` sớm được; bấm trúng lúc server vừa tự chuyển thì nhận `Error` code `conflict` và client bỏ qua lỗi này. Việc gửi sự kiện dùng chung qua `GameBroadcaster`.
 - Không nhận điểm hay thời gian do client gửi lên.

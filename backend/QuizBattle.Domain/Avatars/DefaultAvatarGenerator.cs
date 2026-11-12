@@ -4,7 +4,8 @@ using QuizBattle.Domain.Enums;
 namespace QuizBattle.Domain.Avatars;
 
 /// <summary>
-/// Nhân vật mặc định cho tài khoản chưa từng chỉnh và cho khách - hàm thuần, cố định theo đầu vào, chỉ dùng món miễn phí.
+/// Nhân vật mặc định cho tài khoản chưa từng chỉnh và cho khách - hàm thuần, cố định theo đầu vào, chỉ dùng món miễn phí
+/// và không bao giờ chọn khăn trùm đầu (xem <see cref="AvatarCatalog.DefaultFreeItems"/>).
 /// Dùng FNV-1a 64 bit + SplitMix64 (KHÔNG dùng string.GetHashCode: giá trị đó đổi giữa các lần chạy process).
 /// Đổi thuật toán hoặc danh sách món miễn phí sẽ đổi hình mặc định của mọi người; test giá trị cố định chặn việc này.
 /// </summary>
@@ -26,7 +27,7 @@ public static class DefaultAvatarGenerator
         for (var i = 0; i < AvatarSlots.Required.Count; i++)
         {
             var slot = AvatarSlots.Required[i];
-            var free = AvatarCatalog.FreeItems(slot);
+            var free = AvatarCatalog.DefaultFreeItems(slot);
             // Mỗi ô lấy một số riêng từ cùng hash để các ô không chọn tương quan với nhau.
             var pick = Mix(unchecked(hash + (ulong)(i + 1) * GoldenGamma)) % (ulong)free.Count;
             slots[slot] = free[(int)pick].VariantKey;

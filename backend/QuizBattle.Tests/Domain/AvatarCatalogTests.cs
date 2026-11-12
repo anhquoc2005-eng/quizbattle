@@ -212,6 +212,34 @@ public sealed class AvatarCatalogTests
         });
 
     [Fact]
+    public void HeadscarfVariantKeys_Are61To63_AllFreeHair() =>
+        Assert.All(AvatarCatalog.HeadscarfVariantKeys, key =>
+        {
+            Assert.Contains(key, new[] { "variant61", "variant62", "variant63" });
+            Assert.Equal(AvatarTier.Free, AvatarCatalog.Find(AvatarSlot.Hair, key)!.Tier);
+        });
+
+    [Fact]
+    public void DefaultFreeItems_Hair_IsEightFreeHairsWithoutHeadscarves()
+    {
+        var hair = AvatarCatalog.DefaultFreeItems(AvatarSlot.Hair).Select(i => i.VariantKey).Order().ToArray();
+
+        Assert.Equal(
+            new[] { "variant01", "variant02", "variant05", "variant08", "variant20", "variant23", "variant41", "variant45" },
+            hair);
+        Assert.Equal(3, AvatarCatalog.FreeItems(AvatarSlot.Hair).Count - hair.Length); // khăn vẫn miễn phí, chỉ không dùng cho mặc định
+    }
+
+    [Fact]
+    public void DefaultFreeItems_OtherSlots_EqualFreeItems()
+    {
+        foreach (var slot in AvatarSlots.All.Where(s => s != AvatarSlot.Hair))
+        {
+            Assert.Equal(AvatarCatalog.FreeItems(slot), AvatarCatalog.DefaultFreeItems(slot));
+        }
+    }
+
+    [Fact]
     public void Find_UnknownOrWrongSlot_ReturnsNull()
     {
         Assert.Null(AvatarCatalog.Find(AvatarSlot.Eyes, "variant99"));

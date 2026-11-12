@@ -23,6 +23,12 @@ public static class AvatarCatalog
     /// <summary>Kiểu áo có chỗ in hình (đo bằng cách vẽ từng áo có/không hình in trên DiceBear 10.6.0).</summary>
     public static IReadOnlyList<string> PrintableClothesVariantKeys { get; } = Variants(1, 10);
 
+    /// <summary>
+    /// Khăn quấn đầu và khăn hijab (ô tóc): trang phục tôn giáo, luôn miễn phí và chọn được ở trình chỉnh, nhưng nhân vật mặc định
+    /// KHÔNG BAO GIỜ tự mang chúng.
+    /// </summary>
+    public static IReadOnlyList<string> HeadscarfVariantKeys { get; } = ["variant61", "variant62", "variant63"];
+
     public static IReadOnlyList<AvatarSlot> RequiredSlots => AvatarSlots.Required;
 
     public static IReadOnlyList<AvatarItemDefinition> Items { get; } = Build();
@@ -52,6 +58,14 @@ public static class AvatarCatalog
     public static IReadOnlyList<AvatarItemDefinition> FreeItems(AvatarSlot slot) =>
         FreeBySlot.GetValueOrDefault(slot) ?? [];
 
+    /// <summary>
+    /// Món miễn phí mà nhân vật mặc định được phép chọn: như <see cref="FreeItems"/> nhưng bỏ khăn trùm đầu ở ô tóc.
+    /// </summary>
+    public static IReadOnlyList<AvatarItemDefinition> DefaultFreeItems(AvatarSlot slot) =>
+        slot == AvatarSlot.Hair
+            ? FreeItems(slot).Where(i => !HeadscarfVariantKeys.Contains(i.VariantKey)).ToList()
+            : FreeItems(slot);
+
     private static string[] Variants(int from, int to) =>
         Enumerable.Range(from, to - from + 1).Select(n => $"variant{n:00}").ToArray();
 
@@ -73,18 +87,14 @@ public static class AvatarCatalog
         // Tóc: 8 kiểu miễn phí + 3 khăn trùm đầu (trang phục tôn giáo, luôn miễn phí). Phần còn lại theo thứ tự chỉ số:
         // 24 Thường, 21 Hiếm, phần cuối (variant54..60) cùng "hat" là Đặc biệt.
         string[] freeHair = ["variant01", "variant02", "variant05", "variant08", "variant20", "variant23", "variant41", "variant45"];
-        Dictionary<string, string> headscarves = new()
-        {
-            ["variant61"] = "Khăn quấn đầu",
-            ["variant62"] = "Khăn trùm đầu 1",
-            ["variant63"] = "Khăn trùm đầu 2",
-        };
+        string[] headscarfNames = ["Khăn quấn đầu", "Khăn trùm đầu 1", "Khăn trùm đầu 2"];
         var paidHair = Variants(1, 60).Where(v => !freeHair.Contains(v)).ToList(); // 52 kiểu
         foreach (var v in Variants(1, 63))
         {
-            if (headscarves.TryGetValue(v, out var scarfName))
+            var scarf = HeadscarfVariantKeys.ToList().IndexOf(v);
+            if (scarf >= 0)
             {
-                Add(AvatarSlot.Hair, v, scarfName, AvatarTier.Free);
+                Add(AvatarSlot.Hair, v, headscarfNames[scarf], AvatarTier.Free);
                 continue;
             }
 

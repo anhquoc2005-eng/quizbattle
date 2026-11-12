@@ -112,18 +112,20 @@ Nội dung dự kiến: bảng hai gói, phiên bản, giấy phép; ghi rõ "No
 
 1. Khóa đầu vào: tài khoản `"u:" + userId.ToString("N")`; khách `"g:" + displayName.Trim().ToLowerInvariant()` (tên trong phòng đã không phân biệt hoa thường, nên "An" và "an" ra cùng một nhân vật).
 2. Băm FNV-1a 64 bit trên UTF-8 của khóa.
-3. Với mỗi ô bắt buộc theo thứ tự cố định (`eyes, eyebrows, mouth, nose, hair, clothes`, chỉ gồm món **miễn phí** của ô): `x = SplitMix64(hash + (i+1) * 0x9E3779B97F4A7C15)`; chọn `free[slot][x % count]`. SplitMix64 tách các ô khỏi nhau để cùng một hash không làm các ô chọn tương quan.
+3. Với mỗi ô bắt buộc theo thứ tự cố định (`eyes, eyebrows, mouth, nose, hair, clothes`, chỉ gồm món **miễn phí dùng cho mặc định** của ô, tức `AvatarCatalog.DefaultFreeItems(slot)`; ở ô tóc là **8 kiểu**, không có khăn trùm đầu `variant61`..`63`): `x = SplitMix64(hash + (i+1) * 0x9E3779B97F4A7C15)`; chọn `free[slot][x % count]`. SplitMix64 tách các ô khỏi nhau để cùng một hash không làm các ô chọn tương quan.
 4. Ô tùy chọn để trống; `background` = nền mặc định (xám `d4d4d4`) cho cả tài khoản lẫn khách (khách "nền xám" khớp nền mặc định).
 
 Danh sách món miễn phí lấy từ `AvatarCatalog` (R3), là cùng nguồn với bản seed, nên không thể lệch giữa "nhân vật mặc định" và "món miễn phí".
 
 Danh sách món miễn phí do cố vấn chọn (data-model mục 5.1): tóc `variant01, 02, 05, 08, 20, 23, 41, 45` + khăn trùm đầu `61, 62, 63`; áo `variant01, 02, 07, 14, 23`.
 
+**Khăn trùm đầu không bao giờ nằm trong nhân vật mặc định** (sửa sau khi cố vấn duyệt Đợt A): nếu chọn đều trong 11 món miễn phí của ô tóc thì 3/11 ≈ 27% tài khoản và khách sẽ tự động mang khăn tôn giáo dù không chọn. Khăn vẫn miễn phí và chọn được ở trình chỉnh; chỉ riêng bộ sinh mặc định bỏ chúng qua `AvatarCatalog.DefaultFreeItems(slot)`, dựa trên tập `AvatarCatalog.HeadscarfVariantKeys` (nguồn duy nhất).
+
 **Lý do**: backend là nơi duy nhất sinh mặc định (các nơi đều nhận đủ ô qua DTO, frontend không tự sinh); hàm thuần nên test được, đúng quy tắc Domain của CLAUDE.md.
 
 **Đã loại**: dùng `seed` của DiceBear để frontend tự sinh (sẽ khác giữa các nơi, không kiểm chứng "chỉ món miễn phí" ở server được); lưu nhân vật mặc định vào DB cho mọi tài khoản cũ (trái yêu cầu "không cần sửa dữ liệu cũ").
 
-**Test (bắt buộc)**: cùng đầu vào cho cùng kết quả (nhiều lần, và hai thể hiện `Guid` bằng nhau); mọi món trả về thuộc danh sách miễn phí (tóc ∈ 11 kiểu, áo ∈ 5 kiểu ở trên); đủ sáu ô bắt buộc, bốn ô tùy chọn rỗng, nền mặc định; khách không phân biệt hoa thường/khoảng trắng đầu cuối; kết quả cố định cho một vài đầu vào cụ thể (**golden**: nếu ai đó đổi hash hay danh sách miễn phí thì test fail, vì như vậy nhân vật mặc định của mọi người đổi hình); 10.000 khóa ngẫu nhiên đều hợp lệ và phủ đủ nhiều kiểu (không dồn vào một kiểu).
+**Test (bắt buộc)**: cùng đầu vào cho cùng kết quả (nhiều lần, và hai thể hiện `Guid` bằng nhau); mọi món trả về thuộc danh sách miễn phí dùng cho mặc định (tóc ∈ 8 kiểu, **không bao giờ** `variant61`..`63`, kiểm trên 10.000 tài khoản và 10.000 tên khách; áo ∈ 5 kiểu); đủ sáu ô bắt buộc, bốn ô tùy chọn rỗng, nền mặc định; khách không phân biệt hoa thường/khoảng trắng đầu cuối; kết quả cố định cho một vài đầu vào cụ thể (**golden**: nếu ai đó đổi hash hay danh sách miễn phí thì test fail, vì như vậy nhân vật mặc định của mọi người đổi hình); 10.000 khóa ngẫu nhiên đều hợp lệ và phủ đủ nhiều kiểu (không dồn vào một kiểu).
 
 ## R3. Danh mục: một nguồn duy nhất trong mã, seed vào DB, server kiểm bằng DB
 

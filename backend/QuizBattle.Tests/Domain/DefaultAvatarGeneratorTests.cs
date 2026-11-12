@@ -80,17 +80,17 @@ public sealed class DefaultAvatarGeneratorTests
         Assert.True(signatures > 40, $"chỉ có {signatures} nhân vật khác nhau trong 50 tên");
     }
 
-    // Giá trị cố định (đã đối chiếu bằng một cài đặt độc lập viết bằng JavaScript/BigInt, không chỉ tự khẳng định): nếu ai đổi hash hoặc danh sách món miễn phí thì nhân vật mặc định của MỌI người đổi hình,
+    // Giá trị cố định (tính độc lập bằng JavaScript/BigInt, không chỉ tự khẳng định; tóc chỉ chọn trong 8 kiểu, không có khăn trùm đầu): nếu ai đổi hash hoặc danh sách món miễn phí thì nhân vật mặc định của MỌI người đổi hình,
     // test này fail để việc đó phải là quyết định có chủ đích. Cũng là bằng chứng không dùng string.GetHashCode()
     // (giá trị đó đổi giữa các lần chạy process).
     public static TheoryData<string, string> Golden => new()
     {
-        { "u:11111111-1111-1111-1111-111111111111", "eyes=variant01,eyebrows=variant01,mouth=variant13,nose=variant19,hair=variant62,clothes=variant14,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
-        { "u:3f2c9a1e-8b47-4d65-9c1a-5e0d7a6b2f10", "eyes=variant04,eyebrows=variant01,mouth=variant05,nose=variant11,hair=variant20,clothes=variant07,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
-        { "u:00000000-0000-0000-0000-000000000000", "eyes=variant02,eyebrows=variant10,mouth=variant22,nose=variant03,hair=variant45,clothes=variant07,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
-        { "g:Minh Anh", "eyes=variant01,eyebrows=variant09,mouth=variant08,nose=variant04,hair=variant05,clothes=variant01,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
-        { "g:An", "eyes=variant04,eyebrows=variant04,mouth=variant22,nose=variant19,hair=variant20,clothes=variant02,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
-        { "g:Khách 1", "eyes=variant04,eyebrows=variant12,mouth=variant11,nose=variant02,hair=variant01,clothes=variant01,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
+        { "u:11111111-1111-1111-1111-111111111111", "eyes=variant01,eyebrows=variant01,mouth=variant13,nose=variant19,hair=variant02,clothes=variant14,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
+        { "u:3f2c9a1e-8b47-4d65-9c1a-5e0d7a6b2f10", "eyes=variant04,eyebrows=variant01,mouth=variant05,nose=variant11,hair=variant02,clothes=variant07,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
+        { "u:00000000-0000-0000-0000-000000000000", "eyes=variant02,eyebrows=variant10,mouth=variant22,nose=variant03,hair=variant20,clothes=variant07,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
+        { "g:Minh Anh", "eyes=variant01,eyebrows=variant09,mouth=variant08,nose=variant04,hair=variant02,clothes=variant01,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
+        { "g:An", "eyes=variant04,eyebrows=variant04,mouth=variant22,nose=variant19,hair=variant08,clothes=variant02,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
+        { "g:Khách 1", "eyes=variant04,eyebrows=variant12,mouth=variant11,nose=variant02,hair=variant05,clothes=variant01,glasses=-,beard=-,gesture=-,clothesGraphic=-,background=d4d4d4" },
     };
 
     [Theory]
@@ -104,6 +104,39 @@ public sealed class DefaultAvatarGeneratorTests
 
     internal static string Describe(AvatarSelection avatar) =>
         string.Join(',', AvatarSlots.All.Select(s => $"{AvatarSlots.ToKey(s)}={avatar.Get(s) ?? "-"}"));
+
+    [Fact]
+    public void ForAccount_TenThousandAccounts_NeverWearHeadscarf()
+    {
+        // Khăn trùm đầu là trang phục tôn giáo: miễn phí và chọn được ở trình chỉnh, nhưng nhân vật mặc định không bao giờ tự mang.
+        var rng = new Random(2024);
+        var bytes = new byte[16];
+        var hairs = new HashSet<string>();
+
+        for (var i = 0; i < 10_000; i++)
+        {
+            rng.NextBytes(bytes);
+            hairs.Add(DefaultAvatarGenerator.ForAccount(new Guid(bytes)).Get(AvatarSlot.Hair)!);
+        }
+
+        Assert.DoesNotContain("variant61", hairs);
+        Assert.DoesNotContain("variant62", hairs);
+        Assert.DoesNotContain("variant63", hairs);
+        Assert.Equal(8, hairs.Count); // đủ 8 kiểu tóc miễn phí thường đều xuất hiện
+    }
+
+    [Fact]
+    public void ForGuest_TenThousandNames_NeverWearHeadscarf()
+    {
+        var hairs = Enumerable.Range(0, 10_000)
+            .Select(i => DefaultAvatarGenerator.ForGuest($"người chơi {i}").Get(AvatarSlot.Hair)!)
+            .ToHashSet();
+
+        Assert.DoesNotContain("variant61", hairs);
+        Assert.DoesNotContain("variant62", hairs);
+        Assert.DoesNotContain("variant63", hairs);
+        Assert.Equal(8, hairs.Count);
+    }
 
     [Fact]
     public void ForAccount_TenThousandIds_AllValidAndWellDistributed()
@@ -127,7 +160,7 @@ public sealed class DefaultAvatarGeneratorTests
 
         foreach (var slot in AvatarSlots.Required)
         {
-            var freeCount = AvatarCatalog.FreeItems(slot).Count;
+            var freeCount = AvatarCatalog.DefaultFreeItems(slot).Count;
             Assert.True(seen[slot].Count >= Math.Ceiling(freeCount * 0.9), $"{slot}: chỉ thấy {seen[slot].Count}/{freeCount} kiểu miễn phí");
         }
     }

@@ -116,7 +116,7 @@ THIRD_PARTY_NOTICES.md (gốc repo)
 
 ### 2. Nhân vật mặc định ([research R2](research.md))
 
-Hàm thuần ở Domain: `DefaultAvatarGenerator.ForAccount(Guid)` và `ForGuest(string)`. Hash **FNV-1a 64 bit** trên UTF-8 của `"u:<userId N>"` / `"g:<tên chuẩn hoá>"`, mỗi ô lấy `SplitMix64(hash + (i+1)·φ) % số món miễn phí của ô`; tuyệt đối không dùng `string.GetHashCode`. Chỉ ô bắt buộc có giá trị, nền = xám mặc định (cũng là nền của khách). Mọi DTO (`avatar` trong `PlayerSummary`, `LeaderboardEntry`, `PlayerJoined`, `XpLeaderboardEntry`, `GET /api/users/me/avatar`) luôn có đủ ô; **frontend không sinh**. Test: cùng đầu vào cùng kết quả (cả giá trị cố định "golden"), chỉ món miễn phí, đủ sáu ô bắt buộc, khách không phân biệt hoa thường, 10.000 khóa ngẫu nhiên đều hợp lệ và phân tán.
+Hàm thuần ở Domain: `DefaultAvatarGenerator.ForAccount(Guid)` và `ForGuest(string)`. Hash **FNV-1a 64 bit** trên UTF-8 của `"u:<userId N>"` / `"g:<tên chuẩn hoá>"`, mỗi ô lấy `SplitMix64(hash + (i+1)·φ) % số món miễn phí dùng cho mặc định của ô` (ô tóc: 8 kiểu, **không bao giờ khăn trùm đầu** `variant61`..`63`, dù khăn vẫn miễn phí và chọn được ở trình chỉnh); tuyệt đối không dùng `string.GetHashCode`. Chỉ ô bắt buộc có giá trị, nền = xám mặc định (cũng là nền của khách). Mọi DTO (`avatar` trong `PlayerSummary`, `LeaderboardEntry`, `PlayerJoined`, `XpLeaderboardEntry`, `GET /api/users/me/avatar`) luôn có đủ ô; **frontend không sinh**. Test: cùng đầu vào cùng kết quả (cả giá trị cố định "golden"), chỉ món miễn phí, đủ sáu ô bắt buộc, khách không phân biệt hoa thường, 10.000 khóa ngẫu nhiên đều hợp lệ và phân tán.
 
 ### 3. Data model ([data-model.md](data-model.md))
 

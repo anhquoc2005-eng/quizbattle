@@ -8,8 +8,8 @@ Quy ước giữ nguyên Tính năng 1: bảng số nhiều PascalCase, `timesta
 |---|---|
 | `enum AvatarSlot` | `Eyes, Eyebrows, Mouth, Nose, Hair, Clothes, Glasses, Beard, Gesture, ClothesGraphic, Background`. Tên chuỗi (camelCase, dùng ở `Key`, JSON và DiceBear) = `eyes, eyebrows, mouth, nose, hair, clothes, glasses, beard, gesture, clothesGraphic, background` |
 | `enum AvatarTier` | `Free, Common (Thường), Rare (Hiếm), Special (Đặc biệt)` |
-| `AvatarCatalog` (static) | Hằng `StyleVersion = "10.6.0"`, `DefaultBackgroundHex = "d4d4d4"`, `RequiredSlots`, `PrintableClothesVariantKeys` (áo in được: `variant01`..`variant10`, đo ở research R1-a), `PriceOf(tier)` (50/150/400, Free = 0), `Items` (201 `AvatarItemDefinition`: 85 miễn phí + 116 bán). Nguồn duy nhất cho seed, mặc định và test |
-| `DefaultAvatarGenerator` (static, thuần) | `ForAccount(Guid)`, `ForGuest(string)`; FNV-1a 64 + SplitMix64, chỉ chọn món `Free` (research R2) |
+| `AvatarCatalog` (static) | `HeadscarfVariantKeys` (`variant61`, `62`, `63`: nguồn duy nhất cho khăn trùm đầu), `DefaultFreeItems(slot)`; hằng `StyleVersion = "10.6.0"`, `DefaultBackgroundHex = "d4d4d4"`, `RequiredSlots`, `PrintableClothesVariantKeys` (áo in được: `variant01`..`variant10`, đo ở research R1-a), `PriceOf(tier)` (50/150/400, Free = 0), `Items` (201 `AvatarItemDefinition`: 85 miễn phí + 116 bán). Nguồn duy nhất cho seed, mặc định và test |
+| `DefaultAvatarGenerator` (static, thuần) | `ForAccount(Guid)`, `ForGuest(string)`; FNV-1a 64 + SplitMix64, chỉ chọn món `Free` từ `AvatarCatalog.DefaultFreeItems(slot)`: như `FreeItems` nhưng **bỏ khăn trùm đầu** ở ô tóc, nên tóc mặc định chỉ lấy trong 8 kiểu (research R2) |
 | `AvatarSelection` (record) | Bản đồ ô → `variantKey?` đủ 11 ô; dùng chung cho nhân vật đã lưu, mặc định và DTO |
 | `AvatarRules` (static, thuần) | Kiểm bộ chọn: đủ sáu ô bắt buộc; mỗi `variantKey` có trong danh mục đúng ô đó; nếu có hình in thì áo phải thuộc `PrintableClothesVariantKeys` (lỗi `graphic_incompatible_clothes`); trả danh sách lỗi (test được không cần DB) |
 
@@ -96,7 +96,7 @@ Tổng: **201 món = 85 miễn phí + 116 bán** (53 Thường, 52 Hiếm, 11 Đ
 | áo `clothes` | **5 kiểu**: `variant01`, `02`, `07`, `14`, `23` (in được hình: `01`, `02`, `07`; `14`, `23` không in được, xem R1-a) | 5 |
 | nền `background` | `d4d4d4` "Xám mặc định" | 1 |
 
-Khăn trùm đầu là trang phục tôn giáo nên luôn miễn phí, không bao giờ vào nhóm bán (test danh mục khẳng định `hair.variant61`..`63` có `Tier = Free`). Danh sách chọn do cố vấn; đổi sau khi lên prod phải qua migration mới (research R3).
+Khăn trùm đầu là trang phục tôn giáo nên luôn miễn phí, không bao giờ vào nhóm bán (test danh mục khẳng định `hair.variant61`..`63` có `Tier = Free`). Chúng chọn được ở trình chỉnh, nhưng **nhân vật mặc định không bao giờ tự mang khăn** (`DefaultFreeItems` bỏ chúng): nếu để lẫn, khoảng 3/11 ≈ 27% tài khoản và khách sẽ tự động mang trang phục tôn giáo mà họ không chọn. Danh sách chọn do cố vấn; đổi sau khi lên prod phải qua migration mới (research R3).
 
 ### 5.2 Món bán (116) và mức giá (Thường 50, Hiếm 150, Đặc biệt 400)
 

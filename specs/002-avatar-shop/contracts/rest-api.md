@@ -80,10 +80,11 @@ Tách khỏi `GET /api/users/me` (giữ `ProfileDto` nguyên, không đổi hợ
 |---|---|---|
 | Thiếu hoặc `null` ở ô bắt buộc; ô lạ; `variantKey` sai định dạng | `400` (kèm `errors.<ô>`) | `validation_failed` |
 | `variantKey` không có trong danh mục của ô đó | `400` (kèm `errors.<ô>`) | `unknown_variant` |
+| Có `clothesGraphic` nhưng `clothes` không thuộc `variant01`..`variant10` (áo in được) | `400` (kèm `errors.clothesGraphic`) | `graphic_incompatible_clothes` |
 | Món bán mà tài khoản chưa sở hữu | `409` (kèm `errors.<ô>`) | `item_not_owned` |
 | Chưa đăng nhập / hết hạn | `401` | có sẵn |
 
-Cả yêu cầu bị từ chối nếu có **một** lỗi (không lưu một phần). Lỗi đầu tiên theo thứ tự ô cố định. Chọn `409` cho `item_not_owned` (trạng thái sở hữu xung đột với yêu cầu), nhất quán với `already_owned`/`insufficient_coins`; `403` dành cho phân quyền theo vai trò, không dùng ở đây.
+Cả yêu cầu bị từ chối nếu có **một** lỗi (không lưu một phần). Lỗi đầu tiên theo thứ tự ô cố định; kiểm tương thích hình in/áo chạy sau khi các ô đều hợp lệ. Chọn `409` cho `item_not_owned` (trạng thái sở hữu xung đột với yêu cầu), nhất quán với `already_owned`/`insufficient_coins`; `403` dành cho phân quyền theo vai trò, không dùng ở đây.
 
 ## Thay đổi: `GET /api/leaderboards/xp`
 
@@ -101,4 +102,5 @@ Mỗi phần tử thêm `avatar: AvatarDto` (luôn đủ ô; tài khoản chưa 
 
 - Các hàm gọi ở `src/api/shop.ts` và `src/api/avatar.ts` (mọi HTTP qua `request()`), TanStack Query với khóa `['shop','items']`, `['me','avatar']`, `['me','profile']`; sau khi mua thành công làm mới `['me','avatar']` và `['me','profile']`.
 - Mã lỗi `code` ánh xạ ra thông điệp tiếng Việt ở `src/api/` (một bảng duy nhất), không rải trong component.
+- Danh sách hình in bị vô hiệu hóa kèm lý do khi áo đang chọn không thuộc tập áo in được (hằng cùng giá trị với backend, có test Vitest dựng lại từ đúng phiên bản DiceBear đã ghim).
 - Nút Mua/Lưu `disabled` trong lúc gửi; lỗi `already_owned` sau khi bấm hai lần được hiểu là thành công không đổi (làm mới dữ liệu, không hiện đỏ).

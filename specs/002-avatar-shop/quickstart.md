@@ -25,16 +25,16 @@ Nhóm test chính phải có và xanh:
 
 | Nhóm | Ví dụ |
 |---|---|
-| Danh mục | 201 món, 82 miễn phí / 119 bán, 53/55/11 theo mức, giá 50/150/400; cử chỉ Hiếm, hình in Đặc biệt |
+| Danh mục | 201 món, 85 miễn phí / 116 bán, 53/52/11 theo mức, giá 50/150/400; cử chỉ Hiếm, hình in Đặc biệt; `hair.variant61`..`63` miễn phí; tổng giá mua hết 14.850 Xu |
 | Đồng bộ style | mọi `variantKey` đã seed == khóa `components.*.variants` của `notionists.min.json` đúng phiên bản `10.6.0` |
 | Nhân vật mặc định | xác định, chỉ món miễn phí, đủ ô bắt buộc, khách không phân biệt hoa thường, giá trị cố định (golden) |
-| Quy tắc lưu | thiếu ô bắt buộc, sai ô, món chưa sở hữu, món lạ: từ chối cả yêu cầu |
+| Quy tắc lưu | thiếu ô bắt buộc, sai ô, món chưa sở hữu, món lạ, hình in trên áo ngoài `variant01`..`10` (`graphic_incompatible_clothes`): từ chối cả yêu cầu |
 | Mua đồ | trừ đúng Xu, ghi sổ cái âm `ShopPurchase`, thứ tự kiểm (404 → 400 → 409 sở hữu → 409 số dư) |
 | Đồng thời | xem bảng ở [plan.md](plan.md) điểm 6; gồm mua trùng, hai món chỉ đủ Xu một món, mua cùng kết thúc trận |
 | Độ nhạy | `Purchase_WithoutUserRowLock_LosesUpdate_…` phá được bất biến khi tắt khóa |
 | RLS | `pg_class.relrowsecurity = true` cho ba bảng mới |
 | Truy vấn phòng | số lệnh SQL bằng nhau cho phòng 2 người và 50 người |
-| Frontend | dựng tùy chọn DiceBear (ô trống → xác suất 0, nền trống → `d4d4d4`), áo in được, cấm chuỗi `api.dicebear.com`, `package.json` ghim chính xác (không `^`/`~`) hai gói DiceBear, các màn Cửa hàng/Hồ sơ có đủ tải/lỗi/rỗng |
+| Frontend | tập áo in được == tập áo cho SVG khác nhau khi thêm hình in (đúng phiên bản ghim); dựng tùy chọn DiceBear (ô trống → xác suất 0, nền trống → `d4d4d4`), áo in được, cấm chuỗi `api.dicebear.com`, `package.json` ghim chính xác (không `^`/`~`) hai gói DiceBear, các màn Cửa hàng/Hồ sơ có đủ tải/lỗi/rỗng |
 
 ## 2. Kịch bản thủ công (khớp spec)
 
@@ -47,11 +47,11 @@ Nhóm test chính phải có và xanh:
 | 5 | Mua món giá lớn hơn số dư | bị từ chối `insufficient_coins`, số dư không đổi (US1-2) |
 | 6 | `/profile`: đổi tóc sang món vừa mua, thêm một cử chỉ đã mua, bỏ chọn kính, bấm Lưu | tải lại thấy đúng nhân vật; ô bắt buộc không thể để trống trên giao diện (US2-1,3,4) |
 | 7 | Gửi tay `PUT /api/users/me/avatar` với một món chưa sở hữu | `409 item_not_owned`, nhân vật cũ nguyên vẹn; thiếu `hair` → `400` (US2-4,5) |
-| 8 | Chọn hình in rồi mặc áo `variant11` trở lên | giao diện báo áo này không in được hình (Q-A) |
+| 8 | Chọn hình in rồi mặc áo `variant11` trở lên; hoặc gửi tay `PUT` có hình in kèm áo `variant14` | giao diện vô hiệu hóa hình in và nêu lý do; `PUT` trả `400 graphic_incompatible_clothes`, nhân vật cũ nguyên vẹn (FR-028) |
 | 9 | Phòng có `a`, `b` (tài khoản) và một khách: mở sảnh chờ | mỗi người có nhân vật nhỏ cạnh tên; khách có nhân vật tự sinh nền xám (US3-1) |
 | 10 | Trong khi trận chạy, `a` đổi đồ ở tab khác | điểm và hạng không đổi; bảng điểm câu kế tiếp hiện nhân vật mới (US3-2,3) |
 | 11 | Kết thúc trận, xem bảng điểm cuối trận và `/ranking` | có nhân vật nhỏ ở mọi dòng (US3-1,4) |
-| 12 | Mở DevTools → Network khi dùng cả app | không có yêu cầu nào tới `api.dicebear.com`; `notionists.json` chỉ tải khi vào màn có nhân vật |
+| 12 | Mở DevTools → Network khi dùng cả app | không có yêu cầu nào tới `api.dicebear.com`; chunk `notionists` (≈ 111 KB gzip) chỉ tải khi vào màn có nhân vật, không nằm trong bundle chính (đối chiếu số trước/sau ở báo cáo Đợt D) |
 
 ## 3. Truy vấn bất biến (chạy trên DB sau khi thử)
 
@@ -66,7 +66,7 @@ SELECT ct."Id" FROM "CoinTransactions" ct
 LEFT JOIN "UserAvatarItems" ui ON ui."Id" = ct."UserAvatarItemId"
 WHERE ct."Reason" = 'ShopPurchase' AND (ui."Id" IS NULL OR ui."UserId" <> ct."UserId");
 
--- Danh mục: 201 món, 82 miễn phí:
+-- Danh mục: 201 món, 85 miễn phí:
 SELECT count(*), count(*) FILTER (WHERE "Tier" = 'Free') FROM "AvatarItems";
 
 -- RLS bật cho ba bảng mới (cả ba dòng đều true):

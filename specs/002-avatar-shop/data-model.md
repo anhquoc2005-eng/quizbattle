@@ -8,10 +8,10 @@ Quy ước giữ nguyên Tính năng 1: bảng số nhiều PascalCase, `timesta
 |---|---|
 | `enum AvatarSlot` | `Eyes, Eyebrows, Mouth, Nose, Hair, Clothes, Glasses, Beard, Gesture, ClothesGraphic, Background`. Tên chuỗi (camelCase, dùng ở `Key`, JSON và DiceBear) = `eyes, eyebrows, mouth, nose, hair, clothes, glasses, beard, gesture, clothesGraphic, background` |
 | `enum AvatarTier` | `Free, Common (Thường), Rare (Hiếm), Special (Đặc biệt)` |
-| `AvatarCatalog` (static) | Hằng `StyleVersion = "10.6.0"`, `DefaultBackgroundHex = "d4d4d4"`, `RequiredSlots`, `PriceOf(tier)` (50/150/400, Free = 0), `Items` (201 `AvatarItemDefinition`). Nguồn duy nhất cho seed, mặc định và test |
+| `AvatarCatalog` (static) | Hằng `StyleVersion = "10.6.0"`, `DefaultBackgroundHex = "d4d4d4"`, `RequiredSlots`, `PrintableClothesVariantKeys` (áo in được: `variant01`..`variant10`, đo ở research R1-a), `PriceOf(tier)` (50/150/400, Free = 0), `Items` (201 `AvatarItemDefinition`: 85 miễn phí + 116 bán). Nguồn duy nhất cho seed, mặc định và test |
 | `DefaultAvatarGenerator` (static, thuần) | `ForAccount(Guid)`, `ForGuest(string)`; FNV-1a 64 + SplitMix64, chỉ chọn món `Free` (research R2) |
 | `AvatarSelection` (record) | Bản đồ ô → `variantKey?` đủ 11 ô; dùng chung cho nhân vật đã lưu, mặc định và DTO |
-| `AvatarRules` (static, thuần) | Kiểm bộ chọn: đủ sáu ô bắt buộc; mỗi `variantKey` có trong danh mục đúng ô đó; trả danh sách lỗi (test được không cần DB) |
+| `AvatarRules` (static, thuần) | Kiểm bộ chọn: đủ sáu ô bắt buộc; mỗi `variantKey` có trong danh mục đúng ô đó; nếu có hình in thì áo phải thuộc `PrintableClothesVariantKeys` (lỗi `graphic_incompatible_clothes`); trả danh sách lỗi (test được không cần DB) |
 
 ## 2. Thực thể và bảng mới
 
@@ -76,15 +76,15 @@ UserAvatarItems 1──0..1 CoinTransactions (mua) ; Users 1──* CoinTransact
 | Quy tắc | Nơi thực thi |
 |---|---|
 | Mua: món tồn tại, bán (không Free), chưa sở hữu, đủ Xu; trừ Xu + thêm sở hữu + thêm sổ cái cùng một transaction dưới khóa dòng `Users` | `ShopService` + `AvatarRepository` (tra `AvatarItems` trong DB); lưới an toàn: `UNIQUE (UserId, ItemKey)` |
-| Lưu nhân vật: đủ sáu ô bắt buộc; mỗi món đúng ô, có trong DB, Free hoặc có sở hữu; thất bại thì không lưu gì | `AvatarService` + `AvatarRules`; FK/CHECK là lưới an toàn |
+| Lưu nhân vật: đủ sáu ô bắt buộc; mỗi món đúng ô, có trong DB, Free hoặc có sở hữu; hình in chỉ khi áo in được (`variant01`..`variant10`); thất bại thì không lưu gì | `AvatarService` + `AvatarRules`; FK/CHECK là lưới an toàn |
 | Chưa từng lưu ⇒ nhân vật mặc định từ `DefaultAvatarGenerator` | Service (không ghi DB) |
 | Ô tùy chọn trống ⇒ cột NULL; `background` NULL vẽ nền mặc định | Cột NULL + frontend dùng hằng cùng giá trị `DefaultBackgroundHex` |
 
-## 5. Danh mục: món miễn phí và bảng giá (cần cố vấn duyệt trước khi áp lên prod)
+## 5. Danh mục: món miễn phí và bảng giá (đã được cố vấn duyệt, xem [plan.md](plan.md))
 
-Tổng: **201 món = 82 miễn phí + 119 bán** (53 Thường, 55 Hiếm, 11 Đặc biệt). Mua hết cần 15.300 Xu. Tham chiếu: thưởng một trận = `floor(điểm/100)` + 30/20/10 cho top 3 (Tính năng 1), nên món Thường ≈ 1-3 trận, Hiếm ≈ 4-8, Đặc biệt ≈ 10+.
+Tổng: **201 món = 85 miễn phí + 116 bán** (53 Thường, 52 Hiếm, 11 Đặc biệt). Mua hết cần **14.850 Xu**. Tham chiếu: thưởng một trận = `floor(điểm/100)` + 30/20/10 cho top 3 (Tính năng 1), nên món Thường ≈ 1-3 trận, Hiếm ≈ 4-8, Đặc biệt ≈ 10+.
 
-### 5.1 Miễn phí (82)
+### 5.1 Miễn phí (85)
 
 | Ô | Món miễn phí | Số |
 |---|---|---|
@@ -92,26 +92,28 @@ Tổng: **201 món = 82 miễn phí + 119 bán** (53 Thường, 55 Hiếm, 11 Đ
 | lông mày `eyebrows` | toàn bộ `variant01`..`variant13` | 13 |
 | miệng `mouth` | toàn bộ `variant01`..`variant30` | 30 |
 | mũi `nose` | toàn bộ `variant01`..`variant20` | 20 |
-| tóc `hair` | **`variant01`..`variant08`** (8 kiểu) | 8 |
-| áo `clothes` | **`variant01`..`variant05`** (5 kiểu; đều in được hình, xem R1-a) | 5 |
+| tóc `hair` | **8 kiểu**: `variant01`, `02`, `05`, `08`, `20`, `23`, `41`, `45`; **3 khăn trùm đầu**: `variant61` "Khăn quấn đầu", `variant62` "Khăn trùm đầu 1", `variant63` "Khăn trùm đầu 2" | 11 |
+| áo `clothes` | **5 kiểu**: `variant01`, `02`, `07`, `14`, `23` (in được hình: `01`, `02`, `07`; `14`, `23` không in được, xem R1-a) | 5 |
 | nền `background` | `d4d4d4` "Xám mặc định" | 1 |
 
-Chọn theo thứ tự đầu danh sách vì chưa thể xem hình trong plan; đây là dữ liệu, đổi được **trước khi áp migration lên prod** (xem câu hỏi Q-C ở [plan.md](plan.md)).
+Khăn trùm đầu là trang phục tôn giáo nên luôn miễn phí, không bao giờ vào nhóm bán (test danh mục khẳng định `hair.variant61`..`63` có `Tier = Free`). Danh sách chọn do cố vấn; đổi sau khi lên prod phải qua migration mới (research R3).
 
-### 5.2 Món bán (119) và mức giá (Thường 50, Hiếm 150, Đặc biệt 400)
+### 5.2 Món bán (116) và mức giá (Thường 50, Hiếm 150, Đặc biệt 400)
 
 | Ô | Thường (50) | Hiếm (150) | Đặc biệt (400) | Tổng |
 |---|---|---|---|---|
-| tóc `hair` (56) | `variant09`..`variant32` (24) | `variant33`..`variant56` (24) | `hat`, `variant57`..`variant63` (8) | 56 |
-| áo `clothes` (20) | `variant06`..`variant17` (12) | `variant18`..`variant25` (8) | không | 20 |
+| tóc `hair` (53) | `variant03`, `04`, `06`, `07`, `09`..`19`, `21`, `22`, `24`..`30` (24) | `variant31`..`40`, `42`..`44`, `46`..`53` (21) | `hat`, `variant54`..`60` (8) | 53 |
+| áo `clothes` (20) | `variant03`..`06`, `08`..`13`, `15`, `16` (12) | `variant17`..`22`, `24`, `25` (8) | không | 20 |
 | kính `glasses` (11) | `variant01`..`variant06` (6) | `variant07`..`variant11` (5) | không | 11 |
 | râu `beard` (12) | `variant01`..`variant06` (6) | `variant07`..`variant12` (6) | không | 12 |
 | cử chỉ `gesture` (10) | không | **tất cả 10** (theo yêu cầu) | không | 10 |
 | hình in `clothesGraphic` (3) | không | không | **`electric`, `galaxy`, `saturn`** (theo yêu cầu) | 3 |
 | nền `background` (7) | 5 màu | 2 màu | không | 7 |
-| **Cộng** | **53** | **55** | **11** | **119** |
+| **Cộng** | **53** | **52** | **11** | **116** |
 
-Quy tắc phân mức: ô nhiều lựa chọn (tóc, áo) chia theo thứ tự chỉ số, hai mức thấp chiếm phần lớn, mức Đặc biệt chỉ dành cho hình in (yêu cầu) và nhóm tóc cuối danh sách có `hat`. Tên hiển thị tạm là "Tóc 09", "Áo 06"...; cố vấn có thể đổi tên/mức bằng danh sách trong `AvatarCatalog` trước Đợt A.
+Tổng Xu mua hết: tóc 24×50 + 21×150 + 8×400 = 7.550; áo 12×50 + 8×150 = 1.800; kính 1.050; râu 1.200; cử chỉ 1.500; hình in 1.200; nền 550 ⇒ **14.850 Xu**.
+
+Quy tắc phân mức: ô nhiều lựa chọn (tóc, áo) chia theo thứ tự chỉ số của phần còn lại sau khi bỏ món miễn phí (Thường trước, Hiếm sau); mức Đặc biệt của tóc chỉ gồm `hat` và các kiểu cuối danh sách (không có khăn trùm đầu, vì chúng miễn phí) cùng hình in (yêu cầu). Tên hiển thị tạm là "Tóc 09", "Áo 06"...; riêng ba khăn có tên trung tính nêu trên.
 
 ### 5.3 Tám màu nền (`background`)
 

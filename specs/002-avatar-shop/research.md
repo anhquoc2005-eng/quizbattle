@@ -79,7 +79,7 @@ Kết quả đo được:
 
 #### R1-a. Hình in chỉ hiện trên áo `variant01`..`variant10`
 
-Thử `clothesGraphic=saturn` trên từng kiểu áo: **`clothes` `variant11`..`variant25` (15 kiểu) vẽ ra SVG y hệt khi không có hình in** (áo đó không có chỗ in). Hệ quả cho plan: không được bán/tính năng này mà người mua thấy "mua 400 Xu rồi không hiện". Quyết định ở [plan.md](plan.md) mục "Quyết định cần cố vấn duyệt" (Q-A).
+Thử `clothesGraphic=saturn` trên từng kiểu áo: **`clothes` `variant11`..`variant25` (15 kiểu) vẽ ra SVG y hệt khi không có hình in** (áo đó không có chỗ in). Hệ quả: không được để người mua hình in (400 Xu) thấy "không hiện gì". **Quyết định đã duyệt (Q-A)**: tập áo in được `variant01`..`variant10` là hằng `AvatarCatalog.PrintableClothesVariantKeys`; `AvatarRules` (hàm thuần) từ chối lưu nhân vật có hình in mà áo ngoài tập này (`400 graphic_incompatible_clothes`); giao diện vô hiệu hóa danh sách hình in kèm lý do. Hằng số này có thể lệch khi nâng cấp DiceBear, nên frontend có test Vitest dựng lại tập áo in được từ chính phiên bản đã ghim (vẽ từng áo có và không có hình in, so SVG sau khi bỏ hậu tố id) và khẳng định bằng đúng hằng số; test backend `AvatarCatalogStyleSyncTests` cũng kiểm hằng số chỉ chứa khóa áo có thật. Chi tiết ở [plan.md](plan.md).
 
 #### R1-b. Ô nền trống phải có nền mặc định khi vẽ
 
@@ -117,11 +117,13 @@ Nội dung dự kiến: bảng hai gói, phiên bản, giấy phép; ghi rõ "No
 
 Danh sách món miễn phí lấy từ `AvatarCatalog` (R3), là cùng nguồn với bản seed, nên không thể lệch giữa "nhân vật mặc định" và "món miễn phí".
 
+Danh sách món miễn phí do cố vấn chọn (data-model mục 5.1): tóc `variant01, 02, 05, 08, 20, 23, 41, 45` + khăn trùm đầu `61, 62, 63`; áo `variant01, 02, 07, 14, 23`.
+
 **Lý do**: backend là nơi duy nhất sinh mặc định (các nơi đều nhận đủ ô qua DTO, frontend không tự sinh); hàm thuần nên test được, đúng quy tắc Domain của CLAUDE.md.
 
 **Đã loại**: dùng `seed` của DiceBear để frontend tự sinh (sẽ khác giữa các nơi, không kiểm chứng "chỉ món miễn phí" ở server được); lưu nhân vật mặc định vào DB cho mọi tài khoản cũ (trái yêu cầu "không cần sửa dữ liệu cũ").
 
-**Test (bắt buộc)**: cùng đầu vào cho cùng kết quả (nhiều lần, và hai thể hiện `Guid` bằng nhau); mọi món trả về thuộc danh sách miễn phí; đủ sáu ô bắt buộc, bốn ô tùy chọn rỗng, nền mặc định; khách không phân biệt hoa thường/khoảng trắng đầu cuối; kết quả cố định cho một vài đầu vào cụ thể (**golden**: nếu ai đó đổi hash hay danh sách miễn phí thì test fail, vì như vậy nhân vật mặc định của mọi người đổi hình); 10.000 khóa ngẫu nhiên đều hợp lệ và phủ đủ nhiều kiểu (không dồn vào một kiểu).
+**Test (bắt buộc)**: cùng đầu vào cho cùng kết quả (nhiều lần, và hai thể hiện `Guid` bằng nhau); mọi món trả về thuộc danh sách miễn phí (tóc ∈ 11 kiểu, áo ∈ 5 kiểu ở trên); đủ sáu ô bắt buộc, bốn ô tùy chọn rỗng, nền mặc định; khách không phân biệt hoa thường/khoảng trắng đầu cuối; kết quả cố định cho một vài đầu vào cụ thể (**golden**: nếu ai đó đổi hash hay danh sách miễn phí thì test fail, vì như vậy nhân vật mặc định của mọi người đổi hình); 10.000 khóa ngẫu nhiên đều hợp lệ và phủ đủ nhiều kiểu (không dồn vào một kiểu).
 
 ## R3. Danh mục: một nguồn duy nhất trong mã, seed vào DB, server kiểm bằng DB
 
@@ -203,13 +205,13 @@ Nếu thiếu `frontend/node_modules` thì test **fail với thông báo "chạy
 
 ## R8. RLS trên Supabase
 
-Hiện trạng thật: README ghi rõ các bảng hiện có trong schema `public` **chưa** bật RLS và khuyến nghị tắt Data API. Yêu cầu mới: **bảng mới phải bật RLS**.
+Hiện trạng (cố vấn đã kiểm trên Supabase production, 07/11 và 10/11): **cả 8 bảng hiện có đã bật RLS**, truy vấn kiểm cho 0 bảng tắt RLS. Dòng trong README nói "chưa bật RLS" đã lỗi thời và sẽ được sửa ở Đợt A. Yêu cầu: **bảng mới cũng phải bật RLS** để nhất quán.
 
 **Quyết định**: trong migration `AddAvatarShop` thêm `migrationBuilder.Sql("ALTER TABLE \"AvatarItems\" ENABLE ROW LEVEL SECURITY;")` cho ba bảng mới (`AvatarItems`, `UserAvatars`, `UserAvatarItems`). **Không tạo policy**: không policy nghĩa là vai trò `anon`/`authenticated` (Data API) không đọc/ghi được gì; backend kết nối bằng vai trò chủ bảng (`postgres`, bỏ qua RLS) nên không bị ảnh hưởng. Không `FORCE`. Câu lệnh vô hại trên PostgreSQL dev (docker) và chạy lại được (idempotent).
 
 Test tích hợp: truy vấn `pg_class.relrowsecurity` của ba bảng phải `true` sau khi áp toàn bộ migration trên DB test.
 
-**Nhắc việc treo**: các bảng cũ (`Users`, `Rooms`...) vẫn chưa bật RLS; đề xuất một migration riêng ngoài tính năng này (không làm ở đây, tránh đổi phạm vi).
+Không cần việc nào cho bảng cũ (đã bật). Việc duy nhất liên quan: sửa dòng README (Đợt A).
 
 ## R9. Phát hiện ở mã hiện có cần xử lý trong tính năng
 
@@ -219,7 +221,7 @@ Test tích hợp: truy vấn `pg_class.relrowsecurity` của ba bảng phải `t
 | `CoinTransaction` chưa truy được món đã mua; chú thích cũ ghi "mua đồ ở tính năng sau" | Thêm `UserAvatarItemId` (FK nullable) + CHECK; cập nhật chú thích |
 | `CoinTransactionReason.ShopPurchase` đã có, chưa dùng | Dùng nguyên, không thêm giá trị enum |
 | `ProfileDto` không có nhân vật; Hồ sơ dùng `/api/users/me` | Giữ nguyên `ProfileDto`; nhân vật qua endpoint riêng `/api/users/me/avatar` (xem contracts) |
-| README nói schema `public` chưa RLS | Xem R8 |
+| README nói schema `public` chưa RLS (lỗi thời: production đã bật RLS cho cả 8 bảng) | Sửa dòng README ở Đợt A; xem R8 |
 | `GameBroadcaster` đã gom việc gửi sự kiện | Không đổi; chỉ đổi DTO |
 
 ## R10. Quyết định về kiểu (Hồ sơ) và UI nhân vật nhỏ

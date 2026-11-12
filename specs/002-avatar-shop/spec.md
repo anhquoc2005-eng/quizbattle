@@ -45,6 +45,7 @@ Người chơi đã đăng nhập mở trang hồ sơ, thấy nhân vật lớn 
 4. **Given** ô bắt buộc (mắt, lông mày, miệng, mũi, tóc, áo), **When** người chơi cố lưu mà để trống ô đó, **Then** yêu cầu bị từ chối và nhân vật đã lưu không đổi.
 5. **Given** một yêu cầu lưu chứa món chưa sở hữu (và không miễn phí) hoặc món đặt sai ô, **When** server nhận yêu cầu, **Then** toàn bộ yêu cầu bị từ chối, không lưu một phần nào.
 6. **Given** người chơi chưa từng chỉnh nhân vật (kể cả mọi tài khoản tạo trước tính năng này), **When** họ mở hồ sơ, **Then** họ thấy một nhân vật tự sinh cố định theo tài khoản, chỉ dùng món miễn phí, và nhân vật đó không đổi giữa các lần mở.
+7. **Given** người chơi đã sở hữu một hình in, **When** họ chọn hình in đó trong khi áo đang chọn không in được, **Then** giao diện vô hiệu hóa hình in và nói rõ lý do; nếu yêu cầu lưu vẫn tới được server thì bị từ chối (400, `graphic_incompatible_clothes`) và nhân vật đã lưu không đổi.
 
 ---
 
@@ -97,7 +98,7 @@ Khi người chơi đang mua đồ đúng lúc trận của họ kết thúc và
 
 - **FR-001**: Hệ thống MUST có một danh mục đồ gồm các ô: mắt, lông mày, miệng, mũi, tóc, áo, kính, râu, cử chỉ tay, hình in trên áo, màu nền. Mỗi món thuộc đúng một ô, có tên hiển thị, mức giá (hoặc miễn phí) và mã món đồ.
 - **FR-002**: Số kiểu mỗi ô MUST khớp bộ hình đã chọn: mắt 5, lông mày 13, miệng 30, mũi 20, tóc 64, áo 25, kính 11, râu 12, cử chỉ 10, hình in 3, cộng khoảng 8 màu nền do dự án định nghĩa.
-- **FR-003**: Món miễn phí cho mọi tài khoản MUST gồm toàn bộ mắt, lông mày, miệng, mũi; 8 kiểu tóc; 5 kiểu áo; và nền mặc định. Mọi món còn lại là món bán.
+- **FR-003**: Món miễn phí cho mọi tài khoản MUST gồm toàn bộ mắt, lông mày, miệng, mũi; 8 kiểu tóc và 3 kiểu khăn trùm đầu (khăn quấn đầu và hai kiểu khăn hijab, thuộc ô tóc, vì là trang phục tôn giáo nên không được bán); 5 kiểu áo; và nền mặc định. Mọi món còn lại là món bán.
 - **FR-004**: Món bán MUST thuộc một trong ba mức giá: Thường 50 Xu, Hiếm 150 Xu, Đặc biệt 400 Xu. Cử chỉ MUST là Hiếm, hình in MUST là Đặc biệt; mức của các món còn lại được chốt ở bước lập kế hoạch.
 - **FR-005**: Danh mục (kể cả giá) MUST xem được công khai, không cần đăng nhập.
 
@@ -120,6 +121,7 @@ Khi người chơi đang mua đồ đúng lúc trận của họ kết thúc và
 - **FR-017**: Chỉ tài khoản đã đăng nhập MUST lưu được nhân vật, và chỉ cho chính tài khoản đó.
 - **FR-018**: Tài khoản chưa từng chỉnh (gồm mọi tài khoản tạo trước tính năng này) MUST hiện một nhân vật tự sinh cố định theo tài khoản, chỉ dùng món miễn phí; không cần cập nhật dữ liệu cũ. Nhân vật này MUST không đổi giữa các lần xem.
 - **FR-019**: Khách MUST hiện nhân vật tự sinh cố định theo tên người chơi, chỉ dùng món miễn phí, nền xám. Hai khách trùng tên có thể có nhân vật giống nhau.
+- **FR-028**: Hình in chỉ hiển thị được trên một số kiểu áo (áo `variant01` đến `variant10` của bộ hình, gọi là "áo in được"). Server MUST từ chối việc lưu nhân vật có hình in mà áo không thuộc tập áo in được (lỗi 400, mã lỗi `graphic_incompatible_clothes`) và giữ nguyên nhân vật đã lưu. Giao diện MUST vô hiệu hóa danh sách hình in và nêu lý do khi áo hiện chọn không in được. Tập áo in được là một hằng số duy nhất của danh mục, có test đối chiếu với bộ hình đúng phiên bản đã ghim.
 
 **Hiển thị**
 
@@ -149,7 +151,7 @@ Khi người chơi đang mua đồ đúng lúc trận của họ kết thúc và
 - **SC-001**: Người chơi có đủ Xu mua và mặc một món mới trong dưới 1 phút kể từ lúc mở cửa hàng (mua, sang hồ sơ, chọn, lưu).
 - **SC-002**: Trong 100% các lần thử mua đồng thời (cùng món hoặc hai món khi chỉ đủ Xu cho một), số dư cuối không âm và Xu bị trừ đúng bằng giá các món mua thành công, không món nào bị tính tiền hai lần.
 - **SC-003**: Với mọi tài khoản tại mọi thời điểm kiểm tra, số dư Xu bằng tổng lịch sử giao dịch Xu của tài khoản đó, kể cả sau thử nghiệm mua đồng thời với kết thúc trận.
-- **SC-004**: 100% yêu cầu lưu nhân vật có món chưa sở hữu, sai ô hoặc thiếu ô bắt buộc bị từ chối và nhân vật đã lưu không đổi.
+- **SC-004**: 100% yêu cầu lưu nhân vật có món chưa sở hữu, sai ô, thiếu ô bắt buộc hoặc hình in trên áo không in được bị từ chối và nhân vật đã lưu không đổi.
 - **SC-005**: Mọi tài khoản hiện có trước tính năng này hiện được một nhân vật hợp lệ (không lỗi, không ảnh trống) ngay lần mở đầu tiên mà không cần di chuyển dữ liệu.
 - **SC-006**: Nhân vật hiện đúng ở cả bốn nơi (sảnh chờ, bảng điểm giữa trận, bảng điểm cuối trận, bảng xếp hạng) và ở hồ sơ/cửa hàng với cùng một hình cho cùng một tài khoản.
 - **SC-007**: Với phòng 50 người chơi, bảng điểm và sảnh chờ hiện đủ nhân vật mà người chơi không nhận ra độ trễ thêm so với trước tính năng.
@@ -163,6 +165,7 @@ Khi người chơi đang mua đồ đúng lúc trận của họ kết thúc và
 - Tính năng này KHÔNG làm giao diện lịch sử giao dịch Xu; hồ sơ vẫn chỉ hiện lịch sử thưởng trận như Tính năng 1.
 - Chưa có đồ tặng khi đăng ký ngoài phần miễn phí; không có sự kiện, giảm giá hay đồ giới hạn thời gian.
 - Danh mục không đổi sau khi phát hành trong phạm vi tính năng này; thêm món mới là một thay đổi riêng.
+- Trang phục tôn giáo (khăn quấn đầu, khăn hijab) luôn miễn phí để không ai phải trả Xu cho trang phục tôn giáo của mình; tên hiển thị của chúng trung tính ("Khăn quấn đầu", "Khăn trùm đầu 1", "Khăn trùm đầu 2").
 - Phân bổ mức giá cho các món bán ngoài cử chỉ (Hiếm) và hình in (Đặc biệt) do bước lập kế hoạch đề xuất, tuân thủ ba mức giá ở FR-004.
 - Các màn hình mới tuân theo hệ thiết kế "true-black-flat" của dự án; nhân vật là hình đen trắng nên không vi phạm quy tắc màu nhấn.
 

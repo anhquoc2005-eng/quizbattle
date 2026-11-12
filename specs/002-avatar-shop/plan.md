@@ -31,7 +31,7 @@ Chi tiết quyết định: [research.md](research.md). Dữ liệu: [data-model
 
 **Project Type**: Web application (backend + frontend), cấu trúc sẵn có của dự án.
 
-**Performance Goals**: phòng 50 người: thêm đúng 1 truy vấn cho nhân vật mỗi lần dựng snapshot; payload cộng thêm ≈ 21 KB (`RoomState`), ≈ 10,5 KB mỗi `LeaderboardUpdated`; `notionists.json` (113 KB gzip) nạp lazy.
+**Performance Goals**: phòng 50 người: thêm đúng 1 truy vấn cho nhân vật mỗi lần dựng snapshot; payload cộng thêm ≈ 21 KB (`RoomState`), ≈ 10,5 KB mỗi `LeaderboardUpdated`; `notionists.json` (372 KB thô, ≈ 111–113 KB gzip) nạp bằng `import()` động và tách thành chunk riêng khỏi bundle chính, chỉ tải ở màn có nhân vật; Đợt D ghi kích thước bundle chính trước/sau (`vite build`) vào báo cáo và kiểm bundle chính không chứa `notionists`.
 
 **Constraints**: không gọi `api.dicebear.com`; giá do server; mọi ghi `Users` theo quy tắc khóa của CLAUDE.md; bảng mới bật RLS; migration production chạy tay trước khi merge.
 
@@ -112,7 +112,7 @@ THIRD_PARTY_NOTICES.md (gốc repo)
 
 - Gói và phiên bản ghim chính xác: **`@dicebear/core@10.6.0`** (MIT) và **`@dicebear/styles@10.6.0`** (file `notionists.json` là CC0 1.0). Thế hệ 10.x **không còn gói `@dicebear/notionists`** (bản cuối 9.4.2); kiểu nằm trong `@dicebear/styles`, phiên bản "styles 10.6.0" trong yêu cầu chính là gói này. `@dicebear/core` `latest` hiện là 10.7.0 nên ghim tường minh `10.6.0`.
 - Đã thử ngoài repo (thư mục tạm, không commit): vẽ `hair=variant12`, kính rỗng (`glassesProbability: 0`), `gesture=ok`, nền `2a9d8f` ra SVG hợp lệ; ép được từng variant của mọi ô (193 trường hợp không lỗi); số variant mỗi ô khớp bảng yêu cầu. Lệnh và đoạn code đầy đủ ở research.md R1.
-- **Hai phát hiện cần cố vấn biết**: (a) hình in chỉ hiện trên áo `variant01`..`variant10` (15 kiểu áo còn lại không có chỗ in): xem Q-A; (b) không có nền thì SVG trong suốt, nét đen mất trên nền giao diện đen ⇒ ô nền trống phải vẽ nền mặc định `d4d4d4`.
+- **Hai phát hiện** (cố vấn đã duyệt cách xử lý): (a) hình in chỉ hiện trên áo `variant01`..`variant10` (15 kiểu áo còn lại không có chỗ in) ⇒ server từ chối lưu, xem mục "Quyết định đã duyệt" Q-A; (b) không có nền thì SVG trong suốt, nét đen mất trên nền giao diện đen ⇒ ô nền trống phải vẽ nền mặc định `d4d4d4`.
 
 ### 2. Nhân vật mặc định ([research R2](research.md))
 
@@ -127,8 +127,8 @@ Hàm thuần ở Domain: `DefaultAvatarGenerator.ForAccount(Guid)` và `ForGuest
 
 ### 4. Món miễn phí, giá, màu nền ([data-model.md mục 5](data-model.md))
 
-- Miễn phí (82): mắt 5, lông mày 13, miệng 30, mũi 20 (toàn bộ); **tóc `variant01`..`variant08`**; **áo `variant01`..`variant05`**; nền `d4d4d4`.
-- Bán (119): bảng phân bổ theo ô và mức ở data-model 5.2 (53 Thường, 55 Hiếm, 11 Đặc biệt; cử chỉ toàn Hiếm, hình in toàn Đặc biệt; tóc `hat` + `variant57`..`63` Đặc biệt). Mua hết = 15.300 Xu.
+- Miễn phí (**85**): mắt 5, lông mày 13, miệng 30, mũi 20 (toàn bộ); **tóc 11** = `variant01, 02, 05, 08, 20, 23, 41, 45` + 3 khăn trùm đầu `variant61` "Khăn quấn đầu", `62` "Khăn trùm đầu 1", `63` "Khăn trùm đầu 2" (trang phục tôn giáo, luôn miễn phí); **áo 5** = `variant01, 02, 07, 14, 23`; nền `d4d4d4`.
+- Bán (**116**): bảng phân bổ theo ô và mức ở data-model 5.2 (**53 Thường, 52 Hiếm, 11 Đặc biệt**; cử chỉ toàn Hiếm, hình in toàn Đặc biệt; tóc Thường 24, Hiếm 21, Đặc biệt 8 = `hat` + `variant54`..`60`, không có khăn). Mua hết = **14.850 Xu**.
 - 8 màu nền (hex): `d4d4d4` (miễn phí), Thường `b9c6d6` `b8d4be` `e3d5b8` `e8c4c4` `cfc4e3`, Hiếm `a9d3dc` `ebc4a0`. Phẳng, tương phản với nét đen ≥ 11:1, không dùng vàng `accent`.
 
 ### 5. API ([contracts/rest-api.md](contracts/rest-api.md))
@@ -138,7 +138,7 @@ Hàm thuần ở Domain: `DefaultAvatarGenerator.ForAccount(Guid)` và `ForGuest
 | `GET /api/shop/items` | công khai | 200 `AvatarItemDto[]` (cache 1 giờ) |
 | `POST /api/shop/purchases` `{itemKey}` | JWT | 201 `{itemKey, price, coinBalance}`; 400 `validation_failed`/`item_not_purchasable`; 404 `item_not_found`; **409 `already_owned`**; **409 `insufficient_coins`** |
 | `GET /api/users/me/avatar` | JWT | 200 `{avatar, isDefault, ownedItemKeys}` |
-| `PUT /api/users/me/avatar` (thay toàn bộ) | JWT | 200 `{avatar, isDefault:false}`; 400 `validation_failed`/`unknown_variant`; 409 `item_not_owned` |
+| `PUT /api/users/me/avatar` (thay toàn bộ) | JWT | 200 `{avatar, isDefault:false}`; 400 `validation_failed`/`unknown_variant`/**`graphic_incompatible_clothes`**; 409 `item_not_owned` |
 | `GET /api/leaderboards/xp` | công khai | thêm `avatar` mỗi dòng |
 
 Lỗi theo ProblemDetails + trường mở rộng `code` (máy đọc được); `GlobalExceptionHandler` ghi `code` chung cho ngoại lệ có `Code`. Nhân vật **tách khỏi** `GET /api/users/me` (giữ `ProfileDto` nguyên, không đổi hợp đồng cũ).
@@ -172,29 +172,30 @@ Lỗi theo ProblemDetails + trường mở rộng `code` (máy đọc được);
 - Tên: **`AddAvatarShop`** (một migration).
 - Seed danh mục bằng `HasData` từ `AvatarCatalog` (201 `InsertData`).
 - Kiểm trên **DB riêng** trước: tạo DB mới, migrate tới `AddXpCoinsAndPlayerAccounts`, nạp mẫu, chạy `scripts/migrate-prod.ps1`, áp `psql` hai lần, kiểm dữ liệu cũ + 201 dòng + CHECK + RLS; không chạy trên DB dev hiện tại.
-- **RLS**: `ALTER TABLE … ENABLE ROW LEVEL SECURITY` cho `AvatarItems`, `UserAvatars`, `UserAvatarItems` trong chính migration; không tạo policy (anon/authenticated bị chặn, backend dùng vai trò chủ bảng nên không ảnh hưởng); có test `pg_class.relrowsecurity`.
+- **RLS**: production đã bật RLS cho cả 8 bảng hiện có (cố vấn đã kiểm); README lỗi thời sẽ được sửa ở Đợt A. `ALTER TABLE … ENABLE ROW LEVEL SECURITY` cho `AvatarItems`, `UserAvatars`, `UserAvatarItems` trong chính migration; không tạo policy (anon/authenticated bị chặn, backend dùng vai trò chủ bảng nên không ảnh hưởng); có test `pg_class.relrowsecurity`.
 - Production: chạy `scripts/migrate-prod.ps1` **trước khi merge**; migration chỉ thêm nên backend cũ vẫn chạy được.
 
 ### 9. Chia Đợt (mỗi Đợt: `dotnet build` + `dotnet test` + (frontend) `npm run build`/`test`/`lint` xanh, rồi push để cố vấn đọc diff)
 
 | Đợt | Phạm vi | Cổng ra |
 |---|---|---|
-| **A: Domain và dữ liệu** | `AvatarSlot/Tier`, `AvatarCatalog` (201 món), `DefaultAvatarGenerator`, `AvatarRules` + unit test; thực thể và cấu hình EF; migration `AddAvatarShop` (+RLS); `GET /api/shop/items`; test đồng bộ với file style (xem lưu ý dưới bảng); kiểm migration trên DB riêng | build + test xanh; migration kiểm xong; danh mục được duyệt |
+| **A: Domain và dữ liệu** | `AvatarSlot/Tier`, `AvatarCatalog` (201 món), `DefaultAvatarGenerator`, `AvatarRules` + unit test; thực thể và cấu hình EF; migration `AddAvatarShop` (+RLS); `GET /api/shop/items`; test đồng bộ với file style (xem lưu ý dưới bảng); hằng `PrintableClothesVariantKeys` và luật `graphic_incompatible_clothes` trong `AvatarRules` + test; **sửa dòng README về RLS cho đúng hiện trạng** (production đã bật RLS cho 8 bảng); kiểm migration trên DB riêng | build + test xanh; migration kiểm xong; danh mục được duyệt |
 | **B: Mua đồ và lưu nhân vật (backend)** | `IShopService`/`ShopService`, `IAvatarService`/`AvatarService`, `AvatarRepository`, `Code` trên ngoại lệ + `GlobalExceptionHandler`, `POST /api/shop/purchases`, `GET/PUT /api/users/me/avatar`; unit test (lớp giả) và toàn bộ test đồng thời + kiểm độ nhạy | build + test xanh (cả tích hợp có `QUIZBATTLE_TEST_DB`) |
 | **C: Nhân vật vào game (backend)** | `GameSnapshot.Avatars`, `AvatarOf`, thêm `avatar` vào DTO phòng và `XpLeaderboardEntryDto`, join ở `UserRepository`; sửa test hiện có theo chữ ký DTO; test đếm truy vấn | build + test xanh |
-| **D: Frontend nền** | `npm install --save-exact` hai gói, `.npmrc`, `THIRD_PARTY_NOTICES.md`, cập nhật CLAUDE.md (Stack + cấu trúc), `src/avatar/`, kiểu `types/`, `src/api/`, `Avatar`, trình chỉnh ở `/profile`; test Vitest | `npm run build`, `test`, `lint`, `typecheck` xanh |
+| **D: Frontend nền** | `npm install --save-exact` hai gói, `.npmrc`, `THIRD_PARTY_NOTICES.md`, cập nhật CLAUDE.md (Stack + cấu trúc), `src/avatar/`, kiểu `types/`, `src/api/`, `Avatar`, trình chỉnh ở `/profile` (vô hiệu hóa hình in khi áo không in được); test Vitest gồm test áo in được so với SVG đúng phiên bản ghim; **báo cáo kích thước bundle chính trước và sau** (`vite build`) và kích thước chunk `notionists` | `npm run build`, `test`, `lint`, `typecheck` xanh |
 | **E: Cửa hàng và hiển thị** | `/shop` (+ liên kết điều hướng), nhân vật nhỏ ở sảnh chờ, bảng điểm giữa/cuối trận và `/ranking`, ánh xạ `code` lỗi; lint/inspect giao diện (nếu có skill `design-taste-frontend`); chạy quickstart; kiểm migration production | mọi build/test xanh; quickstart đạt; sẵn sàng chạy `migrate-prod.ps1` rồi merge |
 
 **Lưu ý Đợt A**: test đồng bộ cần `@dicebear/styles@10.6.0` trong `frontend/node_modules`, mà cài gói là việc của Đợt D. Để Đợt A tự đủ, **đưa riêng việc `npm install --save-exact` hai gói (và `.npmrc`) lên đầu Đợt A** (chỉ thay đổi `package.json`/lock, chưa viết code frontend); Đợt D còn lại phần code. Thay đổi này là hệ quả của yêu cầu "test so với file style đúng phiên bản đã ghim".
 
-## Quyết định cần cố vấn duyệt
+## Quyết định đã duyệt (cố vấn)
 
-| # | Vấn đề | Đề xuất (mặc định nếu không phản đối) |
+| # | Vấn đề | Quyết định |
 |---|---|---|
-| **Q-A** | Hình in (Đặc biệt, 400 Xu) chỉ hiện trên áo `variant01`..`variant10` (R1-a). Người mua hình in nhưng mặc áo `variant11+` sẽ không thấy gì | **Chỉ chặn ở giao diện**: trình chỉnh và cửa hàng vô hiệu hóa danh sách hình in kèm dòng giải thích khi áo hiện tại không in được; xem thử tự đổi sang áo in được; server **vẫn nhận** (không thêm luật mới ngoài spec). Danh sách áo in được là hằng `printableClothes.ts` có Vitest dựng lại từ file style để không lệch. Phương án khác: server từ chối (thêm lỗi `400 print_not_supported` và một luật vào spec) |
-| **Q-B** | Mã lỗi: `409` cho cả `insufficient_coins` và `item_not_owned`; `400` cho `item_not_purchasable`, `unknown_variant` | Như [rest-api.md](contracts/rest-api.md); đã nêu lý do (CLAUDE.md không có 402; 403 dành cho vai trò) |
-| **Q-C** | Danh sách món miễn phí chọn theo thứ tự đầu (tóc 01-08, áo 01-05), tên hiển thị tạm ("Tóc 09"), phân mức theo khoảng chỉ số | Cố vấn có thể đổi bằng `AvatarCatalog` **trước khi migration lên prod**; sau đó muốn đổi phải có migration mới (R3) |
-| **Q-D** | Các bảng cũ chưa bật RLS (README) | Không làm ở tính năng này; đề xuất một chore riêng |
+| **Q-A** | Hình in chỉ hiện trên áo `variant01`..`variant10` (R1-a) | **Server từ chối** lưu nhân vật có `clothesGraphic` khi áo ngoài tập áo in được: `400`, `code: "graphic_incompatible_clothes"` (FR-028 mới trong spec). Tập áo in được là hằng `AvatarCatalog.PrintableClothesVariantKeys`, kiểm bởi `AvatarRules` (hàm thuần, có test). Giao diện cũng chặn: vô hiệu hóa danh sách hình in kèm lý do; xem thử trong cửa hàng tự đổi sang áo in được. Test Vitest ở frontend, với đúng phiên bản DiceBear đã ghim, vẽ từng áo có và không có hình in và xác nhận tập áo cho SVG khác nhau đúng bằng hằng số (nâng cấp DiceBear không làm hằng lệch) |
+| **Q-B** | Mã lỗi | Giữ `409` cho `insufficient_coins` và `item_not_owned`; `400` cho `item_not_purchasable`, `unknown_variant`, `graphic_incompatible_clothes` |
+| **Q-C** | Danh sách món miễn phí | Cố vấn chọn: tóc `variant01, 02, 05, 08, 20, 23, 41, 45` + khăn trùm đầu `61, 62, 63` (luôn miễn phí, tên trung tính); áo `variant01, 02, 07, 14, 23`. Mức giá phần còn lại phân lại cùng nguyên tắc cũ (data-model 5.2). Khăn trùm đầu là trang phục tôn giáo nên không bao giờ được bán (FR-003) |
+| **Q-D** | RLS bảng cũ | Tiền đề sai: production đã bật RLS cho cả 8 bảng hiện có. **Bỏ** đề xuất chore RLS; giữ 3 lệnh `ENABLE ROW LEVEL SECURITY` trong `AddAvatarShop`; sửa dòng README ở Đợt A |
+| **Q-E** | Kích thước bundle | `notionists.min.json` (≈ 372 KB, ≈ 111 KB gzip) nạp bằng `import()` động, tách chunk khỏi bundle chính; Đợt D báo cáo kích thước bundle chính trước và sau |
 
 ## Complexity Tracking
 

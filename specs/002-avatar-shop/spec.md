@@ -16,7 +16,7 @@ Người chơi đã đăng nhập mở trang cửa hàng, xem danh sách đồ c
 
 **Why this priority**: Đây là chỗ Xu có giá trị sử dụng, là lý do cho vòng lặp "chơi trận → nhận Xu → mua đồ". Không có việc mua thì các phần còn lại của tính năng không có nội dung để chỉnh.
 
-**Independent Test**: Tài khoản có đủ Xu mua một món Thường; số dư giảm đúng 50, món đó hiện "đã sở hữu" khi tải lại trang, và bảng lịch sử Xu có thêm một dòng trừ tương ứng.
+**Independent Test**: Tài khoản có đủ Xu mua một món Thường; số dư giảm đúng 50, món đó hiện "đã sở hữu" khi tải lại trang, và dữ liệu có thêm đúng một giao dịch Xu -50 với lý do mua đồ trong cửa hàng.
 
 **Acceptance Scenarios**:
 
@@ -25,7 +25,7 @@ Người chơi đã đăng nhập mở trang cửa hàng, xem danh sách đồ c
 3. **Given** người chơi đã sở hữu một món, **When** họ mua lại món đó (kể cả bấm hai lần liên tiếp hoặc gửi hai yêu cầu đồng thời), **Then** chỉ lần đầu thành công; các lần còn lại bị từ chối vì xung đột và không trừ Xu lần hai.
 4. **Given** người chơi chỉ đủ Xu cho một trong hai món, **When** hai yêu cầu mua hai món khác nhau đến cùng lúc, **Then** đúng một món được mua, món kia bị từ chối vì không đủ Xu và số dư không âm.
 5. **Given** người chơi đang xem cửa hàng, **When** họ chọn xem thử một món (kể cả món chưa sở hữu), **Then** nhân vật của họ hiện món đó ngay mà không tốn Xu và không thay đổi nhân vật đã lưu.
-6. **Given** người chưa đăng nhập (khách), **When** họ mở cửa hàng, **Then** họ xem được danh mục và giá nhưng không mua được; nút mua dẫn tới đăng nhập.
+6. **Given** người chưa đăng nhập (khách), **When** họ mở cửa hàng, **Then** họ xem được danh mục và giá, và xem thử được món bất kỳ trên một nhân vật mặc định chỉ gồm món miễn phí (không phải nhân vật của riêng họ); họ không mua được và nút mua dẫn tới đăng nhập.
 
 ---
 
@@ -82,7 +82,7 @@ Khi người chơi đang mua đồ đúng lúc trận của họ kết thúc và
 ### Edge Cases
 
 - Mất kết nối ngay sau khi bấm mua: khi tải lại, trạng thái "đã sở hữu" và số dư phản ánh đúng kết quả cuối cùng (đã mua hoặc chưa), không ở trạng thái nửa chừng.
-- Phiên đăng nhập hết hạn khi đang ở cửa hàng hoặc hồ sơ: thao tác mua/lưu bị từ chối và người chơi được đưa về đăng nhập; không mất lựa chọn đang xem thử nếu có thể giữ lại.
+- Phiên đăng nhập hết hạn khi đang ở cửa hàng hoặc hồ sơ: thao tác mua/lưu bị từ chối và người chơi được đưa về đăng nhập; lựa chọn đang xem thử không cần giữ lại.
 - Món đồ không tồn tại hoặc mã món đồ sai: bị từ chối là không tìm thấy, không ảnh hưởng số dư.
 - Khách đổi tên giữa các phòng: nhân vật tự sinh đổi theo tên mới; hai khách trùng tên có thể trùng nhân vật (chấp nhận).
 - Ô tùy chọn đang rỗng nhưng người chơi chưa lưu và xem thử một món: xem thử không thay đổi dữ liệu đã lưu.
@@ -124,7 +124,7 @@ Khi người chơi đang mua đồ đúng lúc trận của họ kết thúc và
 **Hiển thị**
 
 - **FR-020**: Trang hồ sơ MUST hiện nhân vật lớn và trình chỉnh theo từng ô, chỉ liệt kê món miễn phí và món đã sở hữu, kèm nút lưu.
-- **FR-021**: Trang cửa hàng MUST hiện danh sách đồ theo ô và mức giá, đánh dấu món đã sở hữu, hiện số dư Xu của người đang đăng nhập, cho xem thử món bất kỳ trên nhân vật của mình mà không đổi dữ liệu đã lưu, và mua món chưa sở hữu.
+- **FR-021**: Trang cửa hàng MUST hiện danh sách đồ theo ô và mức giá, đánh dấu món đã sở hữu, hiện số dư Xu của người đang đăng nhập, cho xem thử món bất kỳ mà không đổi dữ liệu đã lưu (người đã đăng nhập xem thử trên nhân vật của mình; khách xem thử trên một nhân vật mặc định chỉ gồm món miễn phí), và mua món chưa sở hữu (chỉ người đã đăng nhập).
 - **FR-022**: Sảnh chờ, bảng điểm giữa trận, bảng điểm cuối trận và trang bảng xếp hạng XP MUST hiện nhân vật nhỏ cạnh tên mỗi người chơi.
 - **FR-023**: Nhân vật hiện trong phòng MUST là nhân vật hiện tại của tài khoản tại thời điểm xem, không phải bản chụp lúc vào phòng.
 - **FR-024**: Đổi đồ trong lúc trận diễn ra MUST NOT ảnh hưởng điểm số, thứ hạng hay thưởng của trận.
@@ -160,6 +160,7 @@ Khi người chơi đang mua đồ đúng lúc trận của họ kết thúc và
 - Người dùng chính là người chơi có tài khoản (đã có từ Tính năng 1); khách vẫn chơi như cũ nhưng không mua hay chỉnh nhân vật.
 - Xu và lịch sử giao dịch Xu đã có từ Tính năng 1, kể cả lý do giao dịch "mua đồ trong cửa hàng". Tính năng này chỉ sử dụng chúng.
 - Ô để trống cho các ô tùy chọn nghĩa là không có món đó trên nhân vật; riêng "màu nền" để trống hiện nền mặc định.
+- Tính năng này KHÔNG làm giao diện lịch sử giao dịch Xu; hồ sơ vẫn chỉ hiện lịch sử thưởng trận như Tính năng 1.
 - Chưa có đồ tặng khi đăng ký ngoài phần miễn phí; không có sự kiện, giảm giá hay đồ giới hạn thời gian.
 - Danh mục không đổi sau khi phát hành trong phạm vi tính năng này; thêm món mới là một thay đổi riêng.
 - Phân bổ mức giá cho các món bán ngoài cử chỉ (Hiếm) và hình in (Đặc biệt) do bước lập kế hoạch đề xuất, tuân thủ ba mức giá ở FR-004.

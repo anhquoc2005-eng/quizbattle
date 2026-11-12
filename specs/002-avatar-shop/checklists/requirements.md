@@ -33,4 +33,5 @@
 
 - Các ràng buộc kỹ thuật (thư viện, transaction, RLS, migration) được người dùng yêu cầu ghi nguyên văn; chúng nằm riêng trong mục "Ràng buộc kỹ thuật đã chốt" của Assumptions, không lẫn vào Functional Requirements hay Success Criteria.
 - Mức giá của các món bán ngoài cử chỉ và hình in được hoãn sang bước plan theo chỉ định của người dùng (không phải điểm còn mơ hồ).
+- Sửa spec 2026-11-12: US1 Independent Test nói theo giao dịch Xu (không nói giao diện lịch sử); phiên hết hạn không giữ lựa chọn xem thử; khách xem thử trên nhân vật mặc định chỉ có món miễn phí. Không có mục checklist nào đổi trạng thái.
 - Quy ước đã chọn mặc định (ghi ở Assumptions): ô "màu nền" để trống hiện nền mặc định; danh mục cố định, không có sự kiện hay giảm giá.

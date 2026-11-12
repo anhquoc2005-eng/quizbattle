@@ -19,6 +19,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<CoinTransaction> CoinTransactions => Set<CoinTransaction>();
 
+    public DbSet<AvatarItem> AvatarItems => Set<AvatarItem>();
+
+    public DbSet<UserAvatarItem> UserAvatarItems => Set<UserAvatarItem>();
+
+    public DbSet<UserAvatar> UserAvatars => Set<UserAvatar>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Mỗi entity có một lớp cấu hình riêng (IEntityTypeConfiguration) trong project này.

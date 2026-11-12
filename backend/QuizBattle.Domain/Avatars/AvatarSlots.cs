@@ -29,6 +29,9 @@ public static class AvatarSlots
         _ => throw new ArgumentOutOfRangeException(nameof(slot), slot, null),
     };
 
+    public static AvatarSlot FromKey(string key) =>
+        TryParse(key, out var slot) ? slot : throw new ArgumentException($"Ô nhân vật không hợp lệ: {key}", nameof(key));
+
     public static bool TryParse(string? key, out AvatarSlot slot)
     {
         foreach (var candidate in All)

@@ -5,6 +5,7 @@ using QuizBattle.Application.Health;
 using QuizBattle.Application.Profile;
 using QuizBattle.Application.Questions;
 using QuizBattle.Application.Rooms;
+using QuizBattle.Application.Shop;
 
 namespace QuizBattle.Application;
 
@@ -19,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IGameService, GameService>();
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IShopService, ShopService>();
         return services;
     }
 }

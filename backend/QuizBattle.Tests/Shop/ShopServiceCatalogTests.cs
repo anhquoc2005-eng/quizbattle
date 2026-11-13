@@ -30,7 +30,7 @@ public sealed class ShopServiceCatalogTests
             Item(AvatarSlot.Hair, "variant01", AvatarTier.Free, 0),
         ]);
 
-        var items = await new ShopService(repository).GetCatalogAsync(CancellationToken.None);
+        var items = await new ShopService(repository, TimeProvider.System).GetCatalogAsync(CancellationToken.None);
 
         Assert.Equal(["eyes.variant01", "hair.variant01", "hair.variant02"], items.Select(i => i.Key));
     }
@@ -47,7 +47,7 @@ public sealed class ShopServiceCatalogTests
             Item(AvatarSlot.ClothesGraphic, "galaxy", AvatarTier.Special, 0),
         ]);
 
-        var items = await new ShopService(repository).GetCatalogAsync(CancellationToken.None);
+        var items = await new ShopService(repository, TimeProvider.System).GetCatalogAsync(CancellationToken.None);
 
         var byKey = items.ToDictionary(i => i.Key);
         Assert.Equal(("free", 0), (byKey["hair.variant01"].Tier, byKey["hair.variant01"].Price));
@@ -62,7 +62,7 @@ public sealed class ShopServiceCatalogTests
         var repository = new FakeAvatarRepository();
         repository.Catalog.Add(Item(AvatarSlot.ClothesGraphic, "saturn", AvatarTier.Special, 2));
 
-        var item = Assert.Single(await new ShopService(repository).GetCatalogAsync(CancellationToken.None));
+        var item = Assert.Single(await new ShopService(repository, TimeProvider.System).GetCatalogAsync(CancellationToken.None));
 
         Assert.Equal("clothesGraphic", item.Slot);
         Assert.Equal("saturn", item.VariantKey);

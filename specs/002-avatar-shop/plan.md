@@ -31,7 +31,7 @@ Chi tiết quyết định: [research.md](research.md). Dữ liệu: [data-model
 
 **Project Type**: Web application (backend + frontend), cấu trúc sẵn có của dự án.
 
-**Performance Goals**: phòng 50 người: thêm đúng 1 truy vấn cho nhân vật mỗi lần dựng snapshot; payload cộng thêm ≈ 21 KB (`RoomState`), ≈ 10,5 KB mỗi `LeaderboardUpdated`; `notionists.json` (372 KB thô, ≈ 111–113 KB gzip) nạp bằng `import()` động và tách thành chunk riêng khỏi bundle chính, chỉ tải ở màn có nhân vật; Đợt D ghi kích thước bundle chính trước/sau (`vite build`) vào báo cáo và kiểm bundle chính không chứa `notionists`.
+**Performance Goals**: phòng 50 người: thêm đúng 1 truy vấn cho nhân vật mỗi lần dựng snapshot; payload cộng thêm (đo thật) ≈ 22 đến 24 KB (`RoomState`), ≈ 11,8 KB mỗi `LeaderboardUpdated`; `notionists.json` (372 KB thô, ≈ 111–113 KB gzip) nạp bằng `import()` động và tách thành chunk riêng khỏi bundle chính, chỉ tải ở màn có nhân vật; Đợt D ghi kích thước bundle chính trước/sau (`vite build`) vào báo cáo và kiểm bundle chính không chứa `notionists`.
 
 **Constraints**: không gọi `api.dicebear.com`; giá do server; mọi ghi `Users` theo quy tắc khóa của CLAUDE.md; bảng mới bật RLS; migration production chạy tay trước khi merge.
 
@@ -165,7 +165,7 @@ Lỗi theo ProblemDetails + trường mở rộng `code` (máy đọc được);
 
 ### 7. Hiển thị trong phòng một truy vấn ([research R6](research.md), [signalr-events.md](contracts/signalr-events.md))
 
-`LoadSnapshotAsync` đã nạp `Users` của cả phòng bằng một truy vấn; thêm đúng một truy vấn `AsNoTracking` `UserAvatars WHERE UserId = ANY(userIds)` vào `GameSnapshot.Avatars`. `GameService.AvatarOf` (đã lưu → mặc định tài khoản → mặc định khách) dùng cho `RoomState.players`, mọi `LeaderboardEntryDto` (cả `LeaderboardUpdated` và `GameEnded`) và `PlayerJoined`. Không lưu vào `Players` (đúng "nhân vật hiện tại"). Bảng xếp hạng XP: một câu `LEFT JOIN`. Test đếm số lệnh SQL (interceptor) cho phòng 2 và 50 người: bằng nhau. Payload: một `AvatarDto` ≈ 210 byte ⇒ phòng 50 người `RoomState` +21 KB, `LeaderboardUpdated`/`GameEnded` +10,5 KB.
+`LoadSnapshotAsync` đã nạp `Users` của cả phòng bằng một truy vấn; thêm đúng một truy vấn `AsNoTracking` `UserAvatars WHERE UserId = ANY(userIds)` vào `GameSnapshot.Avatars`. `GameService.AvatarOf` (đã lưu → mặc định tài khoản → mặc định khách) dùng cho `RoomState.players`, mọi `LeaderboardEntryDto` (cả `LeaderboardUpdated` và `GameEnded`) và `PlayerJoined`. Không lưu vào `Players` (đúng "nhân vật hiện tại"). Bảng xếp hạng XP: một câu `LEFT JOIN`. Test đếm số lệnh SQL (interceptor) cho phòng 2 và 50 người: bằng nhau. Số đo thật ở Đợt C: `FindSnapshotByCodeAsync` từ 5 lên 6 lệnh SQL (cả phòng 2 và 50 người); payload một `AvatarDto` 210 đến 245 byte ⇒ phòng 50 người `RoomState` +22 đến +23,7 KB (tổng 35 đến 36,7 KB), `LeaderboardUpdated`/`GameEnded` +11,8 KB.
 
 ### 8. Migration ([data-model.md mục 6](data-model.md), [research R8](research.md))
 

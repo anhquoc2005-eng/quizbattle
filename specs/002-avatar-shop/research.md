@@ -185,7 +185,7 @@ Nếu thiếu `frontend/node_modules` thì test **fail với thông báo "chạy
 
 **Bảng xếp hạng XP**: `UserRepository.GetTopByXpAsync` đổi sang projection có `LEFT JOIN` `UserAvatars` (một câu SQL cho 50 dòng), nhân vật mặc định tính ở service từ `UserId` (`UserId` **không** đưa ra DTO).
 
-**Kích thước payload** (xem chi tiết ở [contracts/signalr-events.md](contracts/signalr-events.md)): một `AvatarDto` ≈ 210 byte JSON; phòng 50 người: `RoomState` +21 KB (Players + Leaderboard), `LeaderboardUpdated` +10,5 KB mỗi câu, `GameEnded` +10,5 KB một lần. Chấp nhận được; nếu về sau phình, tách bản đồ `avatars` theo `playerId` dùng chung để giảm một nửa.
+**Kích thước payload** (xem chi tiết ở [contracts/signalr-events.md](contracts/signalr-events.md)): một `AvatarDto` 210 đến 245 byte JSON (đo thật); phòng 50 người: `RoomState` +22 đến +23,7 KB (Players + Leaderboard), `LeaderboardUpdated` +11,8 KB mỗi câu, `GameEnded` +11,8 KB một lần. Chấp nhận được; nếu về sau phình, tách bản đồ `avatars` theo `playerId` dùng chung để giảm một nửa.
 
 ## R7. Mua đồ và đồng thời
 

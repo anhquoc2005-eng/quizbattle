@@ -35,6 +35,60 @@ public sealed class GlobalExceptionHandlerTests
         Assert.Equal("session_replaced", problem.Extensions["code"]);
     }
 
+    [Fact]
+    public async Task GlobalExceptionHandler_ConflictWithCode_WritesCodeExtension()
+    {
+        var (problem, status) = await HandleAsync(new ConflictException("Bạn đã sở hữu món này.", "already_owned"));
+
+        Assert.Equal(StatusCodes.Status409Conflict, status);
+        Assert.Equal("already_owned", problem.Extensions["code"]);
+    }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_ConflictWithoutCode_NoCodeExtension()
+    {
+        var (problem, status) = await HandleAsync(new ConflictException("Email đã được sử dụng."));
+
+        Assert.Equal(StatusCodes.Status409Conflict, status);
+        Assert.False(problem.Extensions.ContainsKey("code"));
+    }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_NotFoundWithCode_WritesCodeExtension()
+    {
+        var (problem, status) = await HandleAsync(new NotFoundException("Không tìm thấy món đồ.", "item_not_found"));
+
+        Assert.Equal(StatusCodes.Status404NotFound, status);
+        Assert.Equal("item_not_found", problem.Extensions["code"]);
+    }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_NotFoundWithoutCode_NoCodeExtension()
+    {
+        var (problem, _) = await HandleAsync(new NotFoundException("Không tìm thấy phòng."));
+
+        Assert.False(problem.Extensions.ContainsKey("code"));
+    }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_ValidationWithCode_WritesCodeAndErrors()
+    {
+        var (problem, status) = await HandleAsync(new RequestValidationException("hair", "Kiểu tóc không có.", "unknown_variant"));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, status);
+        Assert.Equal("unknown_variant", problem.Extensions["code"]);
+        var errors = Assert.IsType<Dictionary<string, string[]>>(problem.Extensions["errors"]);
+        Assert.Equal(["Kiểu tóc không có."], errors["hair"]);
+    }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_ValidationWithoutCode_NoCodeExtension()
+    {
+        var (problem, _) = await HandleAsync(new RequestValidationException("limit", "limit phải từ 1 đến 50."));
+
+        Assert.False(problem.Extensions.ContainsKey("code"));
+    }
+
     private static async Task<(ProblemDetails Problem, int Status)> HandleAsync(Exception exception)
     {
         var problemDetails = new CapturingProblemDetailsService();

@@ -100,8 +100,8 @@ Không pipe lệnh build/test qua `tail`/`head`/`Select-Object` khi nối với 
 
 ### Mã lỗi `code` dùng chung
 
-- [ ] T023 [P] [US1] Viết test (FAIL trước) bổ sung vào `backend/QuizBattle.Tests/Api/GlobalExceptionHandlerTests.cs`: `ConflictException_WithCode_WritesCodeExtension`; `NotFoundException_WithCode_WritesCodeExtension`; `RequestValidationException_WithCode_WritesCodeAndErrors`; `ConflictException_WithoutCode_HasNoCodeExtension` (giữ hành vi cũ); `UnauthorizedException_Code_Unchanged` (không đổi `token_expired`/`token_invalid`/`session_replaced`)
-- [ ] T024 [US1] Thêm thuộc tính `Code` (chuỗi, tùy chọn) vào `ConflictException`, `NotFoundException`, `RequestValidationException` trong `backend/QuizBattle.Application/Common/` (hàm tạo cũ vẫn hợp lệ); sửa `backend/QuizBattle.Api/Middleware/GlobalExceptionHandler.cs` ghi `Extensions["code"]` cho mọi ngoại lệ có `Code` (mã 401 cũ giữ nguyên). Làm T023 xanh
+- [x] T023 [P] [US1] Viết test (FAIL trước) bổ sung vào `backend/QuizBattle.Tests/Api/GlobalExceptionHandlerTests.cs`: `ConflictException_WithCode_WritesCodeExtension`; `NotFoundException_WithCode_WritesCodeExtension`; `RequestValidationException_WithCode_WritesCodeAndErrors`; `ConflictException_WithoutCode_HasNoCodeExtension` (giữ hành vi cũ); `UnauthorizedException_Code_Unchanged` (không đổi `token_expired`/`token_invalid`/`session_replaced`)
+- [x] T024 [US1] Thêm thuộc tính `Code` (chuỗi, tùy chọn) vào `ConflictException`, `NotFoundException`, `RequestValidationException` trong `backend/QuizBattle.Application/Common/` (hàm tạo cũ vẫn hợp lệ); sửa `backend/QuizBattle.Api/Middleware/GlobalExceptionHandler.cs` ghi `Extensions["code"]` cho mọi ngoại lệ có `Code` (mã 401 cũ giữ nguyên). Làm T023 xanh
 
 ### Mua đồ (test trước)
 

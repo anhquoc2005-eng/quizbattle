@@ -42,10 +42,13 @@ public sealed class GlobalExceptionHandler(
             Type = type,
         };
 
-        // Trường mở rộng "code" (không đổi cấu trúc ProblemDetails) để client phân biệt nguyên nhân 401.
+        // Trường mở rộng "code" (không đổi cấu trúc ProblemDetails) để client phân biệt nguyên nhân (401, và 400/404/409 của cửa hàng).
         var code = exception switch
         {
             UnauthorizedException { Code: { } c } => c,
+            ConflictException { Code: { } c } => c,
+            NotFoundException { Code: { } c } => c,
+            RequestValidationException { Code: { } c } => c,
             SessionReplacedException => "session_replaced",
             _ => null,
         };

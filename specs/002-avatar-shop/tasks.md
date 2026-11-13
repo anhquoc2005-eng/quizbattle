@@ -259,8 +259,13 @@ Không pipe lệnh build/test qua `tail`/`head`/`Select-Object` khi nối với 
 
 ### Cổng ra và push Đợt E
 
-- [ ] T073 **Cổng ra Đợt E**: `dotnet build` (0 warning), `dotnet test` (Passed/Skipped/Failed; Skipped = 0), `npm --prefix frontend run typecheck`, `lint`, `test` (số file/test), `build` (bundle chính và chunk `notionists` so với T063); quickstart T072 đạt
-- [ ] T074 **Push Đợt E** và báo cố vấn: commit, file, số liệu T073, kết quả quickstart; **chờ cố vấn đọc diff** trước Đợt F
+- [x] T073 **Cổng ra Đợt E**: `dotnet build` (0 warning), `dotnet test` (Passed/Skipped/Failed; Skipped = 0), `npm --prefix frontend run typecheck`, `lint`, `test` (số file/test), `build` (bundle chính và chunk `notionists` so với T063); quickstart T072 đạt
+  - Kết quả cổng ra Đợt E (2026-11-13, `QUIZBATTLE_TEST_DB` trỏ Postgres dev cổng 5433, container `quizbattle-db` healthy):
+  - Backend không đổi ở Đợt E: `dotnet build --no-incremental` **0 Warning(s), 0 Error(s)**; `dotnet test` **Passed 390, Skipped 0, Failed 0, Total 390**.
+  - Frontend: `typecheck` 0 lỗi; Vitest **36 file, 281 test, đều đạt** (sau Đợt D: 32 file / 243 test; +4 file, +38 test: `ShopPage` 20, `preview` 6, `PlayerList` 4, `Leaderboard` 3, `gameReducer` +4, `XpRankingPage` +1, `Avatar` cỡ vừa); `lint` **0 lỗi, 3 cảnh báo có sẵn** (mã mới không thêm); `vite build` thành công.
+  - Bundle (so với T063): chunk chính **360.078 byte raw / 109.650 gzip** (T063: 354.511 / 108.189; +5.567 raw, +1.461 gzip cho `/shop` và nhân vật nhỏ); chunk lazy DiceBear core **159.539 / 26.098** và `notionists` **372.671 / 113.107** không đổi; tổng `dist/assets` 910.635 raw / 253.646 gzip. Chunk chính vẫn không chứa style hay core (guard `guards.test.ts` đạt).
+  - Quickstart T072: mục 2 + 3 = 43/43 đạt trên Chrome thật, mục 4 = 12/12 đạt; thiết kế T071: 0 FAIL.
+- [x] T074 **Push Đợt E** và báo cố vấn: commit, file, số liệu T073, kết quả quickstart; **chờ cố vấn đọc diff** trước Đợt F
 
 **Checkpoint**: tính năng hoàn chỉnh trên dev.
 

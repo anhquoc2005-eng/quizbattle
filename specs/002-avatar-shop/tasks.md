@@ -137,8 +137,13 @@ Không pipe lệnh build/test qua `tail`/`head`/`Select-Object` khi nối với 
 
 ### Cổng ra và push Đợt B
 
-- [ ] T037 **Cổng ra Đợt B**: `dotnet build` (0 warning), `dotnet test` (ghi Passed/Skipped/Failed; Skipped = 0), frontend vẫn xanh (không đổi). Ghi vào đây số test mới so với Đợt A và kết quả kiểm tay độ nhạy ở T030
-- [ ] T038 **Push Đợt B** và báo cố vấn: commit, file, số liệu T037, kết quả độ nhạy; **chờ cố vấn đọc diff** (`AvatarRepository`, `ShopService`, `AvatarService`) trước Đợt C
+- [x] T037 **Cổng ra Đợt B**: `dotnet build` (0 warning), `dotnet test` (ghi Passed/Skipped/Failed; Skipped = 0), frontend vẫn xanh (không đổi). Ghi vào đây số test mới so với Đợt A và kết quả kiểm tay độ nhạy ở T030
+  - Kết quả cổng ra Đợt B (2026-11-13, `QUIZBATTLE_TEST_DB` trỏ Postgres dev cổng 5433, container `quizbattle-db` healthy):
+  - `dotnet build backend/QuizBattle.sln --no-incremental`: **0 Warning(s), 0 Error(s)**.
+  - `dotnet test backend/QuizBattle.sln`: **Passed 368, Skipped 0, Failed 0, Total 368** (sau Đợt A và commit sửa lỗi: 293; +75 test: mã lỗi `code` ở handler 8, `ShopService` mua đồ 17, tích hợp mua đồ 10 + độ nhạy 2, `AvatarService` 22, tích hợp lưu nhân vật 9, controller 7). Test tích hợp đã chạy thật, không bị bỏ qua.
+  - Frontend không đổi: typecheck 0 lỗi; Vitest 23 file / 184 test đạt; lint 0 lỗi, 3 cảnh báo có sẵn (`AuthProvider.tsx`, `Countdown.tsx`, `NextQuestionIn.tsx`); `vite build` thành công, bundle chính 347,17 kB (gzip 105,51 kB), không đổi.
+  - Kiểm độ nhạy khóa `Users` (T030): bỏ khóa thì test đồng thời đỏ 3/3 lần; có khóa thì xanh. Smoke HTTP thật (T036): đạt, DB tạm đã xóa.
+- [x] T038 **Push Đợt B** và báo cố vấn: commit, file, số liệu T037, kết quả độ nhạy; **chờ cố vấn đọc diff** (`AvatarRepository`, `ShopService`, `AvatarService`) trước Đợt C
 
 **Checkpoint**: mua đồ và lưu nhân vật hoàn chỉnh ở backend, an toàn khi đồng thời.
 

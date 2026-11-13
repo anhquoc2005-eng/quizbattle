@@ -11,6 +11,7 @@ import type {
   QuestionStarted,
   RoomState,
 } from '../types/game'
+import type { Avatar } from '../types/avatar'
 import type { RoomStatus } from '../types/room'
 import { computeClockOffsetMs } from './serverTime'
 
@@ -19,6 +20,8 @@ export interface PlayerPresence {
   displayName: string
   score: number
   level: number | null
+  /** Nhân vật hiện tại do server gửi (luôn đủ ô); client không tự sinh. */
+  avatar: Avatar
   /** false khi đã nhận PlayerLeft (rớt mạng) - KHÔNG xóa khỏi danh sách, chỉ đánh dấu. */
   online: boolean
 }
@@ -105,8 +108,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         players: alreadyIn
-          ? state.players.map((p) => (p.playerId === action.payload.playerId ? { ...p, online: true, level: action.payload.level } : p))
-          : [...state.players, { playerId: action.payload.playerId, displayName: action.payload.displayName, score: 0, level: action.payload.level, online: true }],
+          ? state.players.map((p) => (p.playerId === action.payload.playerId ? { ...p, online: true, level: action.payload.level, avatar: action.payload.avatar } : p))
+          : [...state.players, { playerId: action.payload.playerId, displayName: action.payload.displayName, score: 0, level: action.payload.level, avatar: action.payload.avatar, online: true }],
       }
     }
 

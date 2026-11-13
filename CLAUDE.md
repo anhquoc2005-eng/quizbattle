@@ -10,6 +10,7 @@ Mục đích: dự án portfolio xin thực tập fullstack C#. Code phải sạ
 - Frontend: React 18 + TypeScript + Vite, Tailwind CSS, React Router
 - Gọi API: một API client dùng chung; state server dùng TanStack Query
 - Real-time phía client: `@microsoft/signalr`
+- Vẽ nhân vật: `@dicebear/core` + `@dicebear/styles` (chỉ dùng kiểu Notionists, CC0), vẽ SVG ở frontend. GHIM CHÍNH XÁC phiên bản (không `^`/`~`, đã có `frontend/.npmrc` `save-exact=true`) vì tên variant là dữ liệu lưu trong DB, nâng cấp có thể đổi hình. KHÔNG dùng API HTTP `api.dicebear.com` (chỉ miễn phí phi thương mại, không cam kết hoạt động). Nạp bằng `import()` động, không import tĩnh vào bundle chính. Giấy phép ghi ở `THIRD_PARTY_NOTICES.md`.
 - Test: xUnit (backend), Vitest (frontend: logic thuần; màn có trạng thái tải/lỗi/rỗng thì test component bằng `jsdom` + `@testing-library/react`, đặt `// @vitest-environment jsdom` ở đầu file)
 - Muốn thêm thư viện mới: hỏi trước, nêu lý do.
 
@@ -30,6 +31,7 @@ Mục đích: dự án portfolio xin thực tập fullstack C#. Code phải sạ
   src/hooks/      Custom hooks
   src/types/      Kiểu TypeScript dùng chung
   src/validation/ Validate form thuần, không gọi API (test được bằng Vitest)
+  src/avatar/     Logic thuần của nhân vật (dựng tùy chọn DiceBear, cache, tập áo in được); chỉ `avatarRenderer.ts` được nạp DiceBear, bằng `import()` động
 docker-compose.yml
 ```
 

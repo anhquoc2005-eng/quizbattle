@@ -172,8 +172,14 @@ Không pipe lệnh build/test qua `tail`/`head`/`Select-Object` khi nối với 
 
 ### Cổng ra và push Đợt C
 
-- [ ] T046 **Cổng ra Đợt C**: `dotnet build` (0 warning), `dotnet test` (Passed/Skipped/Failed; Skipped = 0; ghi số test tăng), frontend `typecheck`/`test` còn xanh (DTO TS chưa đổi nên chưa lệch). Ghi số lệnh SQL phòng 2 và 50 người từ T043
-- [ ] T047 **Push Đợt C** và báo cố vấn; **chờ cố vấn đọc diff** (`GameRepository`, `GameService`, DTO) trước Đợt D
+- [x] T046 **Cổng ra Đợt C**: `dotnet build` (0 warning), `dotnet test` (Passed/Skipped/Failed; Skipped = 0; ghi số test tăng), frontend `typecheck`/`test` còn xanh (DTO TS chưa đổi nên chưa lệch). Ghi số lệnh SQL phòng 2 và 50 người từ T043
+  - Kết quả cổng ra Đợt C (2026-11-13, `QUIZBATTLE_TEST_DB` trỏ Postgres dev cổng 5433, container `quizbattle-db` healthy):
+  - `dotnet build backend/QuizBattle.sln --no-incremental`: **0 Warning(s), 0 Error(s)**.
+  - `dotnet test backend/QuizBattle.sln`: **Passed 390, Skipped 0, Failed 0, Total 390** (sau Đợt B: 368; +22 test: `GameServiceAvatarTests` 10, `XpLeaderboardAvatarTests` 3, `GameAvatarsQueryTests` tích hợp 6, `AvatarPayloadSizeTests` 3). Test tích hợp đã chạy thật.
+  - Số lệnh SQL (T043): `FindSnapshotByCodeAsync` **5 → 6** cho cả phòng 2 và 50 người; bảng xếp hạng XP 50 dòng = 1 lệnh.
+  - Frontend (DTO TypeScript chưa đổi, JSON thêm trường `avatar` không làm vỡ client hiện tại): typecheck 0 lỗi; Vitest 23 file / 184 test đạt; lint 0 lỗi + 3 cảnh báo có sẵn; `vite build` thành công, bundle chính 347,17 kB (gzip 105,51 kB), không đổi.
+  - Smoke SignalR thật: 17/17 đạt (xem T045).
+- [x] T047 **Push Đợt C** và báo cố vấn; **chờ cố vấn đọc diff** (`GameRepository`, `GameService`, DTO) trước Đợt D
 
 **Checkpoint**: backend hoàn chỉnh; toàn bộ hợp đồng đã sẵn cho frontend.
 

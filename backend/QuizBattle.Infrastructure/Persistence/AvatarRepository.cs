@@ -64,6 +64,49 @@ public sealed class AvatarRepository(AppDbContext db) : IAvatarRepository
         return result;
     }
 
+    public Task<UserAvatar?> GetUserAvatarAsync(Guid userId, CancellationToken cancellationToken) =>
+        db.UserAvatars.AsNoTracking().SingleOrDefaultAsync(a => a.UserId == userId, cancellationToken);
+
+    public async Task<IReadOnlyList<string>> GetOwnedItemKeysAsync(Guid userId, CancellationToken cancellationToken) =>
+        await db.UserAvatarItems.AsNoTracking()
+            .Where(o => o.UserId == userId)
+            .Select(o => o.ItemKey)
+            .OrderBy(key => key)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<AvatarItem>> GetItemsByKeysAsync(IReadOnlyCollection<string> keys, CancellationToken cancellationToken)
+    {
+        var wanted = keys.ToArray();
+        return await db.AvatarItems.AsNoTracking().Where(i => wanted.Contains(i.Key)).ToListAsync(cancellationToken);
+    }
+
+    public async Task SaveUserAvatarAsync(UserAvatar avatar, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            var existing = await db.UserAvatars.SingleOrDefaultAsync(a => a.UserId == avatar.UserId, cancellationToken);
+            if (existing is null)
+            {
+                db.UserAvatars.Add(avatar);
+            }
+            else
+            {
+                db.Entry(existing).CurrentValues.SetValues(avatar);
+            }
+
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            catch (DbUpdateException ex) when (attempt == 0 && ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "PK_UserAvatars" })
+            {
+                // Hai lần lưu đầu tiên đồng thời cùng chèn: bên thua thử lại đúng một lần, lần này thấy dòng đã có nên cập nhật.
+                db.ChangeTracker.Clear();
+            }
+        }
+    }
+
     private Task<User?> LoadUserAsync(Guid userId, CancellationToken cancellationToken) =>
         UseUserRowLock
             ? db.Users.FromSqlInterpolated($"SELECT * FROM \"Users\" WHERE \"Id\" = {userId} FOR UPDATE").SingleOrDefaultAsync(cancellationToken)

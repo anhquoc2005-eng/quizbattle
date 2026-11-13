@@ -14,4 +14,19 @@ public interface IAvatarRepository
     /// (UserId, ItemKey) ánh xạ thành ConflictException "already_owned". Không có tài khoản thì ném NotFoundException.
     /// </summary>
     Task<TResult> PurchaseAsync<TResult>(Guid userId, string itemKey, Func<PurchaseSnapshot, TResult> work, CancellationToken cancellationToken);
+
+    /// <summary>Nhân vật đã lưu của tài khoản; null nếu chưa từng lưu (khi đó nhân vật được tự sinh).</summary>
+    Task<UserAvatar?> GetUserAvatarAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Khóa các món BÁN tài khoản đã mua (món miễn phí không có dòng sở hữu), sắp theo khóa.</summary>
+    Task<IReadOnlyList<string>> GetOwnedItemKeysAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Các món có khóa nằm trong <paramref name="keys"/> (một truy vấn); khóa không có trong danh mục thì không xuất hiện.</summary>
+    Task<IReadOnlyList<AvatarItem>> GetItemsByKeysAsync(IReadOnlyCollection<string> keys, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Ghi đè nhân vật đã lưu (chèn nếu chưa có dòng, cập nhật nếu có). Hai lần lưu đầu tiên đồng thời cùng chèn thì bên thua
+    /// (vi phạm khóa chính) được thử lại một lần dưới dạng cập nhật.
+    /// </summary>
+    Task SaveUserAvatarAsync(UserAvatar avatar, CancellationToken cancellationToken);
 }

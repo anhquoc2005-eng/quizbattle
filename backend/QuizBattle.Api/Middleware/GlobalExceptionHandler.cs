@@ -62,6 +62,10 @@ public sealed class GlobalExceptionHandler(
         {
             problemDetails.Extensions["errors"] = new Dictionary<string, string[]> { [validation.Field] = [validation.Message] };
         }
+        else if (exception is ConflictException { Field: { } field })
+        {
+            problemDetails.Extensions["errors"] = new Dictionary<string, string[]> { [field] = [exception.Message] };
+        }
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {

@@ -89,6 +89,25 @@ public sealed class GlobalExceptionHandlerTests
         Assert.False(problem.Extensions.ContainsKey("code"));
     }
 
+    [Fact]
+    public async Task GlobalExceptionHandler_ConflictWithField_WritesCodeAndErrors()
+    {
+        var (problem, status) = await HandleAsync(new ConflictException("Bạn chưa sở hữu món này.", "item_not_owned", "hair"));
+
+        Assert.Equal(StatusCodes.Status409Conflict, status);
+        Assert.Equal("item_not_owned", problem.Extensions["code"]);
+        var errors = Assert.IsType<Dictionary<string, string[]>>(problem.Extensions["errors"]);
+        Assert.Equal(["Bạn chưa sở hữu món này."], errors["hair"]);
+    }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_ConflictWithoutField_NoErrorsExtension()
+    {
+        var (problem, _) = await HandleAsync(new ConflictException("Bạn đã sở hữu món này.", "already_owned"));
+
+        Assert.False(problem.Extensions.ContainsKey("errors"));
+    }
+
     private static async Task<(ProblemDetails Problem, int Status)> HandleAsync(Exception exception)
     {
         var problemDetails = new CapturingProblemDetailsService();

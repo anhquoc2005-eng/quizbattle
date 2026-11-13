@@ -60,7 +60,7 @@ describe('DiceBear guards', () => {
 
   it('src_NeverInjectsRawHtmlOrSvgIntoTheDom', () => {
     // Nhân vật chỉ vẽ bằng <img src=data URI>; không dangerouslySetInnerHTML / innerHTML trong mã nguồn (trừ test).
-    const offenders = NON_TEST.filter((f) => /dangerouslySetInnerHTML|.innerHTMLs*=/.test(readFileSync(f, 'utf8'))).map(rel)
+    const offenders = NON_TEST.filter((f) => /dangerouslySetInnerHTML|\.innerHTML\s*=/.test(readFileSync(f, 'utf8'))).map(rel)
 
     expect(offenders).toEqual([])
   })

@@ -13,9 +13,12 @@ import { useMyAvatar } from '../../hooks/useMyAvatar'
 import { useProfile } from '../../hooks/useProfile'
 import { usePurchase } from '../../hooks/usePurchase'
 import { useShopItems } from '../../hooks/useShopItems'
-import type { AvatarItem } from '../../types/avatar'
+import type { AvatarItem, AvatarSlot } from '../../types/avatar'
 import { ShopItemCard } from './ShopItemCard'
 import { ShopPreview } from './ShopPreview'
+
+// Mỗi ô chỉ hiện ngần này món đầu (tóc có hơn 50 kiểu bán); "Xem thêm" mở cả ô. Tránh một ô dài đẩy các ô khác xuống rất xa.
+const COLLAPSED_COUNT = 6
 
 /** Cửa hàng: xem danh mục công khai; mua cần đăng nhập. Số dư và món đã sở hữu do server quyết. */
 export function ShopPage() {
@@ -27,6 +30,7 @@ export function ShopPage() {
   const purchase = usePurchase()
   const buying = useRef(false) // isPending của TanStack cập nhật chậm một nhịp: chặn bấm đúp đồng bộ
   const [previewKey, setPreviewKey] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<ReadonlySet<AvatarSlot>>(new Set())
 
   const privateQueries = signedIn ? [mine, profile] : []
   const loading = authLoading || catalog.isPending || privateQueries.some((q) => q.isPending)
@@ -43,6 +47,14 @@ export function ShopPage() {
     purchase.isError && !(purchase.error instanceof ApiError && purchase.error.problem?.code === 'already_owned')
       ? describeAvatarError(purchase.error)
       : null
+
+  function toggleExpanded(slot: AvatarSlot) {
+    setExpanded((current) => {
+      const next = new Set(current)
+      if (!next.delete(slot)) next.add(slot)
+      return next
+    })
+  }
 
   function buy(item: AvatarItem) {
     if (buying.current) return
@@ -85,11 +97,13 @@ export function ShopPage() {
             {AVATAR_SLOTS.map((slot) => {
               const items = forSale.filter((item) => item.slot === slot)
               if (items.length === 0) return null
+              const isExpanded = expanded.has(slot)
+              const shown = isExpanded ? items : items.slice(0, COLLAPSED_COUNT)
               return (
                 <section key={slot} className="card grid gap-3" aria-label={SLOT_LABELS[slot]}>
                   <h2>{SLOT_LABELS[slot]}</h2>
                   <ul className="m-0 grid list-none gap-2 p-0 sm:grid-cols-2">
-                    {items.map((item) => (
+                    {shown.map((item) => (
                       <ShopItemCard
                         key={item.key}
                         item={item}
@@ -104,6 +118,11 @@ export function ShopPage() {
                       />
                     ))}
                   </ul>
+                  {items.length > COLLAPSED_COUNT && (
+                    <button className="btn btn-ghost justify-self-start" type="button" aria-expanded={isExpanded} onClick={() => toggleExpanded(slot)}>
+                      {isExpanded ? 'Thu gọn' : `Xem thêm ${items.length - COLLAPSED_COUNT} món`}
+                    </button>
+                  )}
                 </section>
               )
             })}

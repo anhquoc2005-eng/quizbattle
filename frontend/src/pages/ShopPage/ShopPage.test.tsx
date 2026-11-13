@@ -129,6 +129,45 @@ describe('ShopPage: danh sách', () => {
   })
 })
 
+describe('ShopPage: danh sách dài được cắt gọn', () => {
+  const manyHair = Array.from({ length: 9 }, (_, i) => item('hair', `variant${String(i + 3).padStart(2, '0')}`, `Tóc ${String(i + 3).padStart(2, '0')}`, 'common', 50))
+
+  it('SectionWithMoreThanSixItems_ShowsFirstSixAndAMoreButton', async () => {
+    vi.mocked(getShopItems).mockResolvedValue([...manyHair, item('gesture', 'ok', 'OK', 'rare', 150)])
+    renderPage()
+    await screen.findByRole('region', { name: 'Tóc' })
+
+    expect(section('Tóc').getAllByRole('listitem')).toHaveLength(6)
+    expect(section('Tóc').getByRole('button', { name: 'Xem thêm 3 món' })).not.toBeNull()
+    expect(section('Cử chỉ').queryByRole('button', { name: /Xem thêm/ })).toBeNull() // ô ít món: không có nút
+  })
+
+  it('MoreButtonExpandsTheWholeSection_AndCollapsesAgain', async () => {
+    vi.mocked(getShopItems).mockResolvedValue(manyHair)
+    renderPage()
+    await screen.findByRole('region', { name: 'Tóc' })
+
+    fireEvent.click(section('Tóc').getByRole('button', { name: 'Xem thêm 3 món' }))
+    expect(section('Tóc').getAllByRole('listitem')).toHaveLength(9)
+    expect(section('Tóc').getByRole('button', { name: 'Thu gọn' }).getAttribute('aria-expanded')).toBe('true')
+
+    fireEvent.click(section('Tóc').getByRole('button', { name: 'Thu gọn' }))
+    expect(section('Tóc').getAllByRole('listitem')).toHaveLength(6)
+  })
+
+  it('ExpandingOneSectionDoesNotExpandTheOthers', async () => {
+    const clothes = Array.from({ length: 8 }, (_, i) => item('clothes', `variant${String(i + 3).padStart(2, '0')}`, `Áo ${String(i + 3).padStart(2, '0')}`, 'common', 50))
+    vi.mocked(getShopItems).mockResolvedValue([...manyHair, ...clothes])
+    renderPage()
+    await screen.findByRole('region', { name: 'Tóc' })
+
+    fireEvent.click(section('Tóc').getByRole('button', { name: 'Xem thêm 3 món' }))
+
+    expect(section('Tóc').getAllByRole('listitem')).toHaveLength(9)
+    expect(section('Áo').getAllByRole('listitem')).toHaveLength(6)
+  })
+})
+
 describe('ShopPage: khách', () => {
   beforeEach(() => signIn(false))
 

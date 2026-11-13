@@ -69,7 +69,7 @@ describe('Avatar', () => {
     expect(screen.getByAltText('Nhân vật của bạn')).not.toBeNull()
   })
 
-  it('TwoSizes_SmallAndLarge', () => {
+  it('ThreeSizes_SmallMediumAndLarge', () => {
     vi.mocked(peekAvatarDataUri).mockReturnValue(URI)
 
     const small = render(<Avatar avatar={TEST_AVATAR} size="sm" />)
@@ -80,6 +80,9 @@ describe('Avatar', () => {
 
     expect(smallClass).toContain('size-7') // 28 px
     expect(largeClass).toContain('size-40') // 160 px
+    large.unmount()
+    const medium = render(<Avatar avatar={TEST_AVATAR} size="md" />)
+    expect(medium.container.querySelector('img')!.className).toContain('size-24') // 96 px
   })
 
   it('ImageOnly_NoInlineSvgInjection', () => {

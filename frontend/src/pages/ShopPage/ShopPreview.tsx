@@ -9,11 +9,14 @@ interface ShopPreviewProps {
   onClear: () => void
 }
 
-/** Khung xem thử: nhân vật của bạn (hoặc nhân vật mặc định của khách) khi mặc thử món đang chọn. Không đổi dữ liệu đã lưu. */
+/**
+ * Khung xem thử: nhân vật của bạn (hoặc nhân vật mặc định của khách) khi mặc thử món đang chọn. Không đổi dữ liệu đã lưu.
+ * Dính ở đầu màn hình để bấm "Xem thử" ở món nằm sâu trong danh sách dài (hàng chục kiểu tóc) vẫn thấy ngay kết quả.
+ */
 export function ShopPreview({ base, preview, item, onClear }: ShopPreviewProps) {
   return (
-    <div className="card flex flex-wrap items-center gap-4">
-      <Avatar avatar={preview?.avatar ?? base} size="lg" label="Xem thử nhân vật" />
+    <div className="card sticky top-2 z-10 flex items-center gap-4">
+      <Avatar avatar={preview?.avatar ?? base} size="md" label="Xem thử nhân vật" />
       <div className="grid gap-2">
         <p className="text-muted">{item ? `Đang xem thử: ${item.name}` : 'Chọn "Xem thử" ở một món để mặc thử lên nhân vật.'}</p>
         {preview?.note && <p className="text-sm text-faint">{preview.note}</p>}

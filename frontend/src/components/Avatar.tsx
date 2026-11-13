@@ -1,8 +1,9 @@
 import { useAvatarImage } from '../hooks/useAvatarImage'
 import type { Avatar as AvatarData } from '../types/avatar'
 
-// Cỡ cố định: nhỏ (28 px) cạnh tên người chơi, lớn (160 px) ở hồ sơ và cửa hàng. Khung bo góc cùng bán kính với .card cho lớn.
-const SIZE_CLASS = { sm: 'size-7 rounded-lg', lg: 'size-40 rounded-[20px]' } as const
+// Cỡ cố định: nhỏ (28 px) cạnh tên người chơi, vừa (96 px) cho khung xem thử dính ở cửa hàng, lớn (160 px) ở hồ sơ.
+// Khung bo góc cùng bán kính với .card cho lớn.
+const SIZE_CLASS = { sm: 'size-7 rounded-lg', md: 'size-24 rounded-2xl', lg: 'size-40 rounded-[20px]' } as const
 
 interface AvatarProps {
   avatar: AvatarData

@@ -57,4 +57,11 @@ describe('DiceBear guards', () => {
 
     expect(loaders).toEqual(['avatar/avatarRenderer.ts'])
   })
+
+  it('src_NeverInjectsRawHtmlOrSvgIntoTheDom', () => {
+    // Nhân vật chỉ vẽ bằng <img src=data URI>; không dangerouslySetInnerHTML / innerHTML trong mã nguồn (trừ test).
+    const offenders = NON_TEST.filter((f) => /dangerouslySetInnerHTML|.innerHTMLs*=/.test(readFileSync(f, 'utf8'))).map(rel)
+
+    expect(offenders).toEqual([])
+  })
 })

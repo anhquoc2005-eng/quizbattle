@@ -19,6 +19,7 @@ export function ProfilePage() {
         </Link>
         <nav>
           <Link to="/dashboard">Phòng của tôi</Link>
+          <Link to="/shop">Cửa hàng</Link>
           <Link to="/ranking">Xếp hạng</Link>
         </nav>
       </header>

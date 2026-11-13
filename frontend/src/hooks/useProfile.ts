@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { getProfile, getRewards } from '../api/profile'
 
-export function useProfile() {
-  return useQuery({ queryKey: ['profile'], queryFn: getProfile })
+/** `enabled` = false khi chưa đăng nhập (trang công khai như /shop không được gọi /api/users/me). */
+export function useProfile(enabled = true) {
+  return useQuery({ queryKey: ['profile'], queryFn: getProfile, enabled })
 }
 
 export function useRewards() {

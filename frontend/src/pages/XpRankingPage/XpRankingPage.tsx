@@ -16,6 +16,9 @@ export function XpRankingPage() {
           <LogoMark />
           QuizBattle
         </Link>
+        <nav>
+          <Link to="/shop">Cửa hàng</Link>
+        </nav>
       </header>
 
       <main className="col py-6">

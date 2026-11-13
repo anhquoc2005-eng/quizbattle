@@ -221,8 +221,12 @@ Không pipe lệnh build/test qua `tail`/`head`/`Select-Object` khi nối với 
 
 ### Cổng ra và push Đợt D
 
-- [ ] T064 **Cổng ra Đợt D**: `dotnet build` (0 warning) và `dotnet test` (Passed/Skipped/Failed; Skipped = 0) còn xanh; `npm --prefix frontend run typecheck`, `lint`, `test` (ghi số file/test), `build` (số liệu T048 → T063)
-- [ ] T065 **Push Đợt D** và báo cố vấn: commit, file, số liệu bundle trước/sau, chunk `notionists`; **chờ cố vấn đọc diff** trước Đợt E
+- [x] T064 **Cổng ra Đợt D**: `dotnet build` (0 warning) và `dotnet test` (Passed/Skipped/Failed; Skipped = 0) còn xanh; `npm --prefix frontend run typecheck`, `lint`, `test` (ghi số file/test), `build` (số liệu T048 → T063)
+  - Kết quả cổng ra Đợt D (2026-11-13, `QUIZBATTLE_TEST_DB` trỏ Postgres dev cổng 5433, container `quizbattle-db` healthy):
+  - Backend không đổi ở Đợt D: `dotnet build --no-incremental` **0 Warning(s), 0 Error(s)**; `dotnet test` **Passed 390, Skipped 0, Failed 0, Total 390**.
+  - Frontend: `typecheck` 0 lỗi; Vitest **32 file, 243 test, đều đạt** (sau Đợt C: 23 file / 184 test; thêm 9 file và 59 test: `avatarOptions` 10, `printableClothes` 3, `guards` 6, `avatarRenderer` 5, `availableItems` 3, `avatarErrors` 5, `avatar` api 4, `Avatar` 8, `AvatarEditor` 14, `ProfilePage` +1); `lint` **0 lỗi, 3 cảnh báo có sẵn** (`AuthProvider.tsx`, `Countdown.tsx`, `NextQuestionIn.tsx`, `react-hooks/set-state-in-effect`; mã mới không thêm cảnh báo); `vite build` thành công.
+  - Bundle: chunk chính 347.172 → 354.511 byte raw (105.514 → 108.189 gzip); hai chunk lazy DiceBear 159.539 + 372.671 byte raw (26.098 + 113.107 gzip); số liệu đầy đủ ở T048 và T063.
+- [x] T065 **Push Đợt D** và báo cố vấn: commit, file, số liệu bundle trước/sau, chunk `notionists`; **chờ cố vấn đọc diff** trước Đợt E
 
 **Checkpoint**: vẽ được nhân vật; chỉnh và lưu ở `/profile`.
 

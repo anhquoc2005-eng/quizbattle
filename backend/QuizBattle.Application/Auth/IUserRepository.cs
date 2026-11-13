@@ -15,8 +15,9 @@ public interface IUserRepository
     /// <summary>Thưởng đã nhận (chỉ trận Awarded), mới nhất trước, đọc từ bản sao trong MatchRewards nên không cần phòng còn tồn tại.</summary>
     Task<IReadOnlyList<RewardHistoryItemDto>> GetRewardHistoryAsync(Guid userId, int limit, CancellationToken cancellationToken);
 
-    /// <summary>Top theo TotalXp giảm dần (hòa: tạo sớm hơn trước), bỏ tài khoản 0 XP.</summary>
+    /// <summary>Top theo TotalXp giảm dần (hòa: tạo sớm hơn trước), bỏ tài khoản 0 XP. Kèm nhân vật đã lưu bằng một truy vấn (LEFT JOIN).</summary>
     Task<IReadOnlyList<XpRankRow>> GetTopByXpAsync(int count, CancellationToken cancellationToken);
 }
 
-public sealed record XpRankRow(string DisplayName, int TotalXp);
+/// <summary>Một dòng xếp hạng. UserId chỉ dùng nội bộ để sinh nhân vật mặc định, không đưa ra DTO. Avatar null = chưa từng lưu.</summary>
+public sealed record XpRankRow(Guid UserId, string DisplayName, int TotalXp, UserAvatar? Avatar);

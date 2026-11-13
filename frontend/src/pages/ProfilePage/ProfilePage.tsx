@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { describeApiError } from '../../api/apiError'
+import { AvatarEditor } from '../../components/AvatarEditor'
 import { ErrorRetry } from '../../components/ErrorRetry'
 import { LogoMark } from '../../components/LogoMark'
 import { useProfile } from '../../hooks/useProfile'
@@ -28,6 +29,7 @@ export function ProfilePage() {
         {query.isSuccess && (
           <>
             <ProfileSummary profile={query.data} />
+            <AvatarEditor />
             <RewardHistory />
           </>
         )}

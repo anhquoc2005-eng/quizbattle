@@ -1,3 +1,5 @@
+import type { Avatar } from './avatar'
+
 /** Khớp ProfileDto. Tiến trình = xpIntoLevel / xpForNextLevel (server tính, client không lặp công thức). */
 export interface Profile {
   userId: string
@@ -27,4 +29,5 @@ export interface XpLeaderboardEntry {
   displayName: string
   level: number
   totalXp: number
+  avatar: Avatar
 }

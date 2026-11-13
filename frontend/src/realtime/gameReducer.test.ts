@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { GameEnded, PlayerJoined, PlayerLeft, PlayerReward, QuestionEnded, QuestionStarted, RoomState } from '../types/game'
+import { TEST_AVATAR } from '../avatar/avatarFixture'
 import { gameReducer, initialGameState, type GameState } from './gameReducer'
 
 const ENDED_AT = '2026-01-01T12:00:10.000Z'
@@ -10,7 +11,7 @@ function roomState(overrides: Partial<RoomState> = {}): RoomState {
     code: 'ABCDEF',
     status: 'InProgress',
     questionTimeLimitSeconds: 20,
-    players: [{ playerId: 'p1', displayName: 'Alice', score: 500, level: 2 }],
+    players: [{ playerId: 'p1', displayName: 'Alice', score: 500, level: 2, avatar: TEST_AVATAR }],
     currentQuestion: null,
     leaderboard: [],
     isHost: false,
@@ -64,7 +65,7 @@ describe('gameReducer', () => {
 
     const next = gameReducer(dirty, { type: 'ROOM_STATE', payload: roomState() })
 
-    expect(next.players).toEqual([{ playerId: 'p1', displayName: 'Alice', score: 500, level: 2, online: true }])
+    expect(next.players).toEqual([{ playerId: 'p1', displayName: 'Alice', score: 500, level: 2, avatar: TEST_AVATAR, online: true }])
     expect(next.currentQuestion).toBeNull()
   })
 
@@ -73,7 +74,7 @@ describe('gameReducer', () => {
       ...initialGameState,
       players: [{ playerId: 'p1', displayName: 'Alice', score: 100, level: 2, online: false }],
     }
-    const payload: PlayerJoined = { playerId: 'p1', displayName: 'Alice', level: 2 }
+    const payload: PlayerJoined = { playerId: 'p1', displayName: 'Alice', level: 2, avatar: TEST_AVATAR }
 
     const next = gameReducer(state, { type: 'PLAYER_JOINED', payload })
 
@@ -82,7 +83,7 @@ describe('gameReducer', () => {
   })
 
   it('PLAYER_JOINED với playerId mới thì thêm vào danh sách', () => {
-    const payload: PlayerJoined = { playerId: 'p2', displayName: 'Bob', level: null }
+    const payload: PlayerJoined = { playerId: 'p2', displayName: 'Bob', level: null, avatar: TEST_AVATAR }
 
     const next = gameReducer(initialGameState, { type: 'PLAYER_JOINED', payload })
 
@@ -147,7 +148,7 @@ describe('gameReducer', () => {
   })
 
   it('GAME_ENDED lưu bảng xếp hạng cuối và chuyển trạng thái Finished', () => {
-    const payload: GameEnded = { finalLeaderboard: [{ playerId: 'p1', displayName: 'Alice', score: 900, rank: 1, level: 2 }], rewards: [REWARD] }
+    const payload: GameEnded = { finalLeaderboard: [{ playerId: 'p1', displayName: 'Alice', score: 900, rank: 1, level: 2, avatar: TEST_AVATAR }], rewards: [REWARD] }
 
     const next = gameReducer(stateWithQuestion(), { type: 'GAME_ENDED', payload })
 

@@ -268,3 +268,10 @@ Không pipe lệnh build/test qua `tail`/`head`/`Select-Object` khi nối với 
 - Commit Conventional Commits theo từng task logic nhỏ (`feat:`, `test:`, `fix:`, `docs:`, `chore:`), không commit `.env`, `bin/`, `obj/`, `node_modules/`, `scripts/out/`.
 - Tên hiển thị tạm ("Tóc 09", "Áo 06"...) được cố vấn chấp nhận, giữ nguyên.
 - Không thêm thư viện nào ngoài hai gói DiceBear đã duyệt.
+
+## Việc còn treo (ghi nhận sau Đợt B, chưa sửa)
+
+- `PUT /api/users/me/avatar` trả 500 nếu tài khoản đã bị xóa nhưng token còn hạn: `SaveUserAvatarAsync` vi phạm khóa ngoại `UserAvatars.UserId` → `Users(Id)` mà không được ánh xạ thành 404/401. `POST /api/shop/purchases` thì đã trả 404 "Không tìm thấy tài khoản." (xem `AvatarRepository.PurchaseAsync`). Cần xử lý khi nào xóa tài khoản trở thành tính năng, hoặc ánh xạ `23503` ở `SaveUserAvatarAsync`.
+- Commit `be73aeb` ("docs: ghi kết quả cổng ra Đợt B") thiếu dòng `Co-Authored-By`; không amend vì đã push.
+- Lỗi 400 do ô lạ trong JSON của `PUT avatar` là phản hồi mặc định của ASP.NET (có `errors`, không có `code`), lệch nhẹ so với contract; lỗi 401 do thiếu token cũng không có `code`. Muốn thống nhất phải đổi `InvalidModelStateResponseFactory` cho cả dự án.
+- Chưa có test ở mức HTTP/model-binding/routing/SignalR kết nối thật (dự án không có `Microsoft.AspNetCore.Mvc.Testing`; thêm thư viện cần hỏi trước). Đợt B chỉ có test gọi controller trực tiếp và smoke `curl`, nên không bắt được lỗi routing hay model-binding.

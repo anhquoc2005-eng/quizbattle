@@ -1,6 +1,8 @@
+using QuizBattle.Application.Avatars;
 using QuizBattle.Application.Common;
 using QuizBattle.Application.Rooms;
 using QuizBattle.Domain;
+using QuizBattle.Domain.Avatars;
 using QuizBattle.Domain.Entities;
 using QuizBattle.Domain.Enums;
 
@@ -132,7 +134,7 @@ public sealed class GameService(
         }
 
         var state = BuildRoomState(snapshot, isHost: false, playerId: player.Id, timeProvider.GetUtcNow());
-        var broadcast = new PlayerJoinedDto(player.Id, player.DisplayName, LevelOf(snapshot.Users, player));
+        var broadcast = new PlayerJoinedDto(player.Id, player.DisplayName, LevelOf(snapshot.Users, player), AvatarOf(snapshot, player));
         return (state, broadcast, tokenHash);
     }
 
@@ -352,7 +354,7 @@ public sealed class GameService(
             snapshot.Room.Code,
             snapshot.Room.Status.ToString(),
             snapshot.Room.QuestionTimeLimitSeconds,
-            snapshot.Players.Select(p => new PlayerSummaryDto(p.Id, p.DisplayName, p.Score, LevelOf(snapshot.Users, p))).ToList(),
+            snapshot.Players.Select(p => new PlayerSummaryDto(p.Id, p.DisplayName, p.Score, LevelOf(snapshot.Users, p), AvatarOf(snapshot, p))).ToList(),
             currentDto,
             leaderboard,
             isHost,
@@ -380,8 +382,24 @@ public sealed class GameService(
             })
             .OrderByDescending(x => x.Player.Score)
             .ThenBy(x => x.TotalCorrectMs)
-            .Select((x, i) => new LeaderboardEntryDto(x.Player.Id, x.Player.DisplayName, x.Player.Score, i + 1, LevelOf(snapshot.Users, x.Player)))
+            .Select((x, i) => new LeaderboardEntryDto(x.Player.Id, x.Player.DisplayName, x.Player.Score, i + 1, LevelOf(snapshot.Users, x.Player), AvatarOf(snapshot, x.Player)))
             .ToList();
+    }
+
+    /// <summary>
+    /// Nhân vật HIỆN TẠI của người chơi (đọc cùng lúc dựng snapshot, không chụp lại lúc vào phòng): đã lưu → mặc định theo
+    /// tài khoản → mặc định theo tên (khách). Luôn đủ ô nên frontend không phải tự sinh.
+    /// </summary>
+    private static AvatarDto AvatarOf(GameSnapshot snapshot, Player player)
+    {
+        if (player.UserId is not { } userId)
+        {
+            return AvatarMapping.ToDto(DefaultAvatarGenerator.ForGuest(player.DisplayName));
+        }
+
+        return AvatarMapping.ToDto(snapshot.Avatars.TryGetValue(userId, out var saved)
+            ? AvatarMapping.ToSelection(saved)
+            : DefaultAvatarGenerator.ForAccount(userId));
     }
 
     /// <summary>Cấp của người chơi có tài khoản; khách (hoặc tài khoản không có trong snapshot) là null.</summary>

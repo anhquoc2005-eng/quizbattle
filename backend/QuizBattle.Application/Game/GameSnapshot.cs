@@ -28,6 +28,12 @@ public sealed class GameSnapshot
     public IReadOnlyDictionary<Guid, User> Users { get; init; } = new Dictionary<Guid, User>();
 
     /// <summary>
+    /// Nhân vật đã lưu của những người chơi có tài khoản, theo User.Id (một truy vấn, không khóa). Tài khoản chưa từng lưu
+    /// và khách không có trong từ điển: service tự sinh nhân vật mặc định cho họ.
+    /// </summary>
+    public IReadOnlyDictionary<Guid, UserAvatar> Avatars { get; init; } = new Dictionary<Guid, UserAvatar>();
+
+    /// <summary>
     /// Phòng đang InProgress và câu đã duyệt cuối cùng đã StartedAt + EndedAt - lần AdvanceFrom kế tiếp sẽ kết thúc
     /// trận. Chỉ khi đó repository mới nạp <see cref="Users"/> có khóa FOR UPDATE và theo dõi để cộng thưởng.
     /// </summary>

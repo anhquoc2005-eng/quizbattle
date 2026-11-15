@@ -12,7 +12,7 @@ public sealed class ShopController(IShopService shopService) : ControllerBase
     /// <summary>Danh mục món đồ, công khai. Danh mục chỉ đổi theo migration nên cho phép cache 1 giờ.</summary>
     [HttpGet("items")]
     [AllowAnonymous]
-    [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Any)]
+    [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Any, VaryByHeader = "Origin")]
     [ProducesResponseType<IReadOnlyList<AvatarItemDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<AvatarItemDto>>> GetItems(CancellationToken cancellationToken) =>
         Ok(await shopService.GetCatalogAsync(cancellationToken));

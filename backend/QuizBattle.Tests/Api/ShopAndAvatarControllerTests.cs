@@ -85,6 +85,19 @@ public sealed class ShopAndAvatarControllerTests
     }
 
     [Fact]
+    public void GetItems_ResponseCache_VariesByOriginSoCorsHeadersAreNotServedFromWrongCache()
+    {
+        var cache = typeof(ShopController).GetMethod(nameof(ShopController.GetItems))!
+            .GetCustomAttributes(typeof(ResponseCacheAttribute), inherit: true)
+            .OfType<ResponseCacheAttribute>()
+            .Single();
+
+        Assert.Equal("Origin", cache.VaryByHeader);
+        Assert.Equal(3600, cache.Duration);
+        Assert.Equal(ResponseCacheLocation.Any, cache.Location);
+    }
+
+    [Fact]
     public void SaveAvatarRequest_UnknownSlotInJson_IsRejected()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);

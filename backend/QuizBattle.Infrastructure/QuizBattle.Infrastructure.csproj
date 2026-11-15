@@ -5,6 +5,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Cho test dùng hai điểm tiêm internal của AvatarRepository (chỉ để kiểm độ nhạy của test đồng thời). -->
+    <InternalsVisibleTo Include="QuizBattle.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.11" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />

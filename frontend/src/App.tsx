@@ -8,6 +8,7 @@ import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
 import { PlayPage } from './pages/PlayPage/PlayPage'
 import { ProfilePage } from './pages/ProfilePage/ProfilePage'
 import { RegisterPage } from './pages/RegisterPage/RegisterPage'
+import { ShopPage } from './pages/ShopPage/ShopPage'
 import { XpRankingPage } from './pages/XpRankingPage/XpRankingPage'
 import { RoomLivePage } from './pages/RoomLivePage/RoomLivePage'
 import { RoomPage } from './pages/RoomPage/RoomPage'
@@ -21,6 +22,8 @@ export function App() {
       <Route path="/join" element={<JoinPage />} />
       <Route path="/play/:code" element={<PlayPage />} />
       <Route path="/ranking" element={<XpRankingPage />} />
+      {/* Công khai: xem danh mục không cần đăng nhập; hành động mua yêu cầu đăng nhập ngay trong trang. */}
+      <Route path="/shop" element={<ShopPage />} />
       <Route
         path="/profile"
         element={

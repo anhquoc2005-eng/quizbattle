@@ -23,6 +23,9 @@ public sealed class FakeGameRepository : IGameRepository
 
     public List<User> Users { get; } = [];
 
+    /// <summary>Nhân vật đã lưu theo UserId (không có khóa = chưa từng lưu).</summary>
+    public Dictionary<Guid, UserAvatar> UserAvatars { get; } = [];
+
     public List<MatchReward> MatchRewards { get; } = [];
 
     public List<CoinTransaction> CoinTransactions { get; } = [];
@@ -178,6 +181,7 @@ public sealed class FakeGameRepository : IGameRepository
             TotalQuestionCount = Questions.Count,
             AnsweredCountForCurrentQuestion = current is null ? 0 : Answers.Count(a => a.QuestionId == current.Id),
             Users = Users.Where(u => userIds.Contains(u.Id)).ToDictionary(u => u.Id),
+            Avatars = UserAvatars.Where(a => userIds.Contains(a.Key)).ToDictionary(a => a.Key, a => a.Value),
             IsFinalAdvance = ForceIsFinalAdvance
                 ?? (Room.Status == RoomStatus.InProgress && approved.LastOrDefault() is { StartedAt: not null, EndedAt: not null }),
             Rewards = Room.Status == RoomStatus.Finished ? MatchRewards.Where(r => r.RoomId == Room.Id).ToList() : [],

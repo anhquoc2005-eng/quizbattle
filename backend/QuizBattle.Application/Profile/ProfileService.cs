@@ -1,6 +1,8 @@
 using QuizBattle.Application.Auth;
+using QuizBattle.Application.Avatars;
 using QuizBattle.Application.Common;
 using QuizBattle.Domain;
+using QuizBattle.Domain.Avatars;
 
 namespace QuizBattle.Application.Profile;
 
@@ -30,6 +32,10 @@ public sealed class ProfileService(IUserRepository userRepository) : IProfileSer
     public async Task<IReadOnlyList<XpLeaderboardEntryDto>> GetXpLeaderboardAsync(CancellationToken cancellationToken)
     {
         var rows = await userRepository.GetTopByXpAsync(XpLeaderboardSize, cancellationToken);
-        return rows.Select((r, i) => new XpLeaderboardEntryDto(i + 1, r.DisplayName, LevelCalculator.FromXp(r.TotalXp), r.TotalXp)).ToList();
+        return rows.Select((r, i) => new XpLeaderboardEntryDto(i + 1, r.DisplayName, LevelCalculator.FromXp(r.TotalXp), r.TotalXp, AvatarOf(r))).ToList();
     }
+
+    // Đã lưu → dùng; chưa từng lưu → nhân vật mặc định cố định theo tài khoản (cùng hàm với phòng chơi).
+    private static AvatarDto AvatarOf(XpRankRow row) => AvatarMapping.ToDto(
+        row.Avatar is { } saved ? AvatarMapping.ToSelection(saved) : DefaultAvatarGenerator.ForAccount(row.UserId));
 }

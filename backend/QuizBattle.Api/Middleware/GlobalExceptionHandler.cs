@@ -42,10 +42,13 @@ public sealed class GlobalExceptionHandler(
             Type = type,
         };
 
-        // Trường mở rộng "code" (không đổi cấu trúc ProblemDetails) để client phân biệt nguyên nhân 401.
+        // Trường mở rộng "code" (không đổi cấu trúc ProblemDetails) để client phân biệt nguyên nhân (401, và 400/404/409 của cửa hàng).
         var code = exception switch
         {
             UnauthorizedException { Code: { } c } => c,
+            ConflictException { Code: { } c } => c,
+            NotFoundException { Code: { } c } => c,
+            RequestValidationException { Code: { } c } => c,
             SessionReplacedException => "session_replaced",
             _ => null,
         };
@@ -58,6 +61,10 @@ public sealed class GlobalExceptionHandler(
         if (exception is RequestValidationException validation)
         {
             problemDetails.Extensions["errors"] = new Dictionary<string, string[]> { [validation.Field] = [validation.Message] };
+        }
+        else if (exception is ConflictException { Field: { } field })
+        {
+            problemDetails.Extensions["errors"] = new Dictionary<string, string[]> { [field] = [exception.Message] };
         }
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext

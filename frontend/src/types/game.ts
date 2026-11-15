@@ -1,3 +1,4 @@
+import type { Avatar } from './avatar'
 import type { RoomStatus } from './room'
 
 /** Khớp PlayerSummaryDto. */
@@ -7,6 +8,8 @@ export interface PlayerSummary {
   score: number
   /** Cấp của tài khoản; null với khách. */
   level: number | null
+  /** Nhân vật hiện tại, luôn đủ ô (server tự sinh mặc định cho khách và tài khoản chưa lưu). */
+  avatar: Avatar
 }
 
 /** Khớp CurrentQuestionStateDto - correctIndex chỉ có giá trị khi ended = true. */
@@ -31,6 +34,7 @@ export interface LeaderboardEntry {
   score: number
   rank: number
   level: number | null
+  avatar: Avatar
 }
 
 /** Khớp RoomStateDto - gửi riêng cho người vừa JoinRoom (lần đầu hoặc vào lại sau khi rớt mạng). */
@@ -107,6 +111,7 @@ export interface PlayerJoined {
   playerId: string
   displayName: string
   level: number | null
+  avatar: Avatar
 }
 
 /** Khớp PlayerLeftDto. */

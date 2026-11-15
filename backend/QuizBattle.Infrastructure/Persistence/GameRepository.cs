@@ -206,6 +206,12 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
             users = await db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToListAsync(cancellationToken);
         }
 
+        // Nhân vật đã lưu của cả phòng: ĐÚNG MỘT truy vấn theo cùng mảng userIds (không N+1, không khóa FOR UPDATE nên không đổi
+        // thứ tự khóa Room → Users). Nhân vật hiện tại, đọc lúc dựng snapshot; không lưu vào Players.
+        var avatars = userIds.Length == 0
+            ? []
+            : await db.UserAvatars.AsNoTracking().Where(a => userIds.Contains(a.UserId)).ToListAsync(cancellationToken);
+
         var rewards = room.Status == RoomStatus.Finished
             ? await db.MatchRewards.AsNoTracking().Where(r => r.RoomId == room.Id).ToListAsync(cancellationToken)
             : [];
@@ -219,6 +225,7 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
             TotalQuestionCount = questions.Count,
             AnsweredCountForCurrentQuestion = answeredCount,
             Users = users.ToDictionary(u => u.Id),
+            Avatars = avatars.ToDictionary(a => a.UserId),
             IsFinalAdvance = isFinalAdvance,
             Rewards = rewards,
         };

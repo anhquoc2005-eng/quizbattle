@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { describeApiError } from '../../api/apiError'
+import { Avatar } from '../../components/Avatar'
 import { ErrorRetry } from '../../components/ErrorRetry'
 import { LogoMark } from '../../components/LogoMark'
 import { useXpLeaderboard } from '../../hooks/useXpLeaderboard'
@@ -15,6 +16,9 @@ export function XpRankingPage() {
           <LogoMark />
           QuizBattle
         </Link>
+        <nav>
+          <Link to="/shop">Cửa hàng</Link>
+        </nav>
       </header>
 
       <main className="col py-6">
@@ -31,6 +35,7 @@ export function XpRankingPage() {
                 <li key={entry.rank} className="flex items-center justify-between gap-3 rounded-[14px] px-3 py-2">
                   <span className="flex items-center gap-3">
                     <span className="w-8 text-right tabular-nums text-faint">{entry.rank}</span>
+                    <Avatar avatar={entry.avatar} size="sm" />
                     <span>{entry.displayName}</span>
                     <span className="text-xs tabular-nums text-muted">Cấp {entry.level}</span>
                   </span>

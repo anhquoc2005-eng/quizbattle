@@ -41,6 +41,9 @@ export function DashboardPage() {
           <Link className="hide-sm" to="/dashboard" aria-current="page">
             Phòng của tôi
           </Link>
+          <Link className="hide-sm" to="/shop">
+            Cửa hàng
+          </Link>
           <Link className="hide-sm" to="/ranking">
             Xếp hạng
           </Link>

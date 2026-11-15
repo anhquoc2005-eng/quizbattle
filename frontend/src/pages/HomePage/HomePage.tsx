@@ -31,6 +31,9 @@ export function HomePage() {
             <Link className="btn btn-ghost" to="/join">
               Vào phòng
             </Link>
+            <Link className="btn btn-ghost" to="/shop">
+              Cửa hàng
+            </Link>
             <Link className="btn btn-ghost" to="/ranking">
               Xếp hạng
             </Link>

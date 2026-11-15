@@ -3,11 +3,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getMyAvatar } from '../../api/avatar'
 import { getProfile, getRewards } from '../../api/profile'
+import { getShopItems } from '../../api/shop'
+import { TEST_AVATAR } from '../../avatar/avatarFixture'
 import type { Profile, RewardHistoryItem } from '../../types/profile'
 import { ProfilePage } from './ProfilePage'
 
 vi.mock('../../api/profile', () => ({ getProfile: vi.fn(), getRewards: vi.fn() }))
+vi.mock('../../api/avatar', () => ({ getMyAvatar: vi.fn(), saveMyAvatar: vi.fn() }))
+vi.mock('../../api/shop', () => ({ getShopItems: vi.fn() }))
+vi.mock('../../avatar/avatarRenderer', () => ({
+  peekAvatarDataUri: vi.fn().mockReturnValue('data:image/svg+xml,x'),
+  renderAvatarDataUri: vi.fn().mockResolvedValue('data:image/svg+xml,x'),
+}))
 
 const PROFILE: Profile = { userId: 'u1', displayName: 'Alice', level: 3, totalXp: 640, xpIntoLevel: 40, xpForNextLevel: 600, coinBalance: 125 }
 const REWARD: RewardHistoryItem = {
@@ -27,6 +36,10 @@ function renderPage() {
 beforeEach(() => {
   vi.mocked(getProfile).mockReset()
   vi.mocked(getRewards).mockReset()
+  vi.mocked(getMyAvatar).mockReset().mockResolvedValue({ avatar: TEST_AVATAR, isDefault: true, ownedItemKeys: [] })
+  vi.mocked(getShopItems).mockReset().mockResolvedValue([
+    { key: 'eyes.variant01', slot: 'eyes', variantKey: 'variant01', name: 'Mắt 01', tier: 'free', price: 0 },
+  ])
 })
 afterEach(cleanup)
 
@@ -68,6 +81,16 @@ describe('ProfilePage', () => {
 
     expect(await screen.findByText('Lịch sử Việt Nam')).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Alice' })).toBeTruthy()
+  })
+
+  it('ProfilePage_HasProfile_ShowsAvatarEditorWithPreview', async () => {
+    vi.mocked(getProfile).mockResolvedValue(PROFILE)
+    vi.mocked(getRewards).mockResolvedValue([])
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Nhân vật' })).toBeTruthy()
+    expect(screen.getByAltText('Xem trước nhân vật')).toBeTruthy()
+    expect(screen.getByRole('group', { name: 'Mắt' })).toBeTruthy()
   })
 
   it('ProfilePage_HasData_ShowsLevelXpProgressCoinsAndHistory', async () => {

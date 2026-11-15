@@ -44,6 +44,6 @@ public sealed class UserRepository(AppDbContext db) : IUserRepository
             .Where(u => u.TotalXp > 0)
             .OrderByDescending(u => u.TotalXp).ThenBy(u => u.CreatedAt).ThenBy(u => u.Id)
             .Take(count)
-            .Select(u => new XpRankRow(u.DisplayName, u.TotalXp))
+            .Select(u => new XpRankRow(u.Id, u.DisplayName, u.TotalXp, db.UserAvatars.FirstOrDefault(a => a.UserId == u.Id)))
             .ToListAsync(cancellationToken);
 }

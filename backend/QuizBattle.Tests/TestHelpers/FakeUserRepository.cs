@@ -9,6 +9,9 @@ public sealed class FakeUserRepository : IUserRepository
 {
     public List<User> Users { get; } = [];
 
+    /// <summary>Nhân vật đã lưu theo UserId (không có khóa = chưa từng lưu).</summary>
+    public Dictionary<Guid, UserAvatar> UserAvatars { get; } = [];
+
     /// <summary>Lịch sử của mọi người dùng, theo đúng thứ tự trả về (mới nhất trước).</summary>
     public List<RewardHistoryItemDto> Rewards { get; } = [];
 
@@ -37,6 +40,6 @@ public sealed class FakeUserRepository : IUserRepository
             .Where(u => u.TotalXp > 0)
             .OrderByDescending(u => u.TotalXp).ThenBy(u => u.CreatedAt).ThenBy(u => u.Id)
             .Take(count)
-            .Select(u => new XpRankRow(u.DisplayName, u.TotalXp))
+            .Select(u => new XpRankRow(u.Id, u.DisplayName, u.TotalXp, UserAvatars.GetValueOrDefault(u.Id)))
             .ToList());
 }

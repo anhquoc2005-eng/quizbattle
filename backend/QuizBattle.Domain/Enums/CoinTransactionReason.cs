@@ -4,6 +4,6 @@ public enum CoinTransactionReason
 {
     MatchReward,
 
-    // Dành cho tính năng cửa hàng (chưa dùng).
+    // Mua đồ nhân vật trong cửa hàng (Amount âm).
     ShopPurchase,
 }

@@ -11,6 +11,9 @@ của tối đa 50 người chơi, giơ tay khi đã trả lời, huy hiệu ✓
 vinh danh top 3 lộ dần 3→2→1 kèm pháo giấy CSS trên cả màn chủ phòng lẫn màn người chơi.
 Backend chỉ mở rộng payload 3 chỗ (AnsweredPlayerIds cho host, CorrectPlayerIds cả phòng,
 RoomState host khi reconnect) — không migration, không thư viện mới, không sự kiện SignalR mới.
+Bố cục (sửa theo cố vấn 16/11): thẻ câu hỏi đóng vai "bảng", nút điều khiển ngay dưới dòng "Đã
+trả lời x/y", lưới lớp học ở cuối thẻ; KHÔNG có hình chủ phòng/giáo viên (cần avatar host trong
+RoomState = sửa backend, giá trị thấp).
 
 ## Technical Context
 

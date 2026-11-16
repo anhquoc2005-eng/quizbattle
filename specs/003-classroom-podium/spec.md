@@ -20,9 +20,14 @@ hiện bục vinh danh top 3 với hiệu ứng lộ dần.
 
 1. Cảnh lớp học **chỉ** hiện ở màn chủ phòng (RoomLivePage: Lobby / Question / Finished).
    Màn người chơi (PlayPage) giữ nguyên, chỉ thêm bục vinh danh ở PlayFinished.
-2. Bố cục: chủ phòng như giáo viên đứng trước bảng câu hỏi; người chơi ngồi lưới bàn học,
+2. Bố cục: thẻ câu hỏi đóng vai "bảng", lưới bên dưới là "lớp"; người chơi ngồi lưới bàn học,
    mỗi bàn = nhân vật DiceBear đang đeo (AvatarDto sẵn có) + tên. Lưới tự co giãn tới
-   `Room.MAX_PLAYERS` = 50, dùng được từ màn laptop 1366px tới máy chiếu.
+   `Room.MAX_PLAYERS` = 50, dùng được từ màn laptop 1366px tới máy chiếu. Các nút điều khiển của
+   chủ phòng nằm ngay dưới dòng "Đã trả lời x/y", lưới lớp học ở cuối thẻ (để 50 người không
+   đẩy nút ra ngoài màn 1366×768).
+   **Sửa theo cố vấn 16/11:** bỏ hình chủ phòng/giáo viên (bản cũ: "chủ phòng như giáo viên đứng
+   trước bảng câu hỏi"). Hiện hình chủ phòng cần thêm avatar host vào RoomState (sửa backend),
+   giá trị thấp nên không làm.
 3. Trong câu: người đã trả lời → nhân vật "giơ tay". Chỉ biết **đã trả lời**, KHÔNG lộ đáp án đã chọn.
 4. Sau QuestionEnded: huy hiệu ✓/✗ phủ lên nhân vật + nhún nhẹ. KHÔNG đổi biểu cảm/thuộc tính
    DiceBear (đó là đồ người chơi mua bằng Xu).

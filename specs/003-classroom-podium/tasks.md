@@ -10,7 +10,7 @@
 và push độc lập (commit nhỏ Conventional Commits trong đợt vẫn khuyến khích). Nhãn [US1/US2/US3]
 ánh xạ về user story trong spec.md để truy vết.
 
-**Tổng: 39 task đánh số T001–T039 + T010a (test tích hợp thêm vào Đợt 1, không đánh số lại) / 5 đợt** (Đợt 1: T001–T015 kèm T010a, Đợt 2: T016–T021, Đợt 3: T022–T028, Đợt 4: T029–T035, Đợt 5: T036–T039).
+**Tổng: 39 task đánh số T001–T039 + T010a (test tích hợp thêm vào Đợt 1) + T021a/T021b (sửa bố cục/tài liệu theo cố vấn 16/11, đầu Đợt 3); không đánh số lại / 5 đợt** (Đợt 1: T001–T015 kèm T010a, Đợt 2: T016–T021, Đợt 3: T021a–T021b + T022–T028, Đợt 4: T029–T035, Đợt 5: T036–T039).
 
 ## Format: `[ID] [P?] [Story] Mô tả + đường dẫn file`
 
@@ -73,6 +73,8 @@ trong GameRepository.
 
 **Independent Test**: Quickstart Kịch bản 1 (bước 3-6) + Kịch bản 2.
 
+- [ ] T021a [US1] Sửa bố cục frontend/src/pages/RoomLivePage/LiveQuestion.tsx (theo cố vấn 16/11, vì 50 người đẩy nút ra ngoài màn 1366×768): đang chạy → câu hỏi, đếm ngược, đáp án, dòng "Đã trả lời x/y", nút "Kết thúc sớm" (+ ConfirmDialog), rồi `Classroom` ở CUỐI thẻ; câu đã kết thúc → đáp án, nút "Chuyển ngay" + đếm ngược câu tiếp, rồi `Classroom` (có ✓/✗), rồi "Bảng xếp hạng" cuối cùng (để lưới ✓/✗ không bị bảng xếp hạng 50 dòng đẩy xuống)
+- [x] T021b [US1] Sửa quyết định 2 trong specs/003-classroom-podium/spec.md (và Summary trong plan.md): bỏ hình chủ phòng/giáo viên, thẻ câu hỏi là "bảng", lưới bên dưới là "lớp"; ghi "sửa theo cố vấn 16/11"
 - [ ] T022 [US1] Khớp types trong frontend/src/types/game.ts: `AnswerProgress.answeredPlayerIds: string[]`, `QuestionEnded.correctPlayerIds: string[]`, `RoomState.answeredPlayerIds: string[] | null` (đúng data-model.md); cập nhật chú thích `AnswerProgress`: danh sách có thể thiếu người nộp đồng thời
 - [ ] T023 [US1] Sửa frontend/src/realtime/gameReducer.ts: thêm `answeredPlayerIds: string[]` và `correctPlayerIds: string[] | null` vào GameState; `ANSWER_PROGRESS` GỘP HỢP (union, chỉ thêm, không ghi đè) vào `answeredPlayerIds` hiện có của cùng câu và BỎ QUA khi `currentQuestion?.ended` (R3, R7); `QUESTION_ENDED` ghi `correctPlayerIds`; `QUESTION_STARTED` reset `answeredPlayerIds = []`, `correctPlayerIds = null`; `ROOM_STATE` THAY THẾ `answeredPlayerIds` bằng `payload ?? []` và reset `correctPlayerIds`; `GAME_ENDED` reset; `PLAYER_JOINED`/`PLAYER_LEFT` giữ nguyên hành vi (nối cuối / `online:false`)
 - [ ] T024 [US1] Truyền trạng thái vào `Classroom` trong frontend/src/pages/RoomLivePage/LiveQuestion.tsx và frontend/src/components/Classroom.tsx: desk "giơ tay" khi id ∈ answeredPlayerIds và câu chưa ended; khi ended: ✓ nếu id ∈ correctPlayerIds, ✗ nếu không (correctPlayerIds null → desk thường — data-model.md); huy hiệu là LỚP PHỦ, không đổi props Avatar/DiceBear (FR-011)

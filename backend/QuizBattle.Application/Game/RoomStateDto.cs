@@ -15,4 +15,7 @@ public sealed record RoomStateDto(
     // dùng offset đó để suy ra "server nghĩ bây giờ là mấy giờ" thay vì tin thẳng đồng hồ máy mình.
     DateTimeOffset ServerTime,
     // Có giá trị khi phòng Finished (đọc từ thưởng đã lưu, không tính lại); null ở trạng thái khác.
-    IReadOnlyList<PlayerRewardDto>? Rewards);
+    IReadOnlyList<PlayerRewardDto>? Rewards,
+    // Người đã trả lời câu hiện tại (để chủ phòng vào lại giữa câu vẫn thấy đúng ai đã giơ tay). Chỉ có giá trị khi người nhận
+    // là chủ phòng, phòng InProgress và câu hiện tại chưa kết thúc; mọi trường hợp khác (kể cả MỌI người chơi) là null.
+    IReadOnlyList<Guid>? AnsweredPlayerIds);

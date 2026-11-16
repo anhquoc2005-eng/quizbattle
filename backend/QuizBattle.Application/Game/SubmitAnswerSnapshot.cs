@@ -12,7 +12,8 @@ public sealed class SubmitAnswerSnapshot
     /// <summary>Câu đang chạy của phòng này (StartedAt có giá trị, EndedAt chưa có) - null nếu không có câu nào đang chạy.</summary>
     public Question? Question { get; init; }
 
-    public int AnsweredCountForCurrentQuestion { get; init; }
+    /// <summary>Người đã trả lời CÂU ĐANG CHẠY (answer đã commit) - rỗng nếu không có câu đang chạy. Số đã trả lời = .Count.</summary>
+    public required IReadOnlyList<Guid> AnsweredPlayerIds { get; init; }
 
     public int TotalPlayers { get; init; }
 }

@@ -10,7 +10,7 @@
 và push độc lập (commit nhỏ Conventional Commits trong đợt vẫn khuyến khích). Nhãn [US1/US2/US3]
 ánh xạ về user story trong spec.md để truy vết.
 
-**Tổng: 39 task / 5 đợt** (Đợt 1: T001–T015, Đợt 2: T016–T021, Đợt 3: T022–T028, Đợt 4: T029–T035, Đợt 5: T036–T039).
+**Tổng: 39 task đánh số T001–T039 + T010a (test tích hợp thêm vào Đợt 1, không đánh số lại) / 5 đợt** (Đợt 1: T001–T015 kèm T010a, Đợt 2: T016–T021, Đợt 3: T022–T028, Đợt 4: T029–T035, Đợt 5: T036–T039).
 
 ## Format: `[ID] [P?] [Story] Mô tả + đường dẫn file`
 
@@ -29,23 +29,24 @@ Web app theo plan.md: `backend/QuizBattle.*`, `frontend/src/`.
 SubmitAnswer và ổn định thứ tự `Players`. Không migration, không sự kiện mới, KHÔNG sửa ORDER BY
 trong GameRepository.
 
-- [ ] T001 [P] Thêm `IReadOnlyList<Guid> AnsweredPlayerIds` vào record `AnswerProgressDto` trong backend/QuizBattle.Application/Game/AnswerProgressDto.cs (giữ XML doc "chỉ gửi nhóm {code}:host"; ghi thêm: có thể thiếu người nộp đồng thời, client gộp hợp — R7)
-- [ ] T002 [P] Thêm `IReadOnlyList<Guid> CorrectPlayerIds` vào record `QuestionEndedDto` trong backend/QuizBattle.Application/Game/QuestionEndedDto.cs
-- [ ] T003 [P] Thêm `IReadOnlyList<Guid>? AnsweredPlayerIds` vào record `RoomStateDto` trong backend/QuizBattle.Application/Game/RoomStateDto.cs, kèm comment: chỉ điền cho host khi InProgress và câu hiện tại chưa ended; null cho người chơi ở MỌI trạng thái
-- [ ] T004 [P] Trong backend/QuizBattle.Application/Game/SubmitAnswerSnapshot.cs thay `int AnsweredCountForCurrentQuestion` bằng `IReadOnlyList<Guid> AnsweredPlayerIds` (PlayerId các answer của câu hiện tại; số đếm = `.Count`); không đụng `GameSnapshot.AnsweredCountForCurrentQuestion` (class khác, đã có `Answers`)
-- [ ] T005 Trong backend/QuizBattle.Infrastructure/Persistence/GameRepository.cs `SubmitAnswerAsync` (~dòng 139) thay `CountAsync` bằng MỘT truy vấn `Select(a => a.PlayerId).ToListAsync` cho câu hiện tại (rỗng nếu `question` null), gán vào `SubmitAnswerSnapshot.AnsweredPlayerIds` (phụ thuộc T004); KHÔNG sửa `LoadSnapshotAsync`/ORDER BY
-- [ ] T006 Trong backend/QuizBattle.Application/Game/GameService.cs `SubmitAnswerAsync` (~dòng 275) dựng `AnswerProgressDto`: `AnsweredPlayerIds` = `snapshot.AnsweredPlayerIds` + `playerId` vừa nộp, `AnsweredCount` = `snapshot.AnsweredPlayerIds.Count + 1` (giá trị y như trước) (phụ thuộc T001, T004)
-- [ ] T007 Trong backend/QuizBattle.Application/Game/GameService.cs `EndCurrentQuestion` (~dòng 279) điền `CorrectPlayerIds` = `PlayerId` của `snapshot.Answers` thuộc câu đang kết thúc có `IsCorrect` (người rời phòng/rớt mạng vẫn nằm trong snapshot nên vẫn có mặt) (phụ thuộc T002)
-- [ ] T008 Trong backend/QuizBattle.Application/Game/GameService.cs `BuildRoomState` (~dòng 353) điền `RoomStateDto.AnsweredPlayerIds` từ `snapshot.Answers`: danh sách khi `isHost` && `Status == InProgress` && câu hiện tại chưa ended; mọi trường hợp khác `null` (phụ thuộc T003)
-- [ ] T009 Trong backend/QuizBattle.Application/Game/GameService.cs `BuildRoomState` (dòng ~357) sắp `snapshot.Players` theo `JoinedAt` rồi `Id` trước khi map sang `PlayerSummaryDto` (OrderBy(JoinedAt).ThenBy(Id)); đây là chỗ DUY NHẤT dựng RoomState; không đổi `BuildLeaderboard`
-- [ ] T010 Sửa các chỗ dựng DTO/snapshot trong test cho build xanh: backend/QuizBattle.Tests/TestHelpers/FakeGameRepository.cs (~dòng 96, dựng `SubmitAnswerSnapshot` bằng list PlayerId từ `Answers` của câu hiện tại) và mọi `new AnswerProgressDto(`/`new QuestionEndedDto(`/`new RoomStateDto(` trong backend/QuizBattle.Tests/ (phụ thuộc T001–T004)
-- [ ] T011 [P] Test xUnit chống rò trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: RoomState trả cho NGƯỜI CHƠI có `AnsweredPlayerIds == null` ở Lobby / InProgress (đã có người trả lời) / Finished
-- [ ] T012 [P] Test xUnit `CorrectPlayerIds` trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: 3 ca — có người không trả lời (vắng mặt), trả lời sai (vắng mặt), người trả lời đúng rồi RỜI PHÒNG/rớt mạng trước khi câu kết thúc (Player không bị xóa → vẫn có mặt trong `CorrectPlayerIds`)
-- [ ] T013 [P] Test xUnit host reconnect trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: giữa câu có A đã trả lời, RoomState trả cho HOST chứa đúng {A}; câu đã ended → null; `AnswerProgress` sau mỗi lần `SubmitAnswerAsync` chứa danh sách tăng dần gồm cả người vừa nộp
-- [ ] T014 [P] Test xUnit thứ tự ổn định trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: snapshot có `Players` lộn xộn (JoinedAt không tăng dần, có hai người cùng `JoinedAt` khác `Id`, điểm khác nhau) → `RoomState.Players` luôn theo `JoinedAt` rồi `Id`, giống nhau cho host và người chơi, không đổi khi điểm đổi
+- [x] T001 [P] Thêm `IReadOnlyList<Guid> AnsweredPlayerIds` vào record `AnswerProgressDto` trong backend/QuizBattle.Application/Game/AnswerProgressDto.cs (giữ XML doc "chỉ gửi nhóm {code}:host"; ghi thêm: có thể thiếu người nộp đồng thời, client gộp hợp — R7)
+- [x] T002 [P] Thêm `IReadOnlyList<Guid> CorrectPlayerIds` vào record `QuestionEndedDto` trong backend/QuizBattle.Application/Game/QuestionEndedDto.cs
+- [x] T003 [P] Thêm `IReadOnlyList<Guid>? AnsweredPlayerIds` vào record `RoomStateDto` trong backend/QuizBattle.Application/Game/RoomStateDto.cs, kèm comment: chỉ điền cho host khi InProgress và câu hiện tại chưa ended; null cho người chơi ở MỌI trạng thái
+- [x] T004 [P] Trong backend/QuizBattle.Application/Game/SubmitAnswerSnapshot.cs thay `int AnsweredCountForCurrentQuestion` bằng `IReadOnlyList<Guid> AnsweredPlayerIds` (PlayerId các answer của câu hiện tại; số đếm = `.Count`); không đụng `GameSnapshot.AnsweredCountForCurrentQuestion` (class khác, đã có `Answers`)
+- [x] T005 Trong backend/QuizBattle.Infrastructure/Persistence/GameRepository.cs `SubmitAnswerAsync` (~dòng 139) thay `CountAsync` bằng MỘT truy vấn `Select(a => a.PlayerId).ToListAsync` cho câu hiện tại (rỗng nếu `question` null), gán vào `SubmitAnswerSnapshot.AnsweredPlayerIds` (phụ thuộc T004); KHÔNG sửa `LoadSnapshotAsync`/ORDER BY
+- [x] T006 Trong backend/QuizBattle.Application/Game/GameService.cs `SubmitAnswerAsync` (~dòng 275) dựng `AnswerProgressDto`: `AnsweredPlayerIds` = `snapshot.AnsweredPlayerIds` + `playerId` vừa nộp, `AnsweredCount` = `snapshot.AnsweredPlayerIds.Count + 1` (giá trị y như trước) (phụ thuộc T001, T004)
+- [x] T007 Trong backend/QuizBattle.Application/Game/GameService.cs `EndCurrentQuestion` (~dòng 279) điền `CorrectPlayerIds` = `PlayerId` của `snapshot.Answers` thuộc câu đang kết thúc có `IsCorrect` (người rời phòng/rớt mạng vẫn nằm trong snapshot nên vẫn có mặt) (phụ thuộc T002)
+- [x] T008 Trong backend/QuizBattle.Application/Game/GameService.cs `BuildRoomState` (~dòng 353) điền `RoomStateDto.AnsweredPlayerIds` từ `snapshot.Answers`: danh sách khi `isHost` && `Status == InProgress` && câu hiện tại chưa ended; mọi trường hợp khác `null` (phụ thuộc T003)
+- [x] T009 Trong backend/QuizBattle.Application/Game/GameService.cs `BuildRoomState` (dòng ~357) sắp `snapshot.Players` theo `JoinedAt` rồi `Id` trước khi map sang `PlayerSummaryDto` (OrderBy(JoinedAt).ThenBy(Id)); đây là chỗ DUY NHẤT dựng RoomState; không đổi `BuildLeaderboard`
+- [x] T010 Sửa các chỗ dựng DTO/snapshot trong test cho build xanh: backend/QuizBattle.Tests/TestHelpers/FakeGameRepository.cs (~dòng 96, dựng `SubmitAnswerSnapshot` bằng list PlayerId từ `Answers` của câu hiện tại) và mọi `new AnswerProgressDto(`/`new QuestionEndedDto(`/`new RoomStateDto(` trong backend/QuizBattle.Tests/ (phụ thuộc T001–T004)
+- [x] T010a [P] Test tích hợp Postgres thật backend/QuizBattle.Tests/Integration/SubmitAnswerSnapshotTests.cs (`[RequiresDatabaseFact]`, `DatabaseFixture`, theo mẫu GameAvatarsQueryTests): gọi `GameRepository.SubmitAnswerAsync` thật, chụp `snapshot.AnsweredPlayerIds` rồi ném lỗi trong `work` để rollback; 2 ca — câu hiện tại có answer của A và B, câu TRƯỚC có answer của C → danh sách = {A, B} (không có C); câu hiện tại chưa ai trả lời (câu trước có C) → rỗng. Lý do: T011–T014 chạy qua `FakeGameRepository` nên không kiểm được truy vấn thật của T005
+- [x] T011 [P] Test xUnit chống rò trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: RoomState trả cho NGƯỜI CHƠI có `AnsweredPlayerIds == null` ở Lobby / InProgress (đã có người trả lời) / Finished
+- [x] T012 [P] Test xUnit `CorrectPlayerIds` trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: 3 ca — có người không trả lời (vắng mặt), trả lời sai (vắng mặt), người trả lời đúng rồi RỜI PHÒNG/rớt mạng trước khi câu kết thúc (Player không bị xóa → vẫn có mặt trong `CorrectPlayerIds`)
+- [x] T013 [P] Test xUnit host reconnect trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: giữa câu có A đã trả lời, RoomState trả cho HOST chứa đúng {A}; câu đã ended → null; `AnswerProgress` sau mỗi lần `SubmitAnswerAsync` chứa danh sách tăng dần gồm cả người vừa nộp
+- [x] T014 [P] Test xUnit thứ tự ổn định trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: snapshot có `Players` lộn xộn (JoinedAt không tăng dần, có hai người cùng `JoinedAt` khác `Id`, điểm khác nhau) → `RoomState.Players` luôn theo `JoinedAt` rồi `Id`, giống nhau cho host và người chơi, không đổi khi điểm đổi
 
 **Checkpoint Đợt 1**:
-- [ ] T015 `dotnet build` + `dotnet test` xanh (backend); `npm run build` + `npm test` xanh (frontend — chưa đụng); commit `feat: thêm AnsweredPlayerIds/CorrectPlayerIds vào payload game và ổn định thứ tự người chơi` + push
+- [x] T015 `dotnet build` + `dotnet test` xanh (backend); `npm run build` + `npm test` xanh (frontend — chưa đụng); commit `feat: thêm AnsweredPlayerIds/CorrectPlayerIds vào payload game và ổn định thứ tự người chơi` + push
 
 ---
 

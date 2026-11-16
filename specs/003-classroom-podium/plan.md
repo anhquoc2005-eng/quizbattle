@@ -124,6 +124,9 @@ trang; logic xếp bục tách hàm thuần `podiumSteps.ts` để Vitest không
   - RoomState của chủ phòng kết nối lại giữa câu chứa đúng danh sách đã trả lời.
   - `RoomState.Players` sắp ổn định theo `JoinedAt` rồi `Id` với snapshot lộn xộn, kể cả khi điểm
     đổi.
+- Test tích hợp Postgres thật (`Integration/SubmitAnswerSnapshotTests.cs`, task T010a): truy vấn
+  thật của `GameRepository.SubmitAnswerAsync` chỉ trả người đã trả lời câu ĐANG CHẠY (không lẫn
+  câu trước; chưa ai trả lời → rỗng) — vì các test ở trên chạy qua `FakeGameRepository`.
 - Frontend chưa đụng (types sửa ở đợt dùng tới) → build + test hai phía vẫn xanh.
 
 ### Đợt 2 — Lưới lớp học (sảnh + trong câu, chưa có trạng thái)

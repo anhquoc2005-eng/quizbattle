@@ -272,7 +272,8 @@ public sealed class GameService(
             };
             snapshot.Player.Score += points;
 
-            var progress = new AnswerProgressDto(snapshot.AnsweredCountForCurrentQuestion + 1, snapshot.TotalPlayers);
+            var progress = new AnswerProgressDto(
+                snapshot.AnsweredPlayerIds.Count + 1, snapshot.TotalPlayers, [.. snapshot.AnsweredPlayerIds, playerId]);
             return (answer, (new AnswerAckDto(true), progress, snapshot.Room.Id));
         }, cancellationToken);
 
@@ -280,9 +281,13 @@ public sealed class GameService(
     {
         current.EndedAt = now;
 
+        var correctPlayerIds = snapshot.Answers
+            .Where(a => a.QuestionId == current.Id && a.IsCorrect)
+            .Select(a => a.PlayerId)
+            .ToList();
         var ended = new QuestionEndedDto(
             current.Id, current.CorrectIndex, snapshot.AnsweredCountForCurrentQuestion, snapshot.Players.Count,
-            now, now.AddSeconds(Room.RESULT_DISPLAY_SECONDS));
+            now, now.AddSeconds(Room.RESULT_DISPLAY_SECONDS), correctPlayerIds);
         var leaderboard = BuildLeaderboard(snapshot);
         return (ended, new LeaderboardUpdatedDto(leaderboard));
     }
@@ -333,6 +338,7 @@ public sealed class GameService(
         var current = snapshot.CurrentQuestion;
         CurrentQuestionStateDto? currentDto = null;
         bool? hasAnswered = null;
+        List<Guid>? answeredPlayerIds = null;
 
         if (current is not null)
         {
@@ -348,20 +354,31 @@ public sealed class GameService(
             {
                 hasAnswered = snapshot.Answers.Any(a => a.PlayerId == playerId.Value && a.QuestionId == current.Id);
             }
+
+            // Chỉ chủ phòng nhận danh sách ai đã trả lời (người chơi không được biết trước khi câu kết thúc).
+            if (isHost && snapshot.Room.Status == RoomStatus.InProgress && !ended)
+            {
+                answeredPlayerIds = snapshot.Answers.Where(a => a.QuestionId == current.Id).Select(a => a.PlayerId).ToList();
+            }
         }
 
         return new RoomStateDto(
             snapshot.Room.Code,
             snapshot.Room.Status.ToString(),
             snapshot.Room.QuestionTimeLimitSeconds,
-            snapshot.Players.Select(p => new PlayerSummaryDto(p.Id, p.DisplayName, p.Score, LevelOf(snapshot.Users, p), AvatarOf(snapshot, p))).ToList(),
+            // Sắp theo JoinedAt rồi Id: thứ tự bàn ổn định, không phụ thuộc thứ tự Postgres trả về khi không có ORDER BY.
+            snapshot.Players
+                .OrderBy(p => p.JoinedAt).ThenBy(p => p.Id)
+                .Select(p => new PlayerSummaryDto(p.Id, p.DisplayName, p.Score, LevelOf(snapshot.Users, p), AvatarOf(snapshot, p)))
+                .ToList(),
             currentDto,
             leaderboard,
             isHost,
             playerId,
             hasAnswered,
             now,
-            snapshot.Room.Status == RoomStatus.Finished ? RewardSettlement.FromStored(snapshot) : null);
+            snapshot.Room.Status == RoomStatus.Finished ? RewardSettlement.FromStored(snapshot) : null,
+            answeredPlayerIds);
     }
 
     // Hòa điểm: tổng thời gian trả lời đúng ít hơn đứng trên - chỉ tính các câu đã trả lời đúng.

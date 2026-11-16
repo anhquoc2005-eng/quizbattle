@@ -55,6 +55,8 @@ Chạy dev: backend `dotnet run --project QuizBattle.Api`, frontend `npm run dev
 - xUnit: `GameServiceTests` — AnsweredPlayerIds không rò sang người chơi; CorrectPlayerIds với
   người không trả lời/sai/rời phòng; RoomState host reconnect; `RoomState.Players` sắp ổn định
   theo `JoinedAt` rồi `Id` dù snapshot đưa vào lộn xộn.
+- xUnit tích hợp (Postgres thật, cần `QUIZBATTLE_TEST_DB`): `SubmitAnswerSnapshotTests` — danh sách
+  đã trả lời chỉ của câu đang chạy.
 - Vitest: `podiumSteps.test.ts` (cùng điểm khác rank, 1–2 người, rỗng); `gameReducer.test.ts` (gộp hợp
   AnswerProgress {A}+{B}→{A,B}, gói trễ không làm mất; AnswerProgress
   trễ bị bỏ, reset khi sang câu, nạp từ RoomState).

@@ -10,7 +10,7 @@
 và push độc lập (commit nhỏ Conventional Commits trong đợt vẫn khuyến khích). Nhãn [US1/US2/US3]
 ánh xạ về user story trong spec.md để truy vết.
 
-**Tổng: 39 task đánh số T001–T039 + T010a (test tích hợp thêm vào Đợt 1) + T021a/T021b (sửa bố cục/tài liệu theo cố vấn 16/11, đầu Đợt 3) + T028a/T028b (huy hiệu to hơn, số đếm không giảm; đầu Đợt 4); không đánh số lại / 5 đợt** (Đợt 1: T001–T015 kèm T010a, Đợt 2: T016–T021, Đợt 3: T021a–T021b + T022–T028, Đợt 4: T028a–T028b + T029–T035, Đợt 5: T036–T039).
+**Tổng: 39 task đánh số T001–T039 + T010a (test tích hợp thêm vào Đợt 1) + T021a/T021b (sửa bố cục/tài liệu theo cố vấn 16/11, đầu Đợt 3) + T028a/T028b (huy hiệu to hơn, số đếm không giảm; đầu Đợt 4) + T035a (khoảng cách chân bục); không đánh số lại / 5 đợt** (Đợt 1: T001–T015 kèm T010a, Đợt 2: T016–T021, Đợt 3: T021a–T021b + T022–T028, Đợt 4: T028a–T028b + T029–T035, Đợt 5: T035a + T036–T039).
 
 ## Format: `[ID] [P?] [Story] Mô tả + đường dẫn file`
 
@@ -111,12 +111,13 @@ trong GameRepository.
 
 **Purpose**: SC-004, SC-006; khớp hệ thiết kế.
 
-- [ ] T036 Gom mọi animation của tính năng dưới `@media (prefers-reduced-motion: reduce)` trong frontend/src/index.css: tắt lộ dần/pháo giấy/nhún/giơ tay chuyển động, nội dung hiện ngay đầy đủ (FR-017); soát bằng DevTools emulation (quickstart Kịch bản 4)
-- [ ] T037 Soát 1366px với 50 người giả lập (quickstart Kịch bản 4 bước 2): không cuộn ngang, tên đọc được, chuyển câu không khựng; chỉnh bậc `--desk-min` trong frontend/src/index.css hoặc frontend/src/components/Classroom.tsx nếu cần; soát Podium trên bề rộng điện thoại (PlayFinished)
-- [ ] T038 Nếu máy có skill `design-taste-frontend`: chạy `node <skill>/scripts/lint.mjs --app` cho các file đã đổi và `node <skill>/scripts/inspect.mjs --app <url build>`; sửa hết FAIL (CLAUDE.md)
+- [x] T035a [US2] Khoảng cách chân bục (theo cố vấn, sau khi xem Đợt 4): frontend/src/index.css `.podium` thêm `padding-bottom: 16px` (cộng `gap-4` của thẻ) để chân bục không dính sát Leaderboard ở LiveFinished và RewardSummary ở PlayFinished
+- [x] T036 Gom mọi animation của tính năng dưới `@media (prefers-reduced-motion: reduce)` trong frontend/src/index.css: tắt lộ dần/pháo giấy/nhún/giơ tay chuyển động, nội dung hiện ngay đầy đủ (FR-017). Đã rà: bổ sung dòng tắt riêng `.confetti i { animation: none }`; thêm frontend/src/reducedMotion.test.ts (đọc index.css bằng `?raw`, vite.config.ts mở `css.include` cho đúng import này) khẳng định mọi selector có `animation:`/`transition:` đều bị tắt trong khối và khối chỉ ẩn `.confetti`; đã thử xóa một dòng tắt thì test đỏ
+- [x] T037 Cố vấn đã đo 50 người ở 1366px (lưới 10×5, cao 432px, không cuộn ngang) và Podium ở khung 360px (không cuộn ngang) trên bản dev — không đo lại; `--desk-min` giữ nguyên 152/116/96px
+- [x] T038 Lint skill thiết kế trên file đã đổi: 0 FAIL, 0 WARN. `inspect.mjs` trên bản dev, CHỈ trang công khai (`/`, `/login`, `/join`; màn chủ phòng/Finished cần đăng nhập và có phòng nên không chạy, đã được cố vấn xem tận mắt ở Đợt 2–4): `--app` cả ba trang 0 FAIL (WARN: dev-server, hero-void, ragged-row, unused-canvas, tiny-text, edge-text — đều ở màn có từ trước, không thuộc tính năng này); `/` không `--app` có 5 FAIL kiểu trang marketing (body 14px, ít ảnh, focal point, still-page, lệch lề 390px) — trang chủ là landing có từ trước, ngoài phạm vi
 
 **Checkpoint Đợt 5**:
-- [ ] T039 Build + test hai phía xanh; chạy trọn quickstart.md; commit `feat: hoàn thiện responsive và reduced-motion cho lớp học` + push
+- [x] T039 Build + test hai phía xanh; chạy trọn quickstart.md; commit `feat: hoàn thiện responsive và reduced-motion cho lớp học` + push
 
 ---
 

@@ -319,7 +319,8 @@
    */
   .podium {
     position: relative;
-    padding: 12px 0 0;
+    /* Đáy 16px (cộng gap của thẻ) để chân bục không dính sát Leaderboard / RewardSummary ngay dưới. */
+    padding: 12px 0 16px;
   }
   .podium-steps {
     list-style: none;
@@ -528,5 +529,8 @@ a:focus-visible {
   }
   .confetti {
     display: none;
+  }
+  .confetti i {
+    animation: none;
   }
 }

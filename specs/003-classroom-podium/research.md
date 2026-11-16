@@ -29,7 +29,8 @@ Không còn NEEDS CLARIFICATION trong Technical Context; các mục dưới ch�
 
 - **Decision**: Reducer bỏ qua action `ANSWER_PROGRESS` khi `state.currentQuestion?.ended` là
   true (hoặc không có câu hiện tại). Trạng thái ✓/✗ chỉ bị xóa bởi `QUESTION_STARTED` /
-  `ROOM_STATE` / `GAME_ENDED`.
+  `ROOM_STATE` / `GAME_ENDED`. Khi KHÔNG bị bỏ qua, `ANSWER_PROGRESS` gộp hợp vào
+  `answeredPlayerIds` (R7), không ghi đè.
 - **Rationale**: Một chỗ chặn duy nhất tại nguồn state; UI không cần biết thứ tự mạng. Khớp hành
   vi sẵn có: `QUESTION_ENDED` đã tự chốt answerProgress cuối (gameReducer.ts:156).
 - **Alternatives considered**: so timestamp sự kiện — phức tạp hơn, payload AnswerProgress không
@@ -39,12 +40,13 @@ Không còn NEEDS CLARIFICATION trong Technical Context; các mục dưới ch�
 
 - **Decision**: `RoomStateDto` thêm `AnsweredPlayerIds` (null với người chơi; chỉ điền cho host
   khi phòng InProgress và câu hiện tại chưa ended). Reducer nạp vào cùng chỗ với
-  `ANSWER_PROGRESS`. Reconnect trong 6 giây hiển thị kết quả: không khôi phục ✓/✗ — ghi nhận là
-  hành vi chấp nhận (Assumption trong spec, chờ cố vấn xác nhận nếu muốn hơn).
-- **Rationale**: Đúng quyết định 6c; dữ liệu lấy từ `snapshot.Answers` đã nạp sẵn trong
-  transaction (GameService đã dùng nó cho `hasAnswered` từng người — không thêm truy vấn).
+  `ANSWER_PROGRESS` (nhưng `ROOM_STATE` thay thế hẳn, vì là nguồn đầy đủ khi vào lại).
+  Reconnect trong 6 giây hiển thị kết quả: không khôi phục ✓/✗ — **đã chốt (cố vấn): chấp nhận**.
+- **Rationale**: Đúng quyết định 6c; ở đường dựng RoomState dữ liệu lấy từ `snapshot.Answers` đã
+  nạp sẵn trong `GameSnapshot` (GameService đã dùng nó cho `hasAnswered` từng người — không thêm
+  truy vấn). Lưu ý đường `SubmitAnswer` khác: xem R7.
 - **Alternatives considered**: đưa `CorrectPlayerIds` vào RoomState khi câu ended — mở rộng
-  ngoài quyết định 6, để cố vấn quyết.
+  ngoài quyết định 6, cố vấn đã chọn không làm.
 
 ## R5 — Lộ dần bục + pháo giấy thuần CSS
 
@@ -68,3 +70,27 @@ Không còn NEEDS CLARIFICATION trong Technical Context; các mục dưới ch�
   nhìn người nhận", dễ null cho người chơi.
 - **Alternatives considered**: lồng vào `CurrentQuestionStateDto` — DTO đó dùng chung cho mọi
   người nhận, muốn null riêng cho người chơi sẽ phải tách hai bản dựng, phức tạp hơn.
+
+## R7 — Danh sách đã trả lời: nguồn dữ liệu ở SubmitAnswer và gộp hợp ở client
+
+- **Decision**:
+  - Backend: `SubmitAnswerSnapshot` (đường `GameRepository.SubmitAnswerAsync`) không có
+    `Answers`, chỉ có `AnsweredCountForCurrentQuestion` từ `CountAsync` (GameRepository.cs:139).
+    Thay bằng MỘT truy vấn lấy danh sách `PlayerId` của câu hiện tại
+    (`Select(a => a.PlayerId).ToListAsync`), số đếm suy ra từ `.Count` — vẫn một truy vấn như cũ.
+    `AnswerProgressDto.AnsweredPlayerIds` = danh sách đó + người vừa nộp.
+  - Client: reducer `ANSWER_PROGRESS` GỘP HỢP với `answeredPlayerIds` hiện có của cùng câu
+    (chỉ thêm, không ghi đè); `QUESTION_STARTED` xóa sạch; `ROOM_STATE` thay thế.
+- **Rationale**: Đường SubmitAnswer chỉ khóa phòng `FOR SHARE` (GameRepository.cs:129-134) để nhiều
+  người nộp song song. Hai người A và B nộp đồng thời: mỗi giao dịch không thấy answer chưa commit
+  của người kia, nên payload của A là `{A}` và của B là `{B}`. Nếu client ghi đè, tay của người đến
+  trước bị hạ xuống. Gộp hợp biến hai payload thành `{A,B}` và cũng làm gói đến trễ (`{A}` sau
+  `{A,B}`) vô hại. Danh sách chỉ ĐÚNG khi đã gộp, vì vậy contract không hứa
+  `answeredPlayerIds.length == answeredCount` ở phía client.
+- **Alternatives considered**: (a) khóa phòng độc quyền khi nộp để mọi người thấy nhau — phá thiết
+  kế chủ ý "không xếp hàng chờ nhau"; (b) thêm số thứ tự/phiên bản vào payload để client chọn gói
+  mới nhất — vẫn thiếu người ở cả hai gói, không giải quyết gốc; (c) gửi lại toàn bộ danh sách
+  bằng truy vấn riêng sau commit — thêm một truy vấn mỗi lần nộp.
+- **Giới hạn đã biết (có từ trước, ngoài phạm vi)**: trong cùng race đó `AnsweredCount` (đếm
+  trước + 1) của hai payload có thể thấp hơn thực tế; chữ "Đã trả lời x/y" hiện có dựa vào nó. Nếu
+  muốn, hiển thị `max(answeredCount, answeredPlayerIds.length)` — không đưa vào tính năng này.

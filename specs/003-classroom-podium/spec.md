@@ -27,8 +27,8 @@ hiện bục vinh danh top 3 với hiệu ứng lộ dần.
 4. Sau QuestionEnded: huy hiệu ✓/✗ phủ lên nhân vật + nhún nhẹ. KHÔNG đổi biểu cảm/thuộc tính
    DiceBear (đó là đồ người chơi mua bằng Xu).
 5. Bục vinh danh cuối trận: top 3, lộ dần hạng 3→2→1, pháo giấy bằng CSS; có trên cả màn chủ
-   phòng và màn người chơi; đồng hạng theo `Rank` server trả; dưới 3 người chỉ hiện số bậc có
-   người; tôn trọng `prefers-reduced-motion`.
+   phòng và màn người chơi; xếp theo `Rank` server trả (luôn duy nhất, xem mục Mâu thuẫn); dưới
+   3 người chỉ hiện số bậc có người; tôn trọng `prefers-reduced-motion`.
 6. Không migration, không thêm thư viện. Backend chỉ:
    - a) `AnswerProgressDto` thêm `AnsweredPlayerIds` (vẫn chỉ gửi nhóm `{code}:host`);
    - b) `QuestionEndedDto` thêm `CorrectPlayerIds` (gửi cả phòng; chấp nhận vì câu đã kết thúc);
@@ -40,15 +40,30 @@ hiện bục vinh danh top 3 với hiệu ứng lộ dần.
 
 ## Mâu thuẫn giữa quyết định và code thật
 
-Đã đối chiếu `RoomStateDto`, `AnswerProgressDto`, `QuestionEndedDto`, `LeaderboardEntryDto`,
-`PlayerSummaryDto`, `Room.MAX_PLAYERS`, `src/avatar/avatarRenderer.ts`, RoomLivePage/PlayPage:
-**không phát hiện mâu thuẫn**. Các điểm xác nhận:
+Đối chiếu `RoomStateDto`, `AnswerProgressDto`, `QuestionEndedDto`, `LeaderboardEntryDto`,
+`PlayerSummaryDto`, `GameService`, `GameRepository`, `GameHub`, `gameReducer`, `RewardCalculator`,
+`Room.MAX_PLAYERS`, `src/avatar/avatarRenderer.ts`, RoomLivePage/PlayPage. Sau review cố vấn
+(bản sửa này), hai điểm quyết định/giả định lệch với code thật, đã xử lý như sau:
+
+1. **Quyết định 5 nói "đồng hạng theo Rank server", nhưng `Rank` của bảng xếp hạng luôn duy nhất.**
+   `BuildLeaderboard` (GameService.cs:383-385) gán `Rank = i + 1` sau
+   `OrderByDescending(Score).ThenBy(TotalCorrectMs)` → không bao giờ có hai `LeaderboardEntryDto`
+   cùng `Rank`. Xử lý: mỗi bậc đúng một người (rank 1/2/3); người cùng điểm vẫn ở hai bậc khác
+   nhau theo thứ tự server. (Ngoại lệ có thật nằm ở thưởng, xem Assumptions về RankBonus.)
+2. **Người chơi rời phòng / rớt mạng KHÔNG bị xóa.** `LeaveRoom` và `OnDisconnectedAsync` chỉ phát
+   `PlayerLeft`; `Player` còn trong DB/snapshot và reducer giữ người đó với `online: false`.
+   Nên bàn học của người đã rời **vẫn còn** (chỉ trạng thái online khác, và hiển thị trạng thái
+   online nằm ngoài phạm vi theo quyết định 7). Xử lý: US3, Edge Cases, FR-003 sửa theo đó.
+
+Các điểm đã khớp:
 
 - `PlayerSummaryDto`/`LeaderboardEntryDto` đã mang `Avatar` đầy đủ → lưới lớp học và bục vinh
   danh không cần dữ liệu avatar mới.
 - `GameEnded.finalLeaderboard` và `RoomState.leaderboard` (khi Finished) đã có `rank` → bục vinh
   danh không cần dữ liệu backend mới.
 - `AnswerProgress` hiện chỉ gửi nhóm host; `QuestionEnded` gửi cả phòng → khớp quyết định 6.
+- `SubmitAnswerSnapshot` chỉ có số đếm (`AnsweredCountForCurrentQuestion`), không có danh sách
+  answers → backend phải đổi truy vấn đếm thành truy vấn lấy `PlayerId` (xem plan/research R7).
 - `avatarRenderer.ts` đã có cache Map (giới hạn MAX_CACHED) → rủi ro vẽ 50 SVG đã có sẵn lớp đệm.
 - `RoomState.hasAnsweredCurrentQuestion` là cờ cá nhân của người chơi, không đụng quyết định 6c
   (danh sách cho host là trường mới, bổ sung chứ không thay thế).
@@ -101,10 +116,9 @@ thứ tự lộ 3→2→1, đúng người đúng hạng theo bảng xếp hạn
 1. **Given** trận kết thúc với ≥3 người chơi điểm khác nhau, **When** màn Finished hiện,
    **Then** bục 3 bậc lộ dần theo thứ tự hạng 3 → hạng 2 → hạng 1 (nhân vật + tên + điểm),
    kèm hiệu ứng pháo giấy, trên cả màn chủ phòng lẫn màn người chơi.
-2. **Given** có đồng hạng (ví dụ hai người cùng `rank` 1), **When** bục hiện, **Then** cả hai
-   đứng cùng bậc 1 theo đúng `rank` server trả, và bậc tương ứng bị chiếm chỗ không hiển thị
-   người hạng kế (ví dụ: hai hạng 1 → có bậc 1 và bậc 3, không có bậc 2 — theo đúng dãy `rank`
-   server trả về).
+2. **Given** hai người có cùng điểm (server vẫn gán `rank` khác nhau, ví dụ 1 và 2 nhờ tổng thời
+   gian trả lời đúng), **When** bục hiện, **Then** họ đứng ở hai bậc khác nhau đúng theo `rank`
+   server trả (mỗi bậc đúng một người); client không tự gộp hay tự xếp lại theo điểm.
 3. **Given** trận chỉ có 1 hoặc 2 người chơi, **When** bục hiện, **Then** chỉ các bậc có người
    xuất hiện, không có bậc trống.
 4. **Given** người dùng bật `prefers-reduced-motion`, **When** màn Finished hiện, **Then** bục và
@@ -115,7 +129,8 @@ thứ tự lộ 3→2→1, đúng người đúng hạng theo bảng xếp hạn
 ### User Story 3 - Sảnh chờ kiểu lớp học (Priority: P3)
 
 Trước khi bắt đầu, màn chủ phòng hiện lớp học: người chơi vào phòng là "ngồi vào bàn" (nhân vật +
-tên xuất hiện trong lưới), rời phòng thì biến mất. Lưới dùng được từ 1 tới 50 người, nhìn rõ trên
+tên xuất hiện trong lưới); người rời phòng/rớt mạng vẫn giữ bàn (họ chưa bị xóa khỏi trận, giữ
+điểm — xem Mâu thuẫn mục 2). Lưới dùng được từ 1 tới 50 người, nhìn rõ trên
 laptop 1366px lẫn máy chiếu.
 
 **Why this priority**: Làm sảnh đồng bộ với cảnh trong trận; giá trị thấp hơn vì sảnh hiện tại đã
@@ -127,7 +142,8 @@ lượng lớn (giả lập 50 người) xem lưới còn đọc được.
 **Acceptance Scenarios**:
 
 1. **Given** sảnh chủ phòng đang mở, **When** một người chơi vào phòng, **Then** nhân vật + tên
-   của họ xuất hiện trong lưới bàn học; khi họ rời phòng, bàn của họ biến mất.
+   của họ xuất hiện trong lưới, nối vào cuối dãy bàn hiện có; khi họ rời phòng hoặc rớt mạng, bàn
+   của họ vẫn còn đúng chỗ cũ (không biến mất, không xô lệch bàn khác).
 2. **Given** phòng có 50 người chơi, **When** nhìn màn chủ phòng ở bề rộng 1366px, **Then** toàn
    bộ 50 nhân vật + tên hiển thị không tràn ngang, tên vẫn đọc được.
 
@@ -137,14 +153,19 @@ lượng lớn (giả lập 50 người) xem lưới còn đọc được.
 
 - AnswerProgress đến **sau** QuestionEnded (mạng trễ): màn chủ phòng đang ở pha ✓/✗ không được
   quay lại pha giơ tay; dữ liệu giơ tay của câu đã kết thúc bị bỏ qua.
-- Người chơi rời phòng giữa câu rồi câu kết thúc: `CorrectPlayerIds` chỉ chứa người trả lời đúng;
-  nhân vật đã rời không còn trong lưới nên không cần huy hiệu.
-- Người chơi rớt mạng (chưa rời phòng) trong câu: nhân vật vẫn ngồi bàn; nếu đã trả lời trước khi
-  rớt thì tay vẫn giơ.
+- Người chơi rời phòng hoặc rớt mạng giữa câu (Player không bị xóa): bàn vẫn còn; nếu đã trả
+  lời trước đó thì tay vẫn giơ, và khi câu kết thúc vẫn nhận ✓/✗ như mọi người (`CorrectPlayerIds`
+  chứa họ nếu đã trả lời đúng). Hiển thị trạng thái online/offline của bàn nằm ngoài phạm vi.
+- Hai người nộp đáp án gần như cùng lúc: mỗi `AnswerProgress` có thể thiếu người kia (cả hai
+  giao dịch chưa thấy answer chưa commit của nhau) → màn chủ phòng gộp hợp các danh sách nhận
+  được trong cùng một câu nên cả hai đều giơ tay; không bao giờ có người đã giơ tay mà bị hạ
+  xuống trước khi câu kết thúc (research R7).
 - Chủ phòng kết nối lại đúng khoảng 6 giây hiển thị kết quả (câu đã ended, chưa sang câu mới):
   RoomState có `currentQuestion.ended = true` + `correctIndex`, nhưng không có `CorrectPlayerIds`
-  của sự kiện đã bỏ lỡ → màn chủ phòng hiện lưới không huy hiệu (chấp nhận: trạng thái ✓/✗ chỉ
-  tồn tại trong 6 giây và sẽ sạch khi sang câu mới). Ghi rõ hành vi này trong plan.
+  của sự kiện đã bỏ lỡ → màn chủ phòng hiện lưới không huy hiệu. **Đã chốt (cố vấn): chấp nhận**,
+  vì trạng thái ✓/✗ chỉ tồn tại trong 6 giây và sẽ sạch khi sang câu mới.
+- Chủ phòng kết nối lại: thứ tự bàn không được đổi so với trước khi rớt (thứ tự cố định theo
+  thời điểm vào phòng, không phụ thuộc điểm hay thứ tự Postgres trả về).
 - Trận kết thúc khi người chơi đang ở màn câu hỏi: chuyển sang Finished vẫn phải hiện bục (dữ
   liệu từ GameEnded), kể cả khi người chơi vào lại sau (dữ liệu từ RoomState khi Finished).
 - Tên quá dài trên bàn học / trên bục: cắt bớt có dấu "…", không vỡ lưới.
@@ -159,8 +180,9 @@ lượng lớn (giả lập 50 người) xem lưới còn đọc được.
   dưới dạng lưới bàn học: mỗi bàn gồm nhân vật đang đeo + tên hiển thị.
 - **FR-002**: Lưới tự co giãn từ 1 tới 50 người, hiển thị đủ không cuộn ngang ở bề rộng từ
   1366px trở lên; dưới 1366px (chủ phòng mở bằng máy nhỏ) được phép cuộn dọc nhưng không vỡ bố cục.
-- **FR-003**: Người chơi vào/rời phòng thì lưới cập nhật ngay theo sự kiện hiện có
-  (PlayerJoined/PlayerLeft/RoomState), không gọi thêm API.
+- **FR-003**: Người chơi vào phòng thì bàn mới xuất hiện ngay theo sự kiện hiện có
+  (PlayerJoined/RoomState), không gọi thêm API. Người rời phòng/rớt mạng (PlayerLeft) giữ nguyên
+  bàn; không hiển thị trạng thái online (ngoài phạm vi).
 - **FR-004**: Màn người chơi (PlayPage) không đổi ở Lobby và Question.
 
 **Giơ tay trong câu**
@@ -191,8 +213,9 @@ lượng lớn (giả lập 50 người) xem lưới còn đọc được.
   tối đa 3 bậc (nhân vật + tên + điểm), xếp theo `rank` trong bảng xếp hạng cuối server trả về.
 - **FR-014**: Các bậc lộ dần theo thứ tự hạng 3 → 2 → 1, kết thúc bằng hiệu ứng pháo giấy dựng
   thuần bằng CSS.
-- **FR-015**: Đồng hạng: mọi người chung `rank` đứng chung bậc của `rank` đó; bậc ứng với `rank`
-  không xuất hiện trong dãy server trả thì không hiển thị.
+- **FR-015**: Mỗi bậc đúng MỘT người: bậc 1/2/3 ứng với `rank` 1/2/3 server trả (`rank` của bảng
+  xếp hạng luôn duy nhất — GameService.cs:383-385). Client chỉ lấy các entry có `rank` ≤ 3 và
+  sắp theo `rank`; không tự gộp theo điểm, không tự tính lại hạng.
 - **FR-016**: Dưới 3 người chơi: chỉ hiển thị các bậc có người.
 - **FR-017**: Khi `prefers-reduced-motion` bật: bỏ lộ dần, bỏ pháo giấy chuyển động, bỏ nhún —
   nội dung hiện ngay, đầy đủ.
@@ -206,6 +229,16 @@ lượng lớn (giả lập 50 người) xem lưới còn đọc được.
 - **FR-021**: Không thêm/đổi tên sự kiện SignalR; chỉ mở rộng payload sự kiện hiện có theo
   quyết định 6.
 
+**Thứ tự chỗ ngồi và gộp tiến độ**
+
+- **FR-022**: Danh sách `Players` trong RoomState được server sắp theo `JoinedAt` rồi `Id` (ổn
+  định, không phụ thuộc thứ tự Postgres trả về hay điểm số), nên chủ phòng kết nối lại thấy
+  nguyên thứ tự bàn. `PLAYER_JOINED` ở client nối người mới vào cuối như hiện tại. Lưới lớp học
+  hiển thị đúng thứ tự `players` nhận được, KHÔNG sắp theo điểm hay bảng xếp hạng.
+- **FR-023**: Client gộp HỢP (chỉ thêm, không ghi đè) các `AnsweredPlayerIds` nhận được trong
+  cùng một câu; `AnsweredPlayerIds` trong RoomState là nguồn đầy đủ khi vào lại và thay thế
+  danh sách hiện có. Đổi câu thì xóa sạch.
+
 ### Key Entities
 
 - **Bàn học (desk)**: một ô trong lưới lớp học = người chơi (nhân vật + tên) + trạng thái
@@ -214,8 +247,8 @@ lượng lớn (giả lập 50 người) xem lưới còn đọc được.
   chỉ chủ phòng nhận; reset mỗi câu.
 - **Danh sách trả lời đúng (CorrectPlayerIds)**: tập Id người chơi trả lời đúng câu vừa kết
   thúc; cả phòng nhận cùng sự kiện câu kết thúc.
-- **Bậc vinh danh**: hạng (`rank`) + danh sách người chung hạng; suy ra thuần túy từ bảng xếp
-  hạng cuối, không có dữ liệu mới.
+- **Bậc vinh danh**: hạng (`rank` 1/2/3) + đúng một người đứng bậc đó; suy ra thuần túy từ bảng
+  xếp hạng cuối, không có dữ liệu mới.
 
 ## Success Criteria *(mandatory)*
 
@@ -230,8 +263,8 @@ lượng lớn (giả lập 50 người) xem lưới còn đọc được.
 - **SC-004**: Màn chủ phòng với 50 người chơi hiển thị đủ 50 bàn ở bề rộng 1366px, không cuộn
   ngang, thao tác chuyển câu không bị khựng thấy rõ (không re-render toàn bộ 50 SVG mỗi lần
   đổi trạng thái).
-- **SC-005**: Bục vinh danh hiển thị đúng ở mọi tổ hợp: 1 người, 2 người, ≥3 người, đồng hạng
-  (có unit test cho hàm xếp bục thuần).
+- **SC-005**: Bục vinh danh hiển thị đúng ở mọi tổ hợp: 1 người, 2 người, ≥3 người, hai người
+  cùng điểm nhưng khác `rank` (có unit test cho hàm xếp bục thuần).
 - **SC-006**: Bật `prefers-reduced-motion` thì không còn chuyển động nào trong màn Finished và
   trong huy hiệu/giơ tay.
 - **SC-007**: Chủ phòng tắt tab rồi mở lại giữa câu: trạng thái giơ tay khôi phục đúng 100%
@@ -243,10 +276,14 @@ lượng lớn (giả lập 50 người) xem lưới còn đọc được.
   thuộc tính DiceBear — vì quyết định 4 cấm đổi thuộc tính nhân vật.
 - Bục vinh danh dùng dữ liệu bảng xếp hạng cuối đã có (`GameEnded.finalLeaderboard`, và
   `RoomState.leaderboard` khi phòng Finished) — không cần payload backend mới cho bục.
-- Chủ phòng kết nối lại trong 6 giây hiển thị kết quả của một câu (đã ended, chưa sang câu mới)
-  thấy lưới KHÔNG có huy hiệu ✓/✗ (RoomState không chở `CorrectPlayerIds` của sự kiện đã lỡ);
-  đây là hành vi chấp nhận được vì trạng thái chỉ sống 6 giây. Nếu cố vấn muốn khôi phục cả
-  huy hiệu, cần mở rộng quyết định 6c — ngoài phạm vi hiện tại.
+- **Đã chốt (cố vấn)**: chủ phòng kết nối lại trong 6 giây hiển thị kết quả của một câu (đã
+  ended, chưa sang câu mới) thấy lưới KHÔNG có huy hiệu ✓/✗ (RoomState không chở
+  `CorrectPlayerIds` của sự kiện đã lỡ); chấp nhận vì trạng thái chỉ sống 6 giây.
 - "Màn máy chiếu" không phải breakpoint mới: máy chiếu nhận cùng bố cục ≥1366px.
-- Thứ tự chỗ ngồi trong lưới theo thứ tự danh sách người chơi server trả (ổn định trong một
-  phiên); không có cơ chế chọn chỗ.
+- Chỗ ngồi theo thứ tự vào phòng (FR-022); không có cơ chế chọn chỗ.
+- `RankBonus` tính kiểu competition ranking (`RewardCalculator`: 1 + số người điểm cao hơn →
+  1-1-3), khác `Rank` của bảng xếp hạng (luôn duy nhất, có tie-break theo thời gian). Hệ quả đã
+  biết: hai người cùng điểm đứng bậc 1 và bậc 2 trên bục vẫn đều có thể nhận thưởng hạng 1.
+  UI không hiển thị hạng thưởng nên bục không mâu thuẫn trực tiếp; không xử lý trong tính năng này.
+- Người rời phòng/rớt mạng không bị xóa khỏi trận (chỉ phát `PlayerLeft`): họ vẫn là một bàn trong
+  lưới và vẫn được tính ✓/✗, điểm, xếp hạng.

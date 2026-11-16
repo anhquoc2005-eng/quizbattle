@@ -28,13 +28,19 @@ Chạy dev: backend `dotnet run --project QuizBattle.Api`, frontend `npm run dev
 1. Trong một câu, cho A trả lời rồi đóng hẳn tab chủ phòng.
 2. Mở lại màn chủ phòng khi câu còn chạy → nhân vật A vẫn giơ tay (từ RoomState, không cần chờ
    người tiếp theo trả lời).
+3. Thứ tự bàn sau khi mở lại GIỐNG HỆT trước khi đóng tab (kể cả sau khi điểm đã đổi — FR-022).
+4. Đóng một tab người chơi (rớt mạng): bàn của họ vẫn còn đúng chỗ (FR-003); nếu họ đã trả lời
+   thì tay vẫn giơ và cuối câu vẫn có ✓/✗.
+5. Đóng tab chủ phòng rồi mở lại đúng lúc đang hiện kết quả 6 giây: lưới không có ✓/✗ — hành vi đã
+   chốt, tự sạch khi sang câu mới.
 
 ## Kịch bản 3 — Bục vinh danh (User Story 2)
 
 1. Chơi hết trận với 3 người điểm khác nhau → cả màn chủ phòng lẫn màn người chơi: bục lộ dần
    hạng 3 → 2 → 1, pháo giấy; RewardSummary của người chơi vẫn hiện như cũ (FR-019).
 2. Trận 2 người → chỉ 2 bậc, không bậc trống (FR-016).
-3. Đồng hạng (hai người bằng điểm cao nhất) → chung bậc 1, không bậc 2 (FR-015).
+3. Hai người bằng điểm cao nhất → vẫn hai bậc 1 và 2 khác nhau, đúng theo `rank` server (người
+   trả lời đúng nhanh hơn đứng bậc 1), mỗi bậc một người (FR-015).
 4. Người chơi đóng tab, vào lại phòng đã Finished → vẫn thấy bục (FR-018).
 
 ## Kịch bản 4 — Reduced motion + 50 người
@@ -47,7 +53,9 @@ Chạy dev: backend `dotnet run --project QuizBattle.Api`, frontend `npm run dev
 ## Test tự động phải có (chạy trong CI từng đợt)
 
 - xUnit: `GameServiceTests` — AnsweredPlayerIds không rò sang người chơi; CorrectPlayerIds với
-  người không trả lời/sai/rời phòng; RoomState host reconnect.
-- Vitest: `podiumSteps.test.ts` (đồng hạng, 1–2 người, rỗng); `gameReducer.test.ts` (AnswerProgress
+  người không trả lời/sai/rời phòng; RoomState host reconnect; `RoomState.Players` sắp ổn định
+  theo `JoinedAt` rồi `Id` dù snapshot đưa vào lộn xộn.
+- Vitest: `podiumSteps.test.ts` (cùng điểm khác rank, 1–2 người, rỗng); `gameReducer.test.ts` (gộp hợp
+  AnswerProgress {A}+{B}→{A,B}, gói trễ không làm mất; AnswerProgress
   trễ bị bỏ, reset khi sang câu, nạp từ RoomState).
 - jsdom: `Classroom.test.tsx`, `Podium.test.tsx`.

@@ -35,4 +35,5 @@
 
 - Quyết định đã chốt từ cố vấn được giữ nguyên văn (kể cả tên DTO) trong mục riêng theo yêu cầu
   của phiên; không coi là rò rỉ implementation vào requirement.
-- Mục "Mâu thuẫn giữa quyết định và code thật" đã đối chiếu code: không có mâu thuẫn.
+- Mục "Mâu thuẫn giữa quyết định và code thật" đã đối chiếu code: sau review cố vấn có 2 lệch
+  (Rank luôn duy nhất; Player rời phòng không bị xóa), đã xử lý trong spec/plan/tasks.

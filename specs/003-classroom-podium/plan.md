@@ -39,7 +39,7 @@ RoomState host khi reconnect) — không migration, không thư viện mới, kh
 | Nguyên tắc | Đánh giá |
 |---|---|
 | 1. Server là nguồn sự thật | ĐẠT — giơ tay/✓✗/bục đều hiển thị từ dữ liệu server (`AnsweredPlayerIds`, `CorrectPlayerIds`, `rank`); client không tự suy đoán đúng/sai. |
-| 2. Kiến trúc phân lớp | ĐẠT — DTO mở rộng ở Application, dữ liệu lấy từ snapshot sẵn có trong GameService; Hub/Broadcaster chỉ chuyển tiếp. Logic xếp bục phía client là hàm thuần có test. |
+| 2. Kiến trúc phân lớp | ĐẠT — DTO mở rộng ở Application, dữ liệu lấy qua snapshot (đường SubmitAnswer đổi truy vấn đếm thành truy vấn lấy `PlayerId` ở Repository); Hub/Broadcaster chỉ chuyển tiếp. Logic xếp bục phía client là hàm thuần có test. |
 | 3. Bảo mật | ĐẠT — điểm mấu chốt: `AnsweredPlayerIds` chỉ đi nhóm `{code}:host` + RoomState của host; có test chống rò sang người chơi. Không secret mới. |
 | 4. Quy trình tính năng | ĐẠT — nhánh `feat/classroom-podium`, 5 đợt nhỏ, mỗi đợt build + test xanh và push độc lập. |
 | 5. Không thêm thư viện | ĐẠT — pháo giấy/hiệu ứng thuần CSS, không cài gì mới. |
@@ -72,20 +72,24 @@ backend/
     AnswerProgressDto.cs        # SỬA: + AnsweredPlayerIds
     QuestionEndedDto.cs         # SỬA: + CorrectPlayerIds
     RoomStateDto.cs             # SỬA: + AnsweredPlayerIds (chỉ host, null với người chơi)
-    GameService.cs              # SỬA: điền 3 trường trên từ snapshot.Answers
-  QuizBattle.Tests/Game/
-    GameServiceTests.cs         # SỬA: test rò rỉ / CorrectPlayerIds / RoomState reconnect
+    SubmitAnswerSnapshot.cs     # SỬA: AnsweredCountForCurrentQuestion (int) -> AnsweredPlayerIds (list, count = .Count)
+    GameService.cs              # SỬA: điền 3 trường; BuildRoomState sắp Players theo JoinedAt rồi Id
+  QuizBattle.Infrastructure/Persistence/
+    GameRepository.cs           # SỬA: SubmitAnswerAsync (dòng ~139) CountAsync -> lấy list PlayerId (vẫn 1 truy vấn). KHÔNG đụng ORDER BY ở LoadSnapshotAsync
+  QuizBattle.Tests/
+    Game/GameServiceTests.cs    # SỬA: test rò rỉ / CorrectPlayerIds / RoomState reconnect / thứ tự ổn định
+    TestHelpers/FakeGameRepository.cs # SỬA: dựng SubmitAnswerSnapshot theo list (dòng ~96)
 
 frontend/src/
   types/game.ts                 # SỬA: khớp 3 DTO mở rộng
-  realtime/gameReducer.ts       # SỬA: giữ answeredPlayerIds/correctPlayerIds, chặn AnswerProgress trễ
+  realtime/gameReducer.ts       # SỬA: answeredPlayerIds (gộp hợp)/correctPlayerIds, chặn AnswerProgress trễ
   realtime/gameReducer.test.ts  # SỬA: test reducer cho trạng thái mới
   components/Classroom.tsx      # THÊM: lưới bàn học (desk = Avatar + tên + trạng thái)
   components/Classroom.test.tsx # THÊM: jsdom test
   components/Podium.tsx         # THÊM: bục vinh danh + pháo giấy CSS
   components/Podium.test.tsx    # THÊM: jsdom test
-  components/podiumSteps.ts     # THÊM: hàm thuần xếp bục từ leaderboard (rank)
-  components/podiumSteps.test.ts# THÊM: Vitest (đồng hạng, 1-2 người)
+  components/podiumSteps.ts     # THÊM: hàm thuần xếp bục từ leaderboard (lọc rank<=3, sắp theo rank)
+  components/podiumSteps.test.ts# THÊM: Vitest (cùng điểm khác rank, 1-2 người)
   pages/RoomLivePage/LiveLobby.tsx    # SỬA: dùng Classroom thay PlayerList
   pages/RoomLivePage/LiveQuestion.tsx # SỬA: thêm Classroom (giơ tay, ✓/✗)
   pages/RoomLivePage/LiveFinished.tsx # SỬA: thêm Podium
@@ -101,16 +105,25 @@ trang; logic xếp bục tách hàm thuần `podiumSteps.ts` để Vitest không
 
 ### Đợt 1 — Backend DTO + test
 
-- Sửa: `AnswerProgressDto.cs`, `QuestionEndedDto.cs`, `RoomStateDto.cs`, `GameService.cs`,
-  `GameServiceTests.cs`.
-- `SubmitAnswerAsync` (GameService.cs:275): dựng `AnsweredPlayerIds` từ `snapshot.Answers` của
-  câu hiện tại + người vừa trả lời. `EndCurrentQuestion` (GameService.cs:279): `CorrectPlayerIds`
-  = answers của câu có `IsCorrect`. `BuildRoomState` (GameService.cs:353): host + InProgress +
-  có câu chưa ended → điền `AnsweredPlayerIds`; mọi trường hợp khác null.
+- Sửa: `AnswerProgressDto.cs`, `QuestionEndedDto.cs`, `RoomStateDto.cs`, `SubmitAnswerSnapshot.cs`,
+  `GameRepository.cs`, `GameService.cs`, `FakeGameRepository.cs`, `GameServiceTests.cs`.
+- Đường SubmitAnswer KHÔNG có `Answers` trong snapshot (chỉ `AnsweredCountForCurrentQuestion` từ
+  `CountAsync`, GameRepository.cs:139): đổi thành MỘT truy vấn lấy `PlayerId` của câu hiện tại,
+  count = `.Count`. `SubmitAnswerAsync` (GameService.cs:275): `AnsweredPlayerIds` = danh sách đó +
+  người vừa trả lời (R7). Đường `GameSnapshot` (EndCurrentQuestion, BuildRoomState) đã có
+  `snapshot.Answers`: `EndCurrentQuestion` (GameService.cs:279) dựng `CorrectPlayerIds` = answers
+  của câu có `IsCorrect`; `BuildRoomState` (GameService.cs:353) host + InProgress + câu chưa ended
+  → điền `AnsweredPlayerIds`, mọi trường hợp khác null.
+- Thứ tự chỗ ngồi: `BuildRoomState` tự sắp `Players` theo `JoinedAt` rồi `Id` (một chỗ dựng
+  RoomState duy nhất; test bằng snapshot lộn xộn, không cần Postgres). KHÔNG sửa ORDER BY trong
+  `GameRepository.LoadSnapshotAsync` — các nơi khác dùng `snapshot.Players` giữ nguyên hành vi.
 - Test bắt buộc (xUnit):
   - RoomState của NGƯỜI CHƠI không chứa `AnsweredPlayerIds` ở mọi trạng thái (chống rò).
-  - `CorrectPlayerIds` đúng khi: có người không trả lời, trả lời sai, đã rời phòng.
+  - `CorrectPlayerIds` đúng khi: có người không trả lời, trả lời sai, đã rời phòng (Player còn
+    nguyên trong trận).
   - RoomState của chủ phòng kết nối lại giữa câu chứa đúng danh sách đã trả lời.
+  - `RoomState.Players` sắp ổn định theo `JoinedAt` rồi `Id` với snapshot lộn xộn, kể cả khi điểm
+    đổi.
 - Frontend chưa đụng (types sửa ở đợt dùng tới) → build + test hai phía vẫn xanh.
 
 ### Đợt 2 — Lưới lớp học (sảnh + trong câu, chưa có trạng thái)
@@ -119,25 +132,31 @@ trang; logic xếp bục tách hàm thuần `podiumSteps.ts` để Vitest không
 - Lưới CSS grid tự co giãn theo số người (xem research.md R1); desk = `Avatar` (component sẵn
   có, đã đi qua cache avatarRenderer) + tên cắt bằng ellipsis.
 - Mỗi desk bọc `React.memo` — 50 SVG chỉ render lại khi props desk đó đổi (R2).
-- Test jsdom: render đúng số desk, tên hiển thị, cập nhật khi players đổi.
+- Lưới hiển thị đúng thứ tự `players` nhận được, KHÔNG sắp theo điểm/leaderboard (FR-022);
+  `PLAYER_JOINED` nối cuối như reducer hiện tại; người rời (`online:false`) vẫn giữ bàn.
+- Test jsdom: render đúng số desk, tên hiển thị, giữ nguyên thứ tự đầu vào (kể cả khi điểm đổi),
+  người mới nối cuối, cập nhật khi players đổi.
 
 ### Đợt 3 — Giơ tay + huy hiệu ✓/✗
 
 - Sửa: `types/game.ts`, `gameReducer.ts` (+ test), `Classroom.tsx` (+ test), `LiveQuestion.tsx`,
   `index.css`.
-- Reducer: `ANSWER_PROGRESS` lưu `answeredPlayerIds`; bị BỎ QUA khi `currentQuestion.ended`
-  (R3 — sự kiện đến trễ); `QUESTION_ENDED` lưu `correctPlayerIds`; `QUESTION_STARTED` xóa cả
-  hai; `ROOM_STATE` nạp `answeredPlayerIds` (host reconnect, R4).
+- Reducer: `ANSWER_PROGRESS` GỘP HỢP vào `answeredPlayerIds` (R7: hai người nộp đồng thời mỗi
+  payload có thể thiếu người kia); bị BỎ QUA khi `currentQuestion.ended` (R3 — sự kiện đến trễ);
+  `QUESTION_ENDED` lưu `correctPlayerIds`; `QUESTION_STARTED` xóa cả hai; `ROOM_STATE` thay thế
+  `answeredPlayerIds` (host reconnect, R4).
 - Desk nhận trạng thái: thường / giơ tay / ✓ / ✗ (lớp phủ CSS, không đổi thuộc tính DiceBear).
-- Test reducer: thứ tự sự kiện trễ, reset khi sang câu, nạp từ RoomState. Test jsdom: đúng desk
-  giơ tay, ✓/✗ phủ đúng người (sai + không trả lời đều ✗).
+- Test reducer: {A} rồi {B} → {A,B}; {A,B} rồi {A} đến trễ → vẫn {A,B}; thứ tự sự kiện trễ sau
+  QUESTION_ENDED, reset khi sang câu, nạp từ RoomState. Test jsdom: đúng desk giơ tay, ✓/✗ phủ
+  đúng người (sai + không trả lời đều ✗).
 
 ### Đợt 4 — Bục vinh danh
 
 - Thêm: `podiumSteps.ts` (+ Vitest), `Podium.tsx` (+ jsdom). Sửa: `LiveFinished.tsx`,
   `PlayFinished.tsx`, `index.css`.
-- `podiumSteps(leaderboard)`: hàm thuần nhóm theo `rank`, lấy các bậc có người trong top 3 hạng;
-  test đồng hạng (hai rank 1 → không có bậc 2), 1 người, 2 người, rỗng.
+- `podiumSteps(leaderboard)`: hàm thuần lọc `rank <= 3` và sắp theo `rank` (rank bảng xếp hạng
+  luôn duy nhất → mỗi bậc một người); test cùng điểm nhưng rank khác → hai bậc khác nhau, 1 người,
+  2 người, rỗng.
 - Lộ dần 3→2→1 bằng CSS animation-delay; pháo giấy CSS thuần (R5).
 - Nguồn dữ liệu: `finalLeaderboard ?? leaderboard` (đã có sẵn ở cả hai màn, kể cả vào lại sau
   khi trận kết thúc — FR-018).
@@ -156,6 +175,9 @@ trang; logic xếp bục tách hàm thuần `podiumSteps.ts` để Vitest không
 |---|---|
 | Vẽ 50 SVG DiceBear chậm / re-render hàng loạt | Cache data-URI đã có sẵn trong `avatarRenderer.ts` (Map + MAX_CACHED) nên mỗi avatar chỉ dựng SVG một lần; thêm `React.memo` cho từng desk để đổi trạng thái 1 người không render lại 49 người. Đo bằng mắt ở quickstart với 50 người giả lập. |
 | `AnswerProgress` đến sau `QuestionEnded` | Chặn ở reducer: bỏ qua `ANSWER_PROGRESS` khi câu hiện tại `ended` (có test reducer riêng). |
-| Chủ phòng kết nối lại giữa câu | `RoomState` host mang `AnsweredPlayerIds` (đợt 1) → reducer nạp lại tay giơ. Reconnect trong 6 giây kết quả: không khôi phục ✓/✗ (Assumption trong spec — cần cố vấn xác nhận). |
+| Hai người nộp đồng thời (phòng chỉ khóa `FOR SHARE`): mỗi `AnswerProgress` thiếu người kia | Reducer gộp HỢP `answeredPlayerIds` trong cùng câu, không ghi đè (R7); test {A}+{B}→{A,B} và gói trễ {A} sau {A,B}. |
+| Chủ phòng kết nối lại giữa câu | `RoomState` host mang `AnsweredPlayerIds` (đợt 1) → reducer nạp lại tay giơ; `Players` sắp theo `JoinedAt` rồi `Id` nên bàn không đổi chỗ. Reconnect trong 6 giây kết quả: không khôi phục ✓/✗ — **đã chốt (cố vấn)**. |
+| Thứ tự `Players` không ổn định (Postgres không đảm bảo thứ tự khi không ORDER BY, đổi sau UPDATE điểm) | Sắp trong `BuildRoomState` theo `JoinedAt` rồi `Id`; unit test với snapshot lộn xộn, không cần Postgres; không sửa repository. |
+| Rank bục vs RankBonus lệch nhau với người cùng điểm | Bục dùng `rank` bảng xếp hạng (duy nhất); RankBonus kiểu 1-1-3 là hạn chế đã biết, UI không hiện hạng thưởng — không xử lý ở đây (spec Assumptions). |
 | Rò danh sách đã trả lời sang người chơi | Trường chỉ điền khi `IsHost`; test xUnit khẳng định payload người chơi null ở mọi trạng thái. |
 | `QuestionEnded` phát cả phòng mang `CorrectPlayerIds` | Chấp nhận theo quyết định 6b (câu đã kết thúc, đúng/sai không còn là bí mật). |

@@ -191,6 +191,56 @@
     background: transparent;
     border: 1px solid var(--color-raised);
   }
+
+  /*
+   * Lớp học (màn chủ phòng). Từ viewport 1152px trở lên (laptop 1366px và máy chiếu) .col = 1120px; trừ padding .card 2×22px
+   * → vùng chứa 1076px. Với gap 8px, auto-fill tạo ⌊(1076 + 8) / (min + 8)⌋ cột:
+   *   roomy  min 152px → 6 cột  (≤ 12 bàn: 2 hàng)
+   *   medium min 116px → 8 cột  (≤ 30 bàn: 4 hàng)
+   *   dense  min  96px → 10 cột (≤ 50 bàn: 5 hàng)
+   * Bậc chọn theo số người ở classroomDensity.ts; cột thừa ở hàng cuối để trống (1fr không kéo bàn giãn quá cỡ khi ít người).
+   */
+  .classroom {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(var(--desk-min), 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .classroom[data-density='roomy'] {
+    --desk-min: 152px;
+  }
+  .classroom[data-density='medium'] {
+    --desk-min: 116px;
+  }
+  .classroom[data-density='dense'] {
+    --desk-min: 96px;
+  }
+
+  .desk {
+    min-width: 0;
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: 6px;
+    padding: 10px 8px;
+    background: var(--color-ground);
+    border: 1px solid var(--color-rule);
+    border-radius: 14px;
+  }
+  .classroom[data-density='dense'] .desk {
+    gap: 4px;
+    padding: 8px 6px;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .desk-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .btn:focus-visible,

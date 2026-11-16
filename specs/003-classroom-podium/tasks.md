@@ -56,14 +56,14 @@ trong GameRepository.
 
 **Independent Test**: Sảnh chủ phòng hiện bàn học khi người vào; người rời giữ bàn; 50 người vừa màn 1366px (US3).
 
-- [ ] T016 [US3] Tạo frontend/src/components/Classroom.tsx: nhận `players` (kiểu của `state.players`, có `online`) + props trạng thái để trống cho đợt 3; render CSS grid `repeat(auto-fill, minmax(var(--desk-min), 1fr))` với bậc `--desk-min` theo số người (≤12 / ≤30 / ≤50 — research R1); mỗi desk = component `Avatar` sẵn có + tên cắt ellipsis; hiển thị ĐÚNG THỨ TỰ `players` nhận được, KHÔNG sắp theo điểm/leaderboard (FR-022); người `online:false` vẫn giữ bàn (không hiển thị online — ngoài phạm vi); desk bọc `React.memo` (R2); ≤150 dòng, tách file con nếu vượt
-- [ ] T017 [US3] Thêm class/token CSS cho lớp học vào frontend/src/index.css (`@layer components`, dùng token màu sẵn có — không hex mới, không gradient/bóng đổ)
-- [ ] T018 [US3] Dùng `Classroom` thay `PlayerList` trong frontend/src/pages/RoomLivePage/LiveLobby.tsx (PlayPage không đổi — FR-004; `PlayerList` giữ nguyên cho nơi khác đang dùng)
-- [ ] T019 [US1] Thêm `Classroom` vào frontend/src/pages/RoomLivePage/LiveQuestion.tsx (dưới khối câu hỏi; dòng "Đã trả lời x/y" giữ nguyên)
-- [ ] T020 [P] [US3] Test jsdom frontend/src/components/Classroom.test.tsx (`// @vitest-environment jsdom`): render đúng số desk + tên; GIỮ NGUYÊN thứ tự đầu vào dù điểm đảo ngược; người mới (cuối mảng) xuất hiện cuối; người `online:false` vẫn có desk; 50 players không ném lỗi
+- [x] T016 [US3] Tạo frontend/src/components/Classroom.tsx: nhận `players` (kiểu của `state.players`, có `online`) + props trạng thái để trống cho đợt 3; render CSS grid `repeat(auto-fill, minmax(var(--desk-min), 1fr))` với bậc `--desk-min` theo số người (≤12 / ≤30 / ≤50 — research R1); mỗi desk = component `Avatar` sẵn có + tên cắt ellipsis; hiển thị ĐÚNG THỨ TỰ `players` nhận được, KHÔNG sắp theo điểm/leaderboard (FR-022); người `online:false` vẫn giữ bàn (không hiển thị online — ngoài phạm vi); desk bọc `React.memo` (R2); ≤150 dòng, tách file con nếu vượt
+- [x] T017 [US3] Thêm class/token CSS cho lớp học vào frontend/src/index.css (`@layer components`, dùng token màu sẵn có — không hex mới, không gradient/bóng đổ)
+- [x] T018 [US3] Dùng `Classroom` thay `PlayerList` trong frontend/src/pages/RoomLivePage/LiveLobby.tsx (PlayPage không đổi — FR-004; `PlayerList` giữ nguyên cho nơi khác đang dùng)
+- [x] T019 [US1] Thêm `Classroom` vào frontend/src/pages/RoomLivePage/LiveQuestion.tsx (dưới khối câu hỏi; dòng "Đã trả lời x/y" giữ nguyên)
+- [x] T020 [P] [US3] Test jsdom frontend/src/components/Classroom.test.tsx (`// @vitest-environment jsdom`): render đúng số desk + tên; GIỮ NGUYÊN thứ tự đầu vào dù điểm đảo ngược; người mới (cuối mảng) xuất hiện cuối; người `online:false` vẫn có desk; 50 players không ném lỗi
 
 **Checkpoint Đợt 2**:
-- [ ] T021 Build + test hai phía xanh; soát nhanh sảnh theo quickstart Kịch bản 1 bước 2; commit `feat: lưới lớp học trên màn chủ phòng` + push
+- [x] T021 Build + test hai phía xanh; soát nhanh sảnh theo quickstart Kịch bản 1 bước 2; commit `feat: lưới lớp học trên màn chủ phòng` + push
 
 ---
 

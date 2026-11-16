@@ -1,4 +1,5 @@
 import { useReducer, useState } from 'react'
+import { Classroom } from '../../components/Classroom'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { canConfirm, confirmReducer, initialConfirmState } from '../../components/confirmReducer'
 import { Countdown } from '../../components/Countdown'
@@ -68,6 +69,8 @@ export function LiveQuestion({ state }: { state: GameState }) {
           Đã trả lời {progress?.answeredCount ?? 0}/{progress?.totalPlayers ?? state.players.length}
         </p>
       )}
+
+      <Classroom players={state.players} />
 
       {offline && <p className="error" role="alert">Mất kết nối, thử lại khi đã kết nối lại.</p>}
 

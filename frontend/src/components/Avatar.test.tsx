@@ -85,6 +85,18 @@ describe('Avatar', () => {
     expect(medium.container.querySelector('img')!.className).toContain('size-24') // 96 px
   })
 
+  it('TileSizes_ForClassroomDesks_48And64Px', () => {
+    vi.mocked(peekAvatarDataUri).mockReturnValue(URI)
+
+    const small = render(<Avatar avatar={TEST_AVATAR} size="tile-sm" />)
+    const smallClass = small.container.querySelector('img')!.className
+    small.unmount()
+    const medium = render(<Avatar avatar={TEST_AVATAR} size="tile-md" />)
+
+    expect(smallClass).toContain('size-12') // 48 px
+    expect(medium.container.querySelector('img')!.className).toContain('size-16') // 64 px
+  })
+
   it('ImageOnly_NoInlineSvgInjection', () => {
     vi.mocked(peekAvatarDataUri).mockReturnValue(URI)
 

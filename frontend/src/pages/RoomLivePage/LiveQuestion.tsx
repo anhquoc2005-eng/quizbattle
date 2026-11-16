@@ -70,8 +70,6 @@ export function LiveQuestion({ state }: { state: GameState }) {
         </p>
       )}
 
-      <Classroom players={state.players} />
-
       {offline && <p className="error" role="alert">Mất kết nối, thử lại khi đã kết nối lại.</p>}
 
       {!question.ended ? (
@@ -95,10 +93,6 @@ export function LiveQuestion({ state }: { state: GameState }) {
         </>
       ) : (
         <>
-          <div className="grid gap-3 border-t border-rule pt-4">
-            <h2>Bảng xếp hạng</h2>
-            <Leaderboard entries={state.leaderboard} />
-          </div>
           <button className="btn btn-primary justify-self-start" type="button" onClick={handleNext} disabled={pending}>
             {pending ? 'Đang chuyển…' : isLast ? 'Xem kết quả ngay' : 'Chuyển ngay'}
           </button>
@@ -110,6 +104,19 @@ export function LiveQuestion({ state }: { state: GameState }) {
             />
           )}
         </>
+      )}
+
+      {/* "Lớp" nằm dưới "bảng" (thẻ câu hỏi) và các nút điều khiển: 50 người không đẩy nút ra ngoài màn 1366×768. */}
+      <Classroom
+        players={state.players}
+        round={{ ended: question.ended, answeredPlayerIds: state.answeredPlayerIds, correctPlayerIds: state.correctPlayerIds }}
+      />
+
+      {question.ended && (
+        <div className="grid gap-3 border-t border-rule pt-4">
+          <h2>Bảng xếp hạng</h2>
+          <Leaderboard entries={state.leaderboard} />
+        </div>
       )}
     </section>
   )

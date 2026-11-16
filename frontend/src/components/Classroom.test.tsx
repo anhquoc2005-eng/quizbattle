@@ -76,6 +76,76 @@ describe('Classroom', () => {
     expect(name.textContent).toBe(longName)
   })
 
+  describe('trạng thái giơ tay và ✓/✗', () => {
+    const roster = [player('a', 'An'), player('b', 'Bình'), player('c', 'Chi')]
+    const statusOf = (container: HTMLElement) => Array.from(container.querySelectorAll('li.desk')).map((d) => d.getAttribute('data-status'))
+    const badges = (container: HTMLElement) => Array.from(container.querySelectorAll('.desk-badge')).map((b) => b.getAttribute('aria-label'))
+
+    it('NoRound_AllDesksIdleWithoutBadges', () => {
+      const { container } = render(<Classroom players={roster} />)
+
+      expect(statusOf(container)).toEqual(['idle', 'idle', 'idle'])
+      expect(badges(container)).toEqual([])
+    })
+
+    it('Running_OnlyAnsweredPlayersRaiseHand', () => {
+      const round = { ended: false, answeredPlayerIds: ['b'], correctPlayerIds: null }
+      const { container } = render(<Classroom players={roster} round={round} />)
+
+      expect(statusOf(container)).toEqual(['idle', 'raised', 'idle'])
+      expect(badges(container)).toEqual(['Đã trả lời'])
+    })
+
+    it('Ended_CorrectGetsTick_WrongAndNoAnswerGetCross', () => {
+      const round = { ended: true, answeredPlayerIds: [], correctPlayerIds: ['a'] } // b sai, c không trả lời
+      const { container } = render(<Classroom players={roster} round={round} />)
+
+      expect(statusOf(container)).toEqual(['correct', 'wrong', 'wrong'])
+      expect(badges(container)).toEqual(['Trả lời đúng', 'Trả lời sai hoặc không trả lời', 'Trả lời sai hoặc không trả lời'])
+    })
+
+    it('Ended_CorrectListUnknown_NoBadgesAtAll', () => {
+      const round = { ended: true, answeredPlayerIds: [], correctPlayerIds: null }
+      const { container } = render(<Classroom players={roster} round={round} />)
+
+      expect(statusOf(container)).toEqual(['idle', 'idle', 'idle'])
+      expect(badges(container)).toEqual([])
+    })
+
+    it('OfflinePlayerWhoAnsweredCorrectly_StillGetsTick', () => {
+      const players = [player('a', 'An', { online: false }), player('b', 'Bình')]
+      const { container } = render(<Classroom players={players} round={{ ended: true, answeredPlayerIds: [], correctPlayerIds: ['a'] }} />)
+
+      expect(statusOf(container)).toEqual(['correct', 'wrong'])
+    })
+
+    it('Badge_IsAnOverlay_AvatarImageAndSizeUnchanged', () => {
+      const idle = render(<Classroom players={[player('a', 'An')]} />)
+      const idleImg = idle.container.querySelector('img')!
+      const idleClass = idleImg.className
+      const idleSrc = idleImg.getAttribute('src')
+      idle.unmount()
+
+      const { container } = render(<Classroom players={[player('a', 'An')]} round={{ ended: true, answeredPlayerIds: [], correctPlayerIds: ['a'] }} />)
+
+      const img = container.querySelector('li.desk img')!
+      expect(img.className).toBe(idleClass) // không đổi cỡ/khung nhân vật
+      expect(img.getAttribute('src')).toBe(idleSrc) // không đổi ảnh DiceBear
+      expect(container.querySelector('.desk-badge')).not.toBeNull()
+      expect(container.querySelectorAll('li.desk img')).toHaveLength(1)
+    })
+
+    it('StatusChangeOfOnePlayer_RerendersOnlyThatDesk', () => {
+      const players = Array.from({ length: 6 }, (_, i) => player(`p${i}`, `Người ${i}`))
+      const { rerender } = render(<Classroom players={players} round={{ ended: false, answeredPlayerIds: [], correctPlayerIds: null }} />)
+      vi.mocked(peekAvatarDataUri).mockClear() // Avatar gọi peek đúng một lần mỗi lần vẽ
+
+      rerender(<Classroom players={players} round={{ ended: false, answeredPlayerIds: ['p3'], correctPlayerIds: null }} />)
+
+      expect(peekAvatarDataUri).toHaveBeenCalledTimes(1) // chỉ bàn p3; 5 bàn còn lại được memo giữ nguyên
+    })
+  })
+
   it.each([
     [1, 'roomy', 'size-24'],
     [12, 'roomy', 'size-24'],

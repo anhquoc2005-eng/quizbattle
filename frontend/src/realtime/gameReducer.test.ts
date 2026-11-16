@@ -19,6 +19,7 @@ function roomState(overrides: Partial<RoomState> = {}): RoomState {
     hasAnsweredCurrentQuestion: null,
     serverTime: new Date().toISOString(),
     rewards: null,
+    answeredPlayerIds: null,
     ...overrides,
   }
 }
@@ -166,7 +167,7 @@ describe('gameReducer', () => {
 
   it('QUESTION_ENDED lưu correctIndex cho đúng câu đang hiển thị', () => {
     const state = stateWithQuestion()
-    const payload: QuestionEnded = { questionId: 'q1', correctIndex: 2, answeredCount: 3, totalPlayers: 4, endedAt: ENDED_AT, nextQuestionAt: NEXT_AT }
+    const payload: QuestionEnded = { questionId: 'q1', correctIndex: 2, answeredCount: 3, totalPlayers: 4, endedAt: ENDED_AT, nextQuestionAt: NEXT_AT, correctPlayerIds: [] }
 
     const next = gameReducer(state, { type: 'QUESTION_ENDED', payload })
 
@@ -178,7 +179,7 @@ describe('gameReducer', () => {
 
   it('QUESTION_ENDED không ghi đè nếu questionId không khớp câu hiện tại (sự kiện đến muộn)', () => {
     const state = stateWithQuestion()
-    const payload: QuestionEnded = { questionId: 'câu-khác', correctIndex: 2, answeredCount: 3, totalPlayers: 4, endedAt: ENDED_AT, nextQuestionAt: NEXT_AT }
+    const payload: QuestionEnded = { questionId: 'câu-khác', correctIndex: 2, answeredCount: 3, totalPlayers: 4, endedAt: ENDED_AT, nextQuestionAt: NEXT_AT, correctPlayerIds: ['p1'] }
 
     const next = gameReducer(state, { type: 'QUESTION_ENDED', payload })
 
@@ -214,5 +215,113 @@ describe('gameReducer', () => {
     const next = gameReducer({ ...initialGameState, rewards: [REWARD] }, { type: 'ROOM_STATE', payload: roomState() })
 
     expect(next.rewards).toBeNull()
+  })
+})
+
+describe('gameReducer - lớp học (giơ tay, ✓/✗)', () => {
+  const progress = (ids: string[]) => ({
+    type: 'ANSWER_PROGRESS' as const,
+    payload: { answeredCount: ids.length, totalPlayers: 4, answeredPlayerIds: ids },
+  })
+  const ended = (overrides: Partial<QuestionEnded> = {}) => ({
+    type: 'QUESTION_ENDED' as const,
+    payload: { questionId: 'q1', correctIndex: 2, answeredCount: 2, totalPlayers: 4, endedAt: ENDED_AT, nextQuestionAt: NEXT_AT, correctPlayerIds: ['a'], ...overrides },
+  })
+
+  it('ANSWER_PROGRESS gộp hợp: {A} rồi {B} → {A,B} (hai người nộp đồng thời mỗi gói thiếu người kia)', () => {
+    const afterA = gameReducer(stateWithQuestion(), progress(['a']))
+    const afterB = gameReducer(afterA, progress(['b']))
+
+    expect(afterB.answeredPlayerIds).toEqual(['a', 'b'])
+  })
+
+  it('ANSWER_PROGRESS đến muộn: {A,B} rồi {A} → vẫn {A,B}, không ai hạ tay', () => {
+    const both = gameReducer(stateWithQuestion(), progress(['a', 'b']))
+
+    const next = gameReducer(both, progress(['a']))
+
+    expect(next.answeredPlayerIds).toEqual(['a', 'b'])
+    expect(next.answeredPlayerIds).toBe(both.answeredPlayerIds) // không ai mới → giữ nguyên tham chiếu
+  })
+
+  it('ANSWER_PROGRESS vẫn cập nhật số đếm hiển thị', () => {
+    const next = gameReducer(stateWithQuestion(), progress(['a', 'b']))
+
+    expect(next.answerProgress).toEqual({ answeredCount: 2, totalPlayers: 4 })
+  })
+
+  it('ANSWER_PROGRESS sau QUESTION_ENDED bị bỏ qua: màn không quay lại pha giơ tay', () => {
+    const afterEnd = gameReducer(gameReducer(stateWithQuestion(), progress(['a'])), ended())
+
+    const next = gameReducer(afterEnd, progress(['a', 'b', 'c']))
+
+    expect(next).toBe(afterEnd)
+    expect(next.answeredPlayerIds).toEqual(['a'])
+  })
+
+  it('ANSWER_PROGRESS khi chưa có câu hiện tại bị bỏ qua', () => {
+    const next = gameReducer(initialGameState, progress(['a']))
+
+    expect(next).toBe(initialGameState)
+  })
+
+  it('QUESTION_ENDED lưu correctPlayerIds cho đúng câu đang hiển thị', () => {
+    const next = gameReducer(stateWithQuestion(), ended({ correctPlayerIds: ['a', 'c'] }))
+
+    expect(next.correctPlayerIds).toEqual(['a', 'c'])
+  })
+
+  it('QUESTION_ENDED của câu khác (đến muộn) không ghi đè correctPlayerIds', () => {
+    const next = gameReducer(stateWithQuestion(), ended({ questionId: 'câu-khác', correctPlayerIds: ['a'] }))
+
+    expect(next.correctPlayerIds).toBeNull()
+  })
+
+  it('QUESTION_STARTED xóa người đã giơ tay và danh sách trả lời đúng của câu trước', () => {
+    const state = gameReducer(gameReducer(stateWithQuestion(), progress(['a', 'b'])), ended())
+    const payload: QuestionStarted = {
+      questionId: 'q2', index: 1, total: 3, text: 'Câu 2?', options: ['A', 'B', 'C', 'D'],
+      startedAt: new Date().toISOString(), deadline: new Date(Date.now() + 20_000).toISOString(), serverTime: new Date().toISOString(),
+    }
+
+    const next = gameReducer(state, { type: 'QUESTION_STARTED', payload })
+
+    expect(next.answeredPlayerIds).toEqual([])
+    expect(next.correctPlayerIds).toBeNull()
+  })
+
+  it('ROOM_STATE của chủ phòng vào lại giữa câu THAY THẾ danh sách đã trả lời (không gộp với bản cũ)', () => {
+    const stale: GameState = { ...stateWithQuestion(), answeredPlayerIds: ['cũ'], correctPlayerIds: ['cũ'] }
+
+    const next = gameReducer(stale, { type: 'ROOM_STATE', payload: roomState({ isHost: true, playerId: null, answeredPlayerIds: ['a', 'b'] }) })
+
+    expect(next.answeredPlayerIds).toEqual(['a', 'b'])
+    expect(next.correctPlayerIds).toBeNull()
+  })
+
+  it('ROOM_STATE không có danh sách (người chơi, hoặc câu đã kết thúc) → rỗng', () => {
+    const next = gameReducer({ ...stateWithQuestion(), answeredPlayerIds: ['cũ'] }, { type: 'ROOM_STATE', payload: roomState({ answeredPlayerIds: null }) })
+
+    expect(next.answeredPlayerIds).toEqual([])
+  })
+
+  it('GAME_ENDED xóa danh sách giơ tay và đúng sai', () => {
+    const state = gameReducer(gameReducer(stateWithQuestion(), progress(['a'])), ended())
+
+    const next = gameReducer(state, { type: 'GAME_ENDED', payload: { finalLeaderboard: [], rewards: [] } })
+
+    expect(next.answeredPlayerIds).toEqual([])
+    expect(next.correctPlayerIds).toBeNull()
+  })
+
+  it('PLAYER_JOINED nối cuối và PLAYER_LEFT giữ người đó tại chỗ (lưới không đổi chỗ)', () => {
+    const player = (playerId: string) => ({ playerId, displayName: playerId, score: 0, level: null, avatar: TEST_AVATAR, online: true })
+    const state: GameState = { ...initialGameState, players: [player('p1'), player('p2')] }
+
+    const joined = gameReducer(state, { type: 'PLAYER_JOINED', payload: { playerId: 'p3', displayName: 'p3', level: null, avatar: TEST_AVATAR } })
+    const left = gameReducer(joined, { type: 'PLAYER_LEFT', payload: { playerId: 'p1' } })
+
+    expect(left.players.map((p) => p.playerId)).toEqual(['p1', 'p2', 'p3'])
+    expect(left.players[0]?.online).toBe(false)
   })
 })

@@ -241,6 +241,85 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /*
+   * Trạng thái bàn (data-status trên .desk): raised = đã trả lời (nhấc nhân vật + huy hiệu bàn tay), correct / wrong = ✓ / ✗ sau
+   * khi câu kết thúc (nhún nhẹ một lần). Huy hiệu là lớp phủ ở góc nhân vật; KHÔNG đổi ảnh DiceBear. Màu theo token:
+   * trắng = đã trả lời, positive = đúng, negative = sai. Khối prefers-reduced-motion ở cuối file bỏ mọi chuyển động.
+   */
+  .desk-figure {
+    position: relative;
+    display: inline-grid;
+    transition: transform 0.18s ease;
+  }
+  .desk-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--color-ink);
+    color: var(--color-ground);
+    animation: desk-pop 0.2s ease-out;
+  }
+  .desk-badge svg {
+    width: 14px;
+    height: 14px;
+  }
+  .classroom[data-density='dense'] .desk-badge {
+    top: -5px;
+    right: -5px;
+    width: 18px;
+    height: 18px;
+  }
+  .classroom[data-density='dense'] .desk-badge svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .desk[data-status='raised'] {
+    border-color: var(--color-control);
+  }
+  .desk[data-status='raised'] .desk-figure {
+    transform: translateY(-4px);
+  }
+  .desk[data-status='correct'] {
+    border-color: var(--color-positive);
+  }
+  .desk[data-status='correct'] .desk-badge {
+    background: var(--color-positive);
+  }
+  .desk[data-status='wrong'] .desk-badge {
+    background: var(--color-negative);
+  }
+  .desk[data-status='correct'] .desk-figure,
+  .desk[data-status='wrong'] .desk-figure {
+    animation: desk-bounce 0.45s ease-out;
+  }
+}
+
+@keyframes desk-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes desk-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-7px);
+  }
 }
 
 .btn:focus-visible,
@@ -278,5 +357,14 @@ a:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .btn {
     transition: none;
+  }
+  /* Lớp học: trạng thái vẫn hiện đủ (huy hiệu, viền) nhưng không còn chuyển động nào. */
+  .desk-figure {
+    transition: none;
+  }
+  .desk-badge,
+  .desk[data-status='correct'] .desk-figure,
+  .desk[data-status='wrong'] .desk-figure {
+    animation: none;
   }
 }

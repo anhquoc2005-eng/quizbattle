@@ -10,7 +10,7 @@
 và push độc lập (commit nhỏ Conventional Commits trong đợt vẫn khuyến khích). Nhãn [US1/US2/US3]
 ánh xạ về user story trong spec.md để truy vết.
 
-**Tổng: 39 task đánh số T001–T039 + T010a (test tích hợp thêm vào Đợt 1) + T021a/T021b (sửa bố cục/tài liệu theo cố vấn 16/11, đầu Đợt 3); không đánh số lại / 5 đợt** (Đợt 1: T001–T015 kèm T010a, Đợt 2: T016–T021, Đợt 3: T021a–T021b + T022–T028, Đợt 4: T029–T035, Đợt 5: T036–T039).
+**Tổng: 39 task đánh số T001–T039 + T010a (test tích hợp thêm vào Đợt 1) + T021a/T021b (sửa bố cục/tài liệu theo cố vấn 16/11, đầu Đợt 3) + T028a/T028b (huy hiệu to hơn, số đếm không giảm; đầu Đợt 4); không đánh số lại / 5 đợt** (Đợt 1: T001–T015 kèm T010a, Đợt 2: T016–T021, Đợt 3: T021a–T021b + T022–T028, Đợt 4: T028a–T028b + T029–T035, Đợt 5: T036–T039).
 
 ## Format: `[ID] [P?] [Story] Mô tả + đường dẫn file`
 
@@ -93,15 +93,17 @@ trong GameRepository.
 
 **Independent Test**: Quickstart Kịch bản 3 (4 bước).
 
-- [ ] T029 [P] [US2] Tạo frontend/src/components/podiumSteps.ts: hàm thuần `podiumSteps(entries: LeaderboardEntry[])` → `{ rank, entry }[]`: lọc `rank <= 3`, sắp tăng dần theo `rank`; mỗi bậc đúng MỘT người vì `rank` bảng xếp hạng luôn duy nhất (GameService.cs:383-385); không nhóm, không tính lại hạng, không gọi mạng/DOM (data-model.md)
-- [ ] T030 [P] [US2] Test Vitest frontend/src/components/podiumSteps.test.ts: ≥5 người → đúng 3 bậc rank 1/2/3 theo thứ tự; hai người CÙNG ĐIỂM nhưng rank 1 và 2 → hai bậc khác nhau đúng thứ tự rank; đầu vào sắp lộn xộn → vẫn ra 1,2,3; 1 người → 1 bậc; 2 người → 2 bậc; rỗng → []
-- [ ] T031 [US2] Tạo frontend/src/components/Podium.tsx: nhận `entries`, dựng bậc từ `podiumSteps`, mỗi bậc hiện nhân vật (`Avatar`) + tên + điểm; lộ dần 3→2→1 bằng animation-delay CSS; pháo giấy span thuần CSS (R5); ≤150 dòng
-- [ ] T032 [US2] Thêm keyframes lộ dần + pháo giấy vào frontend/src/index.css (màu từ token; accent chỉ trên dữ liệu)
-- [ ] T033 [US2] Thêm `Podium` (nguồn `finalLeaderboard ?? leaderboard`) vào frontend/src/pages/RoomLivePage/LiveFinished.tsx và frontend/src/pages/PlayPage/PlayFinished.tsx; RewardSummary + Leaderboard + nút điều hướng giữ nguyên (FR-018, FR-019)
-- [ ] T034 [P] [US2] Test jsdom frontend/src/components/Podium.test.tsx: ≥3 người hiện 3 bậc đúng người đúng hạng; 2 người → 2 bậc không bậc trống; hai người cùng điểm khác rank → hai bậc khác nhau
+- [x] T028a [US1] Huy hiệu to hơn để nhìn được trên máy chiếu (theo cố vấn, sau khi xem Đợt 3): frontend/src/index.css — chip 28px (roomy) / 24px (medium) / 20px (dense), biểu tượng bên trong phóng theo; bàn `raised` đổi viền sang `border-color: var(--color-ink)` (viền sáng như bàn ✓ có viền xanh)
+- [x] T028b [US1] frontend/src/realtime/gameReducer.ts `ANSWER_PROGRESS`: `answerProgress.answeredCount = max(số cũ của cùng câu, payload.answeredCount, answeredPlayerIds.length sau gộp)` để "Đã trả lời x/y" không thấp hơn số tay đang giơ (gói đến muộn / server đếm thiếu khi nộp đồng thời); `ROOM_STATE` của chủ phòng vào lại giữa câu đặt `answerProgress = { answeredCount: số người trong danh sách, totalPlayers: số người chơi }` (không hiện "0/…" khi đã có bàn giơ tay); test reducer tương ứng trong gameReducer.test.ts
+- [x] T029 [P] [US2] Tạo frontend/src/components/podiumSteps.ts: hàm thuần `podiumSteps(entries: LeaderboardEntry[])` → `{ rank, entry }[]`: lọc `rank <= 3`, sắp tăng dần theo `rank`; mỗi bậc đúng MỘT người vì `rank` bảng xếp hạng luôn duy nhất (GameService.cs:383-385); không nhóm, không tính lại hạng, không gọi mạng/DOM (data-model.md)
+- [x] T030 [P] [US2] Test Vitest frontend/src/components/podiumSteps.test.ts: ≥5 người → đúng 3 bậc rank 1/2/3 theo thứ tự; hai người CÙNG ĐIỂM nhưng rank 1 và 2 → hai bậc khác nhau đúng thứ tự rank; đầu vào sắp lộn xộn → vẫn ra 1,2,3; 1 người → 1 bậc; 2 người → 2 bậc; rỗng → []
+- [x] T031 [US2] Tạo frontend/src/components/Podium.tsx: nhận `entries`, dựng bậc từ `podiumSteps`, mỗi bậc hiện nhân vật (`Avatar`) + tên + điểm; lộ dần 3→2→1 bằng animation-delay CSS; pháo giấy span thuần CSS (R5); ≤150 dòng
+- [x] T032 [US2] Thêm keyframes lộ dần + pháo giấy vào frontend/src/index.css (màu từ token; accent chỉ trên dữ liệu)
+- [x] T033 [US2] Thêm `Podium` (nguồn `finalLeaderboard ?? leaderboard`) vào frontend/src/pages/RoomLivePage/LiveFinished.tsx và frontend/src/pages/PlayPage/PlayFinished.tsx; RewardSummary + Leaderboard + nút điều hướng giữ nguyên (FR-018, FR-019)
+- [x] T034 [P] [US2] Test jsdom frontend/src/components/Podium.test.tsx: ≥3 người hiện 3 bậc đúng người đúng hạng; 2 người → 2 bậc không bậc trống; hai người cùng điểm khác rank → hai bậc khác nhau
 
 **Checkpoint Đợt 4**:
-- [ ] T035 Build + test hai phía xanh; soát tay quickstart Kịch bản 3; commit `feat: bục vinh danh cuối trận` + push
+- [x] T035 Build + test hai phía xanh; soát tay quickstart Kịch bản 3; commit `feat: bục vinh danh cuối trận` + push
 
 ---
 

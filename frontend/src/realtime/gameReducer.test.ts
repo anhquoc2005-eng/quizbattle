@@ -250,6 +250,53 @@ describe('gameReducer - lớp học (giơ tay, ✓/✗)', () => {
     expect(next.answerProgress).toEqual({ answeredCount: 2, totalPlayers: 4 })
   })
 
+  it('Số đếm không giảm khi gói đến muộn: {A,B,C} (3) rồi {A} (1) → vẫn 3', () => {
+    const three = gameReducer(stateWithQuestion(), progress(['a', 'b', 'c']))
+
+    const next = gameReducer(three, { type: 'ANSWER_PROGRESS', payload: { answeredCount: 1, totalPlayers: 4, answeredPlayerIds: ['a'] } })
+
+    expect(next.answerProgress?.answeredCount).toBe(3)
+  })
+
+  it('Số đếm không thấp hơn số tay đang giơ khi server đếm thiếu (hai người nộp đồng thời)', () => {
+    const afterA = gameReducer(stateWithQuestion(), { type: 'ANSWER_PROGRESS', payload: { answeredCount: 1, totalPlayers: 4, answeredPlayerIds: ['a'] } })
+
+    const afterB = gameReducer(afterA, { type: 'ANSWER_PROGRESS', payload: { answeredCount: 1, totalPlayers: 4, answeredPlayerIds: ['b'] } }) // server đếm 1 dù đã có 2
+
+    expect(afterB.answeredPlayerIds).toEqual(['a', 'b'])
+    expect(afterB.answerProgress?.answeredCount).toBe(2)
+  })
+
+  it('Số đếm của câu trước không rò sang câu mới', () => {
+    const q1 = gameReducer(stateWithQuestion(), progress(['a', 'b', 'c']))
+    const payload: QuestionStarted = {
+      questionId: 'q2', index: 1, total: 3, text: 'Câu 2?', options: ['A', 'B', 'C', 'D'],
+      startedAt: new Date().toISOString(), deadline: new Date(Date.now() + 20_000).toISOString(), serverTime: new Date().toISOString(),
+    }
+
+    const q2 = gameReducer(gameReducer(q1, { type: 'QUESTION_STARTED', payload }), progress(['a']))
+
+    expect(q2.answerProgress?.answeredCount).toBe(1)
+  })
+
+  it('ROOM_STATE của chủ phòng vào lại giữa câu: số đếm khớp số tay giơ, không hiện 0', () => {
+    const next = gameReducer(initialGameState, {
+      type: 'ROOM_STATE',
+      payload: roomState({
+        isHost: true, playerId: null, answeredPlayerIds: ['a', 'b'],
+        players: [{ playerId: 'a', displayName: 'A', score: 0, level: null, avatar: TEST_AVATAR }, { playerId: 'b', displayName: 'B', score: 0, level: null, avatar: TEST_AVATAR }, { playerId: 'c', displayName: 'C', score: 0, level: null, avatar: TEST_AVATAR }],
+      }),
+    })
+
+    expect(next.answerProgress).toEqual({ answeredCount: 2, totalPlayers: 3 })
+  })
+
+  it('ROOM_STATE của người chơi (không có danh sách) → answerProgress null', () => {
+    const next = gameReducer(initialGameState, { type: 'ROOM_STATE', payload: roomState({ answeredPlayerIds: null }) })
+
+    expect(next.answerProgress).toBeNull()
+  })
+
   it('ANSWER_PROGRESS sau QUESTION_ENDED bị bỏ qua: màn không quay lại pha giơ tay', () => {
     const afterEnd = gameReducer(gameReducer(stateWithQuestion(), progress(['a'])), ended())
 

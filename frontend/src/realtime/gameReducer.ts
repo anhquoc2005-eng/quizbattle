@@ -103,7 +103,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         leaderboard: s.leaderboard,
         isHost: s.isHost,
         playerId: s.playerId,
-        answerProgress: null,
+        // Chủ phòng vào lại giữa câu: số đếm khớp số tay giơ (không hiện "0/…" khi đã có bàn giơ tay); người chơi / câu đã xong: null.
+        answerProgress: s.answeredPlayerIds ? { answeredCount: s.answeredPlayerIds.length, totalPlayers: s.players.length } : null,
         answeredPlayerIds: s.answeredPlayerIds ?? [], // RoomState là nguồn đầy đủ khi vào lại: thay thế, không gộp
         correctPlayerIds: null,
         finalLeaderboard: s.status === 'Finished' ? s.leaderboard : null,
@@ -182,7 +183,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       // muộn ({A} sau {A,B}) không được làm ai hạ tay xuống. Giữ nguyên tham chiếu nếu không có ai mới.
       const merged = [...new Set([...state.answeredPlayerIds, ...action.payload.answeredPlayerIds])]
       const answeredPlayerIds = merged.length === state.answeredPlayerIds.length ? state.answeredPlayerIds : merged
-      return { ...state, answerProgress: { answeredCount: action.payload.answeredCount, totalPlayers: action.payload.totalPlayers }, answeredPlayerIds }
+      // Số đếm không bao giờ thấp hơn số cũ của cùng câu (answerProgress reset mỗi câu) hay số tay đang giơ: gói đến muộn, hoặc
+      // server đếm thiếu khi hai người nộp đồng thời, không được làm "Đã trả lời x/y" nhỏ hơn số bàn đang giơ tay.
+      const answeredCount = Math.max(state.answerProgress?.answeredCount ?? 0, action.payload.answeredCount, answeredPlayerIds.length)
+      return { ...state, answerProgress: { answeredCount, totalPlayers: action.payload.totalPlayers }, answeredPlayerIds }
     }
 
     case 'GAME_ENDED':

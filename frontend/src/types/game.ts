@@ -51,6 +51,8 @@ export interface RoomState {
   serverTime: string
   /** Có giá trị khi status = Finished (thưởng đã lưu), null ở trạng thái khác. */
   rewards: PlayerReward[] | null
+  /** Người đã trả lời câu hiện tại - CHỈ chủ phòng nhận, khi InProgress và câu chưa kết thúc; người chơi luôn là null. */
+  answeredPlayerIds: string[] | null
 }
 
 /** Khớp QuestionStartedDto - KHÔNG có correctIndex. */
@@ -73,6 +75,8 @@ export interface QuestionEnded {
   totalPlayers: number
   endedAt: string
   nextQuestionAt: string
+  /** Người trả lời đúng câu này (gửi cả phòng, vì câu đã kết thúc). Người rời phòng/rớt mạng vẫn có mặt nếu đã trả lời đúng. */
+  correctPlayerIds: string[]
 }
 
 /** Khớp LeaderboardUpdatedDto. */
@@ -123,6 +127,11 @@ export interface PlayerLeft {
 export interface AnswerProgress {
   answeredCount: number
   totalPlayers: number
+  /**
+   * Người đã trả lời câu hiện tại. Hai người nộp đồng thời có thể mỗi gói thiếu người kia, nên KHÔNG đồng nhất với answeredCount
+   * và client phải GỘP HỢP các gói trong cùng một câu (xem gameReducer), không ghi đè.
+   */
+  answeredPlayerIds: string[]
 }
 
 /** Khớp AnswerAckDto - kết quả invoke('SubmitAnswer', ...), null khi bị từ chối (xem sự kiện Error). */

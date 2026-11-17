@@ -1,0 +1,140 @@
+# Tasks: Màn chơi kiểu lớp học + bục vinh danh
+
+**Input**: Design documents from `/specs/003-classroom-podium/`
+
+**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/signalr-payloads.md, quickstart.md
+
+**Tests**: Có — danh sách test bắt buộc do cố vấn yêu cầu (spec SC-002/005/006/007, plan, quickstart).
+
+**Organization**: Theo 5 ĐỢT trong plan.md. Mỗi đợt kết thúc bằng checkpoint build + test xanh
+và push độc lập (commit nhỏ Conventional Commits trong đợt vẫn khuyến khích). Nhãn [US1/US2/US3]
+ánh xạ về user story trong spec.md để truy vết.
+
+**Tổng: 39 task đánh số T001–T039 + T010a (test tích hợp thêm vào Đợt 1) + T021a/T021b (sửa bố cục/tài liệu theo cố vấn 16/11, đầu Đợt 3) + T028a/T028b (huy hiệu to hơn, số đếm không giảm; đầu Đợt 4) + T035a (khoảng cách chân bục); không đánh số lại / 5 đợt** (Đợt 1: T001–T015 kèm T010a, Đợt 2: T016–T021, Đợt 3: T021a–T021b + T022–T028, Đợt 4: T028a–T028b + T029–T035, Đợt 5: T035a + T036–T039).
+
+## Format: `[ID] [P?] [Story] Mô tả + đường dẫn file`
+
+- **[P]**: chạy song song được (khác file, không phụ thuộc task chưa xong)
+- **[Story]**: US1 = lớp học khi đang chơi, US2 = bục vinh danh, US3 = sảnh lớp học
+
+## Path Conventions
+
+Web app theo plan.md: `backend/QuizBattle.*`, `frontend/src/`.
+
+---
+
+## Đợt 1: Backend DTO + test (Foundational — chặn mọi đợt sau)
+
+**Purpose**: Mở rộng 3 payload theo contracts/signalr-payloads.md, đổi nguồn dữ liệu đường
+SubmitAnswer và ổn định thứ tự `Players`. Không migration, không sự kiện mới, KHÔNG sửa ORDER BY
+trong GameRepository.
+
+- [x] T001 [P] Thêm `IReadOnlyList<Guid> AnsweredPlayerIds` vào record `AnswerProgressDto` trong backend/QuizBattle.Application/Game/AnswerProgressDto.cs (giữ XML doc "chỉ gửi nhóm {code}:host"; ghi thêm: có thể thiếu người nộp đồng thời, client gộp hợp — R7)
+- [x] T002 [P] Thêm `IReadOnlyList<Guid> CorrectPlayerIds` vào record `QuestionEndedDto` trong backend/QuizBattle.Application/Game/QuestionEndedDto.cs
+- [x] T003 [P] Thêm `IReadOnlyList<Guid>? AnsweredPlayerIds` vào record `RoomStateDto` trong backend/QuizBattle.Application/Game/RoomStateDto.cs, kèm comment: chỉ điền cho host khi InProgress và câu hiện tại chưa ended; null cho người chơi ở MỌI trạng thái
+- [x] T004 [P] Trong backend/QuizBattle.Application/Game/SubmitAnswerSnapshot.cs thay `int AnsweredCountForCurrentQuestion` bằng `IReadOnlyList<Guid> AnsweredPlayerIds` (PlayerId các answer của câu hiện tại; số đếm = `.Count`); không đụng `GameSnapshot.AnsweredCountForCurrentQuestion` (class khác, đã có `Answers`)
+- [x] T005 Trong backend/QuizBattle.Infrastructure/Persistence/GameRepository.cs `SubmitAnswerAsync` (~dòng 139) thay `CountAsync` bằng MỘT truy vấn `Select(a => a.PlayerId).ToListAsync` cho câu hiện tại (rỗng nếu `question` null), gán vào `SubmitAnswerSnapshot.AnsweredPlayerIds` (phụ thuộc T004); KHÔNG sửa `LoadSnapshotAsync`/ORDER BY
+- [x] T006 Trong backend/QuizBattle.Application/Game/GameService.cs `SubmitAnswerAsync` (~dòng 275) dựng `AnswerProgressDto`: `AnsweredPlayerIds` = `snapshot.AnsweredPlayerIds` + `playerId` vừa nộp, `AnsweredCount` = `snapshot.AnsweredPlayerIds.Count + 1` (giá trị y như trước) (phụ thuộc T001, T004)
+- [x] T007 Trong backend/QuizBattle.Application/Game/GameService.cs `EndCurrentQuestion` (~dòng 279) điền `CorrectPlayerIds` = `PlayerId` của `snapshot.Answers` thuộc câu đang kết thúc có `IsCorrect` (người rời phòng/rớt mạng vẫn nằm trong snapshot nên vẫn có mặt) (phụ thuộc T002)
+- [x] T008 Trong backend/QuizBattle.Application/Game/GameService.cs `BuildRoomState` (~dòng 353) điền `RoomStateDto.AnsweredPlayerIds` từ `snapshot.Answers`: danh sách khi `isHost` && `Status == InProgress` && câu hiện tại chưa ended; mọi trường hợp khác `null` (phụ thuộc T003)
+- [x] T009 Trong backend/QuizBattle.Application/Game/GameService.cs `BuildRoomState` (dòng ~357) sắp `snapshot.Players` theo `JoinedAt` rồi `Id` trước khi map sang `PlayerSummaryDto` (OrderBy(JoinedAt).ThenBy(Id)); đây là chỗ DUY NHẤT dựng RoomState; không đổi `BuildLeaderboard`
+- [x] T010 Sửa các chỗ dựng DTO/snapshot trong test cho build xanh: backend/QuizBattle.Tests/TestHelpers/FakeGameRepository.cs (~dòng 96, dựng `SubmitAnswerSnapshot` bằng list PlayerId từ `Answers` của câu hiện tại) và mọi `new AnswerProgressDto(`/`new QuestionEndedDto(`/`new RoomStateDto(` trong backend/QuizBattle.Tests/ (phụ thuộc T001–T004)
+- [x] T010a [P] Test tích hợp Postgres thật backend/QuizBattle.Tests/Integration/SubmitAnswerSnapshotTests.cs (`[RequiresDatabaseFact]`, `DatabaseFixture`, theo mẫu GameAvatarsQueryTests): gọi `GameRepository.SubmitAnswerAsync` thật, chụp `snapshot.AnsweredPlayerIds` rồi ném lỗi trong `work` để rollback; 2 ca — câu hiện tại có answer của A và B, câu TRƯỚC có answer của C → danh sách = {A, B} (không có C); câu hiện tại chưa ai trả lời (câu trước có C) → rỗng. Lý do: T011–T014 chạy qua `FakeGameRepository` nên không kiểm được truy vấn thật của T005
+- [x] T011 [P] Test xUnit chống rò trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: RoomState trả cho NGƯỜI CHƠI có `AnsweredPlayerIds == null` ở Lobby / InProgress (đã có người trả lời) / Finished
+- [x] T012 [P] Test xUnit `CorrectPlayerIds` trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: 3 ca — có người không trả lời (vắng mặt), trả lời sai (vắng mặt), người trả lời đúng rồi RỜI PHÒNG/rớt mạng trước khi câu kết thúc (Player không bị xóa → vẫn có mặt trong `CorrectPlayerIds`)
+- [x] T013 [P] Test xUnit host reconnect trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: giữa câu có A đã trả lời, RoomState trả cho HOST chứa đúng {A}; câu đã ended → null; `AnswerProgress` sau mỗi lần `SubmitAnswerAsync` chứa danh sách tăng dần gồm cả người vừa nộp
+- [x] T014 [P] Test xUnit thứ tự ổn định trong backend/QuizBattle.Tests/Game/GameServiceTests.cs: snapshot có `Players` lộn xộn (JoinedAt không tăng dần, có hai người cùng `JoinedAt` khác `Id`, điểm khác nhau) → `RoomState.Players` luôn theo `JoinedAt` rồi `Id`, giống nhau cho host và người chơi, không đổi khi điểm đổi
+
+**Checkpoint Đợt 1**:
+- [x] T015 `dotnet build` + `dotnet test` xanh (backend); `npm run build` + `npm test` xanh (frontend — chưa đụng); commit `feat: thêm AnsweredPlayerIds/CorrectPlayerIds vào payload game và ổn định thứ tự người chơi` + push
+
+---
+
+## Đợt 2: Lưới lớp học (US3 sảnh + nền cho US1)
+
+**Purpose**: Lưới bàn học hiển thị ở cả ba màn chủ phòng, chưa có trạng thái giơ tay/✓✗.
+
+**Independent Test**: Sảnh chủ phòng hiện bàn học khi người vào; người rời giữ bàn; 50 người vừa màn 1366px (US3).
+
+- [x] T016 [US3] Tạo frontend/src/components/Classroom.tsx: nhận `players` (kiểu của `state.players`, có `online`) + props trạng thái để trống cho đợt 3; render CSS grid `repeat(auto-fill, minmax(var(--desk-min), 1fr))` với bậc `--desk-min` theo số người (≤12 / ≤30 / ≤50 — research R1); mỗi desk = component `Avatar` sẵn có + tên cắt ellipsis; hiển thị ĐÚNG THỨ TỰ `players` nhận được, KHÔNG sắp theo điểm/leaderboard (FR-022); người `online:false` vẫn giữ bàn (không hiển thị online — ngoài phạm vi); desk bọc `React.memo` (R2); ≤150 dòng, tách file con nếu vượt
+- [x] T017 [US3] Thêm class/token CSS cho lớp học vào frontend/src/index.css (`@layer components`, dùng token màu sẵn có — không hex mới, không gradient/bóng đổ)
+- [x] T018 [US3] Dùng `Classroom` thay `PlayerList` trong frontend/src/pages/RoomLivePage/LiveLobby.tsx (PlayPage không đổi — FR-004; `PlayerList` giữ nguyên cho nơi khác đang dùng)
+- [x] T019 [US1] Thêm `Classroom` vào frontend/src/pages/RoomLivePage/LiveQuestion.tsx (dưới khối câu hỏi; dòng "Đã trả lời x/y" giữ nguyên)
+- [x] T020 [P] [US3] Test jsdom frontend/src/components/Classroom.test.tsx (`// @vitest-environment jsdom`): render đúng số desk + tên; GIỮ NGUYÊN thứ tự đầu vào dù điểm đảo ngược; người mới (cuối mảng) xuất hiện cuối; người `online:false` vẫn có desk; 50 players không ném lỗi
+
+**Checkpoint Đợt 2**:
+- [x] T021 Build + test hai phía xanh; soát nhanh sảnh theo quickstart Kịch bản 1 bước 2; commit `feat: lưới lớp học trên màn chủ phòng` + push
+
+---
+
+## Đợt 3: Giơ tay + huy hiệu ✓/✗ (US1)
+
+**Purpose**: Desk phản ánh trạng thái server: giơ tay khi đã trả lời, ✓/✗ khi câu kết thúc.
+
+**Independent Test**: Quickstart Kịch bản 1 (bước 3-6) + Kịch bản 2.
+
+- [x] T021a [US1] Sửa bố cục frontend/src/pages/RoomLivePage/LiveQuestion.tsx (theo cố vấn 16/11, vì 50 người đẩy nút ra ngoài màn 1366×768): đang chạy → câu hỏi, đếm ngược, đáp án, dòng "Đã trả lời x/y", nút "Kết thúc sớm" (+ ConfirmDialog), rồi `Classroom` ở CUỐI thẻ; câu đã kết thúc → đáp án, nút "Chuyển ngay" + đếm ngược câu tiếp, rồi `Classroom` (có ✓/✗), rồi "Bảng xếp hạng" cuối cùng (để lưới ✓/✗ không bị bảng xếp hạng 50 dòng đẩy xuống)
+- [x] T021b [US1] Sửa quyết định 2 trong specs/003-classroom-podium/spec.md (và Summary trong plan.md): bỏ hình chủ phòng/giáo viên, thẻ câu hỏi là "bảng", lưới bên dưới là "lớp"; ghi "sửa theo cố vấn 16/11"
+- [x] T022 [US1] Khớp types trong frontend/src/types/game.ts: `AnswerProgress.answeredPlayerIds: string[]`, `QuestionEnded.correctPlayerIds: string[]`, `RoomState.answeredPlayerIds: string[] | null` (đúng data-model.md); cập nhật chú thích `AnswerProgress`: danh sách có thể thiếu người nộp đồng thời
+- [x] T023 [US1] Sửa frontend/src/realtime/gameReducer.ts: thêm `answeredPlayerIds: string[]` và `correctPlayerIds: string[] | null` vào GameState; `ANSWER_PROGRESS` GỘP HỢP (union, chỉ thêm, không ghi đè) vào `answeredPlayerIds` hiện có của cùng câu và BỎ QUA khi `currentQuestion?.ended` (R3, R7); `QUESTION_ENDED` ghi `correctPlayerIds`; `QUESTION_STARTED` reset `answeredPlayerIds = []`, `correctPlayerIds = null`; `ROOM_STATE` THAY THẾ `answeredPlayerIds` bằng `payload ?? []` và reset `correctPlayerIds`; `GAME_ENDED` reset; `PLAYER_JOINED`/`PLAYER_LEFT` giữ nguyên hành vi (nối cuối / `online:false`)
+- [x] T024 [US1] Truyền trạng thái vào `Classroom` trong frontend/src/pages/RoomLivePage/LiveQuestion.tsx và frontend/src/components/Classroom.tsx: desk "giơ tay" khi id ∈ answeredPlayerIds và câu chưa ended; khi ended: ✓ nếu id ∈ correctPlayerIds, ✗ nếu không (correctPlayerIds null → desk thường — data-model.md); huy hiệu là LỚP PHỦ, không đổi props Avatar/DiceBear (FR-011)
+- [x] T025 [US1] Thêm keyframes giơ tay + nhún nhẹ + huy hiệu vào frontend/src/index.css (dùng text-positive/text-negative; không emoji — vẽ ✓/✗ bằng SVG/ký tự trong CSS content theo hệ thiết kế)
+- [x] T026 [P] [US1] Test reducer trong frontend/src/realtime/gameReducer.test.ts: {A} rồi {B} → {A,B}; {A,B} rồi {A} (đến trễ) → vẫn {A,B}; ANSWER_PROGRESS sau QUESTION_ENDED bị bỏ qua; QUESTION_STARTED xóa answered/correct; ROOM_STATE thay thế answeredPlayerIds (host) và ra [] khi null; QUESTION_ENDED ghi correctPlayerIds; PLAYER_JOINED nối cuối và PLAYER_LEFT giữ người đó (online:false) cùng thứ tự
+- [x] T027 [P] [US1] Mở rộng frontend/src/components/Classroom.test.tsx: đúng desk giơ tay; khi ended thì người đúng có ✓, người sai VÀ người không trả lời có ✗; correctPlayerIds null → không huy hiệu; người `online:false` đã trả lời đúng vẫn có ✓
+
+**Checkpoint Đợt 3**:
+- [x] T028 Build + test hai phía xanh; soát tay quickstart Kịch bản 1 + 2; commit `feat: giơ tay và huy hiệu đúng sai trên lưới lớp học` + push
+
+---
+
+## Đợt 4: Bục vinh danh (US2)
+
+**Purpose**: Top 3 lộ dần 3→2→1 + pháo giấy CSS trên cả hai màn Finished.
+
+**Independent Test**: Quickstart Kịch bản 3 (4 bước).
+
+- [x] T028a [US1] Huy hiệu to hơn để nhìn được trên máy chiếu (theo cố vấn, sau khi xem Đợt 3): frontend/src/index.css — chip 28px (roomy) / 24px (medium) / 20px (dense), biểu tượng bên trong phóng theo; bàn `raised` đổi viền sang `border-color: var(--color-ink)` (viền sáng như bàn ✓ có viền xanh)
+- [x] T028b [US1] frontend/src/realtime/gameReducer.ts `ANSWER_PROGRESS`: `answerProgress.answeredCount = max(số cũ của cùng câu, payload.answeredCount, answeredPlayerIds.length sau gộp)` để "Đã trả lời x/y" không thấp hơn số tay đang giơ (gói đến muộn / server đếm thiếu khi nộp đồng thời); `ROOM_STATE` của chủ phòng vào lại giữa câu đặt `answerProgress = { answeredCount: số người trong danh sách, totalPlayers: số người chơi }` (không hiện "0/…" khi đã có bàn giơ tay); test reducer tương ứng trong gameReducer.test.ts
+- [x] T029 [P] [US2] Tạo frontend/src/components/podiumSteps.ts: hàm thuần `podiumSteps(entries: LeaderboardEntry[])` → `{ rank, entry }[]`: lọc `rank <= 3`, sắp tăng dần theo `rank`; mỗi bậc đúng MỘT người vì `rank` bảng xếp hạng luôn duy nhất (GameService.cs:383-385); không nhóm, không tính lại hạng, không gọi mạng/DOM (data-model.md)
+- [x] T030 [P] [US2] Test Vitest frontend/src/components/podiumSteps.test.ts: ≥5 người → đúng 3 bậc rank 1/2/3 theo thứ tự; hai người CÙNG ĐIỂM nhưng rank 1 và 2 → hai bậc khác nhau đúng thứ tự rank; đầu vào sắp lộn xộn → vẫn ra 1,2,3; 1 người → 1 bậc; 2 người → 2 bậc; rỗng → []
+- [x] T031 [US2] Tạo frontend/src/components/Podium.tsx: nhận `entries`, dựng bậc từ `podiumSteps`, mỗi bậc hiện nhân vật (`Avatar`) + tên + điểm; lộ dần 3→2→1 bằng animation-delay CSS; pháo giấy span thuần CSS (R5); ≤150 dòng
+- [x] T032 [US2] Thêm keyframes lộ dần + pháo giấy vào frontend/src/index.css (màu từ token; accent chỉ trên dữ liệu)
+- [x] T033 [US2] Thêm `Podium` (nguồn `finalLeaderboard ?? leaderboard`) vào frontend/src/pages/RoomLivePage/LiveFinished.tsx và frontend/src/pages/PlayPage/PlayFinished.tsx; RewardSummary + Leaderboard + nút điều hướng giữ nguyên (FR-018, FR-019)
+- [x] T034 [P] [US2] Test jsdom frontend/src/components/Podium.test.tsx: ≥3 người hiện 3 bậc đúng người đúng hạng; 2 người → 2 bậc không bậc trống; hai người cùng điểm khác rank → hai bậc khác nhau
+
+**Checkpoint Đợt 4**:
+- [x] T035 Build + test hai phía xanh; soát tay quickstart Kịch bản 3; commit `feat: bục vinh danh cuối trận` + push
+
+---
+
+## Đợt 5: Hoàn thiện responsive + reduced-motion (Polish)
+
+**Purpose**: SC-004, SC-006; khớp hệ thiết kế.
+
+- [x] T035a [US2] Khoảng cách chân bục (theo cố vấn, sau khi xem Đợt 4): frontend/src/index.css `.podium` thêm `padding-bottom: 16px` (cộng `gap-4` của thẻ) để chân bục không dính sát Leaderboard ở LiveFinished và RewardSummary ở PlayFinished
+- [x] T036 Gom mọi animation của tính năng dưới `@media (prefers-reduced-motion: reduce)` trong frontend/src/index.css: tắt lộ dần/pháo giấy/nhún/giơ tay chuyển động, nội dung hiện ngay đầy đủ (FR-017). Đã rà: bổ sung dòng tắt riêng `.confetti i { animation: none }`; thêm frontend/src/reducedMotion.test.ts (đọc index.css bằng `?raw`, vite.config.ts mở `css.include` cho đúng import này) khẳng định mọi selector có `animation:`/`transition:` đều bị tắt trong khối và khối chỉ ẩn `.confetti`; đã thử xóa một dòng tắt thì test đỏ
+- [x] T037 Cố vấn đã đo 50 người ở 1366px (lưới 10×5, cao 432px, không cuộn ngang) và Podium ở khung 360px (không cuộn ngang) trên bản dev — không đo lại; `--desk-min` giữ nguyên 152/116/96px
+- [x] T038 Lint skill thiết kế trên file đã đổi: 0 FAIL, 0 WARN. `inspect.mjs` trên bản dev, CHỈ trang công khai (`/`, `/login`, `/join`; màn chủ phòng/Finished cần đăng nhập và có phòng nên không chạy, đã được cố vấn xem tận mắt ở Đợt 2–4): `--app` cả ba trang 0 FAIL (WARN: dev-server, hero-void, ragged-row, unused-canvas, tiny-text, edge-text — đều ở màn có từ trước, không thuộc tính năng này); `/` không `--app` có 5 FAIL kiểu trang marketing (body 14px, ít ảnh, focal point, still-page, lệch lề 390px) — trang chủ là landing có từ trước, ngoài phạm vi
+
+**Checkpoint Đợt 5**:
+- [x] T039 Build + test hai phía xanh; chạy trọn quickstart.md; commit `feat: hoàn thiện responsive và reduced-motion cho lớp học` + push
+
+---
+
+## Dependencies & Execution Order
+
+- **Đợt 1** (T001→T015): chặn tất cả — payload là nền của mọi hiển thị. T001–T004 song song được (4 file khác nhau) → T005 (sau T004) → T006 (sau T001, T004), T007 (sau T002), T008 (sau T003), T009 → T010 (sau T001–T004) → T011–T014 [P] → T015.
+- **Đợt 2** (T016→T021): cần Đợt 1 đã push (thứ tự `Players` ổn định là điều kiện để lưới không đổi chỗ khi reconnect). T016→T017→T018/T019; T020 sau T016.
+- **Đợt 3** (T022→T028): cần Đợt 1 (payload) + Đợt 2 (lưới). T022→T023→T024→T025; T026/T027 [P] sau T023/T024.
+- **Đợt 4** (T029→T035): chỉ cần dữ liệu leaderboard SẴN CÓ — độc lập với Đợt 2/3, làm song song được nếu cần demo sớm; T029/T030 [P] → T031→T032→T033; T034 sau T031.
+- **Đợt 5** (T036→T039): sau mọi đợt có animation (3, 4).
+
+### Parallel Opportunities
+
+- T001–T004 (4 file riêng); T011–T014 (các test độc lập trong cùng file — viết song song, merge tuần tự); T029/T030 song song với nhau; Đợt 4 song song với Đợt 2+3 nếu có hai người.
+
+## Implementation Strategy
+
+- **MVP = Đợt 1 + 2 + 3** (User Story 1): lớp học sống động khi đang chơi — demo được ngay.
+- Mỗi đợt một lần push; dừng ở bất kỳ checkpoint nào vẫn có sản phẩm chạy được.
+- Không còn điểm chờ cố vấn: host reconnect trong 6 giây kết quả không có ✓/✗ là hành vi **đã chốt**.

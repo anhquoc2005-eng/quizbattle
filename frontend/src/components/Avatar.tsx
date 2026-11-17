@@ -2,8 +2,16 @@ import { useAvatarImage } from '../hooks/useAvatarImage'
 import type { Avatar as AvatarData } from '../types/avatar'
 
 // Cỡ cố định: nhỏ (28 px) cạnh tên người chơi, vừa (96 px) cho khung xem thử dính ở cửa hàng, lớn (160 px) ở hồ sơ.
-// Khung bo góc cùng bán kính với .card cho lớn.
-const SIZE_CLASS = { sm: 'size-7 rounded-lg', md: 'size-24 rounded-2xl', lg: 'size-40 rounded-[20px]' } as const
+// tile-md (64 px) và tile-sm (48 px) cho bàn học khi lớp đông (xem classroomDensity). fill = vuông, rộng bằng khung chứa: bục vinh
+// danh cần co theo bề rộng màn (điện thoại vs máy chiếu) mà cỡ cố định không làm được. Khung bo góc cùng bán kính với .card cho lớn.
+const SIZE_CLASS = {
+  fill: 'w-full aspect-square rounded-2xl',
+  sm: 'size-7 rounded-lg',
+  'tile-sm': 'size-12 rounded-xl',
+  'tile-md': 'size-16 rounded-xl',
+  md: 'size-24 rounded-2xl',
+  lg: 'size-40 rounded-[20px]',
+} as const
 
 interface AvatarProps {
   avatar: AvatarData

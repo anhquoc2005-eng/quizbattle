@@ -43,7 +43,12 @@ export interface GameState {
   leaderboard: LeaderboardEntry[]
   isHost: boolean
   playerId: string | null
-  answerProgress: AnswerProgress | null
+  /** Chỉ số đếm để hiển thị "Đã trả lời x/y"; danh sách người trả lời nằm ở answeredPlayerIds (gộp hợp), không lưu trùng ở đây. */
+  answerProgress: Pick<AnswerProgress, 'answeredCount' | 'totalPlayers'> | null
+  /** Ai đã trả lời câu hiện tại (chỉ chủ phòng có dữ liệu; người chơi luôn []). Gộp hợp qua các AnswerProgress, reset mỗi câu. */
+  answeredPlayerIds: string[]
+  /** Ai trả lời đúng câu vừa kết thúc; null khi chưa kết thúc hoặc chưa nhận được (chủ phòng vào lại giữa 6 giây kết quả). */
+  correctPlayerIds: string[] | null
   finalLeaderboard: LeaderboardEntry[] | null
   /** Thưởng của mọi người chơi khi trận kết thúc (server tính); null khi chưa kết thúc. */
   rewards: PlayerReward[] | null
@@ -63,6 +68,8 @@ export const initialGameState: GameState = {
   isHost: false,
   playerId: null,
   answerProgress: null,
+  answeredPlayerIds: [],
+  correctPlayerIds: null,
   finalLeaderboard: null,
   rewards: null,
   clockOffsetMs: 0,
@@ -96,7 +103,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         leaderboard: s.leaderboard,
         isHost: s.isHost,
         playerId: s.playerId,
-        answerProgress: null,
+        // Chủ phòng vào lại giữa câu: số đếm khớp số tay giơ (không hiện "0/…" khi đã có bàn giơ tay); người chơi / câu đã xong: null.
+        answerProgress: s.answeredPlayerIds ? { answeredCount: s.answeredPlayerIds.length, totalPlayers: s.players.length } : null,
+        answeredPlayerIds: s.answeredPlayerIds ?? [], // RoomState là nguồn đầy đủ khi vào lại: thay thế, không gộp
+        correctPlayerIds: null,
         finalLeaderboard: s.status === 'Finished' ? s.leaderboard : null,
         rewards: s.rewards,
         clockOffsetMs: computeClockOffsetMs(s.serverTime),
@@ -138,6 +148,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         hasAnswered: false,
         selectedIndex: null,
         answerProgress: null,
+        answeredPlayerIds: [],
+        correctPlayerIds: null,
         clockOffsetMs: computeClockOffsetMs(action.payload.serverTime),
       }
 
@@ -154,13 +166,28 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
               }
             : state.currentQuestion,
         answerProgress: { answeredCount: action.payload.answeredCount, totalPlayers: action.payload.totalPlayers },
+        // Chỉ nhận khi đúng câu đang hiển thị (cùng điều kiện với ended ở trên): sự kiện của câu khác đến muộn bị bỏ qua.
+        correctPlayerIds: state.currentQuestion?.questionId === action.payload.questionId ? action.payload.correctPlayerIds : state.correctPlayerIds,
       }
 
     case 'LEADERBOARD_UPDATED':
       return { ...state, leaderboard: action.payload.leaderboard }
 
-    case 'ANSWER_PROGRESS':
-      return { ...state, answerProgress: action.payload }
+    case 'ANSWER_PROGRESS': {
+      // Gói đến sau QuestionEnded (hoặc khi chưa có câu nào) thuộc về câu đã xong: bỏ qua để màn không quay lại pha giơ tay.
+      if (state.currentQuestion === null || state.currentQuestion.ended) {
+        return state
+      }
+
+      // Gộp HỢP, không ghi đè: hai người nộp đồng thời mỗi gói có thể thiếu người kia (phòng chỉ khóa FOR SHARE), và gói đến
+      // muộn ({A} sau {A,B}) không được làm ai hạ tay xuống. Giữ nguyên tham chiếu nếu không có ai mới.
+      const merged = [...new Set([...state.answeredPlayerIds, ...action.payload.answeredPlayerIds])]
+      const answeredPlayerIds = merged.length === state.answeredPlayerIds.length ? state.answeredPlayerIds : merged
+      // Số đếm không bao giờ thấp hơn số cũ của cùng câu (answerProgress reset mỗi câu) hay số tay đang giơ: gói đến muộn, hoặc
+      // server đếm thiếu khi hai người nộp đồng thời, không được làm "Đã trả lời x/y" nhỏ hơn số bàn đang giơ tay.
+      const answeredCount = Math.max(state.answerProgress?.answeredCount ?? 0, action.payload.answeredCount, answeredPlayerIds.length)
+      return { ...state, answerProgress: { answeredCount, totalPlayers: action.payload.totalPlayers }, answeredPlayerIds }
+    }
 
     case 'GAME_ENDED':
       return {
@@ -168,6 +195,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         status: 'Finished',
         leaderboard: action.payload.finalLeaderboard,
         finalLeaderboard: action.payload.finalLeaderboard,
+        answeredPlayerIds: [],
+        correctPlayerIds: null,
         rewards: action.payload.rewards,
       }
 

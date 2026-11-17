@@ -191,6 +191,291 @@
     background: transparent;
     border: 1px solid var(--color-raised);
   }
+
+  /*
+   * Lớp học (màn chủ phòng). Từ viewport 1152px trở lên (laptop 1366px và máy chiếu) .col = 1120px; trừ padding .card 2×22px
+   * → vùng chứa 1076px. Với gap 8px, auto-fill tạo ⌊(1076 + 8) / (min + 8)⌋ cột:
+   *   roomy  min 152px → 6 cột  (≤ 12 bàn: 2 hàng)
+   *   medium min 116px → 8 cột  (≤ 30 bàn: 4 hàng)
+   *   dense  min  96px → 10 cột (≤ 50 bàn: 5 hàng)
+   * Bậc chọn theo số người ở classroomDensity.ts; cột thừa ở hàng cuối để trống (1fr không kéo bàn giãn quá cỡ khi ít người).
+   */
+  .classroom {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(var(--desk-min), 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .classroom[data-density='roomy'] {
+    --desk-min: 152px;
+  }
+  .classroom[data-density='medium'] {
+    --desk-min: 116px;
+  }
+  .classroom[data-density='dense'] {
+    --desk-min: 96px;
+  }
+
+  .desk {
+    min-width: 0;
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: 6px;
+    padding: 10px 8px;
+    background: var(--color-ground);
+    border: 1px solid var(--color-rule);
+    border-radius: 14px;
+  }
+  .classroom[data-density='dense'] .desk {
+    gap: 4px;
+    padding: 8px 6px;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .desk-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /*
+   * Trạng thái bàn (data-status trên .desk): raised = đã trả lời (nhấc nhân vật + huy hiệu bàn tay), correct / wrong = ✓ / ✗ sau
+   * khi câu kết thúc (nhún nhẹ một lần). Huy hiệu là lớp phủ ở góc nhân vật; KHÔNG đổi ảnh DiceBear. Màu theo token:
+   * trắng = đã trả lời, positive = đúng, negative = sai. Khối prefers-reduced-motion ở cuối file bỏ mọi chuyển động.
+   */
+  .desk-figure {
+    position: relative;
+    display: inline-grid;
+    transition: transform 0.18s ease;
+  }
+  /* Cỡ huy hiệu theo mật độ để nhìn được từ xa trên máy chiếu: 28px (roomy) / 24px (medium) / 20px (dense). */
+  .desk-badge {
+    position: absolute;
+    top: -9px;
+    right: -9px;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--color-ink);
+    color: var(--color-ground);
+    animation: desk-pop 0.2s ease-out;
+  }
+  .desk-badge svg {
+    width: 18px;
+    height: 18px;
+  }
+  .classroom[data-density='medium'] .desk-badge {
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+  }
+  .classroom[data-density='medium'] .desk-badge svg {
+    width: 15px;
+    height: 15px;
+  }
+  .classroom[data-density='dense'] .desk-badge {
+    top: -7px;
+    right: -7px;
+    width: 20px;
+    height: 20px;
+  }
+  .classroom[data-density='dense'] .desk-badge svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* Viền sáng cho bàn đã giơ tay: nhìn từ xa không cần đọc biểu tượng (như bàn ✓ có viền xanh). */
+  .desk[data-status='raised'] {
+    border-color: var(--color-ink);
+  }
+  .desk[data-status='raised'] .desk-figure {
+    transform: translateY(-4px);
+  }
+  .desk[data-status='correct'] {
+    border-color: var(--color-positive);
+  }
+  .desk[data-status='correct'] .desk-badge {
+    background: var(--color-positive);
+  }
+  .desk[data-status='wrong'] .desk-badge {
+    background: var(--color-negative);
+  }
+  .desk[data-status='correct'] .desk-figure,
+  .desk[data-status='wrong'] .desk-figure {
+    animation: desk-bounce 0.45s ease-out;
+  }
+
+  /*
+   * Bục vinh danh. Vị trí 2-1-3 bằng `order` (DOM giữ thứ tự hạng 1-2-3). Lộ dần 3 → 2 → 1 bằng animation-delay theo data-rank, pháo
+   * giấy rơi sau khi hạng 1 hiện. Bề rộng nhân vật theo biến --podium-avatar (Avatar size="fill"): trên điện thoại 360px mỗi cột
+   * chỉ ~89px nên hạng 1 = 80px, hạng 2-3 = 64px; từ 640px trở lên 140px / 104px. Khối prefers-reduced-motion ở cuối file.
+   */
+  .podium {
+    position: relative;
+    /* Đáy 16px (cộng gap của thẻ) để chân bục không dính sát Leaderboard / RewardSummary ngay dưới. */
+    padding: 12px 0 16px;
+  }
+  .podium-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+  }
+  .podium-place {
+    --podium-avatar: 64px;
+    --podium-block: 56px;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 220px;
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+    animation: podium-rise 0.6s ease-out both;
+  }
+  .podium-place[data-rank='1'] {
+    --podium-avatar: 80px;
+    --podium-block: 96px;
+    order: 2;
+    animation-delay: 1.8s;
+  }
+  .podium-place[data-rank='2'] {
+    --podium-block: 76px;
+    order: 1;
+    animation-delay: 0.9s;
+  }
+  .podium-place[data-rank='3'] {
+    order: 3;
+  }
+  @media (min-width: 640px) {
+    .podium-place {
+      --podium-avatar: 104px;
+    }
+    .podium-place[data-rank='1'] {
+      --podium-avatar: 140px;
+    }
+  }
+  .podium-person {
+    width: 100%;
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+  }
+  .podium-avatar {
+    width: var(--podium-avatar);
+  }
+  .podium-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .podium-score {
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .podium-block {
+    width: 100%;
+    height: var(--podium-block);
+    display: grid;
+    place-items: center;
+    background: var(--color-raised);
+    border-radius: 14px 14px 0 0;
+    font:
+      600 28px/1 'Inter',
+      system-ui,
+      sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Pháo giấy: 24 mảnh rơi MỘT lần (không lặp), vị trí / màu / độ trễ phân bổ bằng :nth-child; màu chỉ từ token (không dùng accent). */
+  .confetti {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .confetti i {
+    position: absolute;
+    top: 0;
+    width: 8px;
+    height: 12px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: confetti-fall 2.6s ease-out both;
+  }
+  .confetti i:nth-child(8n + 1) { left: 6%; }
+  .confetti i:nth-child(8n + 2) { left: 18%; }
+  .confetti i:nth-child(8n + 3) { left: 30%; }
+  .confetti i:nth-child(8n + 4) { left: 42%; }
+  .confetti i:nth-child(8n + 5) { left: 54%; }
+  .confetti i:nth-child(8n + 6) { left: 66%; }
+  .confetti i:nth-child(8n + 7) { left: 78%; }
+  .confetti i:nth-child(8n + 8) { left: 90%; }
+  .confetti i:nth-child(3n + 1) { animation-delay: 2.3s; }
+  .confetti i:nth-child(3n + 2) { animation-delay: 2.55s; }
+  .confetti i:nth-child(3n + 3) { animation-delay: 2.8s; }
+  .confetti i:nth-child(4n + 1) { background: var(--color-ink); }
+  .confetti i:nth-child(4n + 2) { background: var(--color-positive); }
+  .confetti i:nth-child(4n + 3) { background: var(--color-negative); }
+  .confetti i:nth-child(4n + 4) { background: var(--color-muted); }
+  .confetti i:nth-child(5n + 1) { width: 6px; height: 10px; }
+}
+
+@keyframes podium-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(340px) rotate(540deg);
+  }
+}
+
+@keyframes desk-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes desk-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-7px);
+  }
 }
 
 .btn:focus-visible,
@@ -228,5 +513,24 @@ a:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .btn {
     transition: none;
+  }
+  /* Lớp học: trạng thái vẫn hiện đủ (huy hiệu, viền) nhưng không còn chuyển động nào. */
+  .desk-figure {
+    transition: none;
+  }
+  .desk-badge,
+  .desk[data-status='correct'] .desk-figure,
+  .desk[data-status='wrong'] .desk-figure {
+    animation: none;
+  }
+  /* Bục vinh danh: hiện ngay đủ nội dung, không lộ dần, không pháo giấy. */
+  .podium-place {
+    animation: none;
+  }
+  .confetti {
+    display: none;
+  }
+  .confetti i {
+    animation: none;
   }
 }

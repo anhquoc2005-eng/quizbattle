@@ -136,7 +136,11 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
         var question = await db.Questions.AsNoTracking()
             .SingleOrDefaultAsync(q => q.RoomId == room.Id && q.StartedAt != null && q.EndedAt == null, cancellationToken);
 
-        var answeredCount = question is null ? 0 : await db.Answers.CountAsync(a => a.QuestionId == question.Id, cancellationToken);
+        // Một truy vấn lấy luôn danh sách người đã trả lời (số đếm = .Count) thay cho CountAsync: chủ phòng cần biết AI đã trả lời.
+        // Chỉ thấy answer đã commit - người nộp đồng thời chưa commit sẽ vắng mặt, client gộp hợp để bù.
+        IReadOnlyList<Guid> answeredPlayerIds = question is null
+            ? []
+            : await db.Answers.AsNoTracking().Where(a => a.QuestionId == question.Id).Select(a => a.PlayerId).ToListAsync(cancellationToken);
         var totalPlayers = await db.Players.CountAsync(p => p.RoomId == room.Id, cancellationToken);
 
         var snapshot = new SubmitAnswerSnapshot
@@ -144,7 +148,7 @@ public sealed class GameRepository(AppDbContext db) : IGameRepository
             Player = player,
             Room = room,
             Question = question,
-            AnsweredCountForCurrentQuestion = answeredCount,
+            AnsweredPlayerIds = answeredPlayerIds,
             TotalPlayers = totalPlayers,
         };
 

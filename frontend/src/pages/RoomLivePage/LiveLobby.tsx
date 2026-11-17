@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { PlayerList } from '../../components/PlayerList'
+import { Classroom } from '../../components/Classroom'
 import { RoomCodeBoxes } from '../../components/RoomCodeBoxes'
 import type { GameState } from '../../realtime/gameReducer'
 import { useGameConnection } from '../../realtime/useGameConnection'
@@ -39,7 +39,7 @@ export function LiveLobby({ state }: { state: GameState }) {
 
       <div>
         <h2 className="mb-2">Người chơi ({state.players.length})</h2>
-        <PlayerList players={state.players} />
+        <Classroom players={state.players} />
       </div>
 
       {offline && <p className="error" role="alert">Mất kết nối, thử lại khi đã kết nối lại.</p>}

@@ -318,6 +318,169 @@ public sealed class GameServiceTests
         Assert.Equal(Now.AddSeconds(2), question.EndedAt);
     }
 
+    // ---- Lớp học: ai đã trả lời / ai trả lời đúng / thứ tự chỗ ngồi ----
+
+    [Theory]
+    [InlineData(RoomStatus.Lobby)]
+    [InlineData(RoomStatus.InProgress)]
+    [InlineData(RoomStatus.Finished)]
+    public async Task RoomState_ForPlayer_NeverContainsAnsweredPlayerIds(RoomStatus status)
+    {
+        var room = NewRoom(status);
+        var question = NewQuestion(room.Id, 0, startedAt: Now);
+        var alice = NewPlayer(room.Id, "Alice", SessionTokenHasher.Hash("alice-token"));
+        var bob = NewPlayer(room.Id, "Bob");
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.AddRange([alice, bob]);
+        repository.Answers.Add(NewAnswer(bob, question, isCorrect: true));
+        var service = CreateService(repository);
+
+        var (state, _, _) = await service.JoinAsPlayerAsync(room.Code, "alice-token", CancellationToken.None);
+
+        Assert.Null(state.AnsweredPlayerIds); // chủ phòng mới được biết ai đã giơ tay
+    }
+
+    [Fact]
+    public async Task EndQuestion_CorrectWrongAndNoAnswer_OnlyCorrectPlayersListed()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var question = NewQuestion(room.Id, 0, startedAt: Now); // CorrectIndex = 0
+        var (alice, bob, carol) = (NewPlayer(room.Id, "Alice"), NewPlayer(room.Id, "Bob"), NewPlayer(room.Id, "Carol"));
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.AddRange([alice, bob, carol]);
+        var service = CreateService(repository, Now.AddSeconds(3));
+        await service.SubmitAnswerAsync(alice.Id, "hash", question.Id, 0, CancellationToken.None); // đúng
+        await service.SubmitAnswerAsync(bob.Id, "hash", question.Id, 2, CancellationToken.None);   // sai; Carol không trả lời
+
+        var (ended, _) = await service.EndQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.Equal([alice.Id], ended.CorrectPlayerIds);
+    }
+
+    [Fact]
+    public async Task EndQuestion_CorrectPlayerLeftRoom_StillListed()
+    {
+        // LeaveRoom/rớt mạng chỉ phát PlayerLeft (GameHub), không xóa Player: người đó vẫn nằm trong trận và vẫn nhận ✓.
+        var room = NewRoom(RoomStatus.InProgress);
+        var question = NewQuestion(room.Id, 0, startedAt: Now);
+        var (alice, bob) = (NewPlayer(room.Id, "Alice"), NewPlayer(room.Id, "Bob"));
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.AddRange([alice, bob]);
+        var service = CreateService(repository, Now.AddSeconds(3));
+        await service.SubmitAnswerAsync(alice.Id, "hash", question.Id, 0, CancellationToken.None);
+
+        var (ended, _) = await service.EndQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.Contains(alice.Id, ended.CorrectPlayerIds);
+        Assert.Contains(alice, repository.Players);
+    }
+
+    [Fact]
+    public async Task EndQuestion_CorrectAnswersOfPreviousQuestion_NotListed()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var previous = NewQuestion(room.Id, 0, startedAt: Now.AddSeconds(-60), endedAt: Now.AddSeconds(-30));
+        var current = NewQuestion(room.Id, 1, startedAt: Now);
+        var (alice, bob) = (NewPlayer(room.Id, "Alice"), NewPlayer(room.Id, "Bob"));
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.AddRange([previous, current]);
+        repository.Players.AddRange([alice, bob]);
+        repository.Answers.Add(NewAnswer(alice, previous, isCorrect: true)); // đúng ở câu trước
+        var service = CreateService(repository, Now.AddSeconds(3));
+        await service.SubmitAnswerAsync(bob.Id, "hash", current.Id, 0, CancellationToken.None);
+
+        var (ended, _) = await service.EndQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.Equal([bob.Id], ended.CorrectPlayerIds);
+    }
+
+    [Fact]
+    public async Task RoomState_ForHostMidQuestion_ListsPlayersWhoAnswered()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var question = NewQuestion(room.Id, 0, startedAt: Now);
+        var (alice, bob) = (NewPlayer(room.Id, "Alice"), NewPlayer(room.Id, "Bob"));
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.AddRange([alice, bob]);
+        var service = CreateService(repository, Now.AddSeconds(3));
+        await service.SubmitAnswerAsync(alice.Id, "hash", question.Id, 1, CancellationToken.None); // đáp án sai vẫn tính là đã trả lời
+
+        var state = await service.JoinAsHostAsync(HostUserId, room.Code, CancellationToken.None); // chủ phòng kết nối lại giữa câu
+
+        Assert.Equal([alice.Id], state.AnsweredPlayerIds);
+    }
+
+    [Fact]
+    public async Task RoomState_ForHostAfterQuestionEnded_AnsweredPlayerIdsIsNull()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var question = NewQuestion(room.Id, 0, startedAt: Now);
+        var alice = NewPlayer(room.Id, "Alice");
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.Add(alice);
+        var service = CreateService(repository, Now.AddSeconds(3));
+        await service.SubmitAnswerAsync(alice.Id, "hash", question.Id, 0, CancellationToken.None);
+        await service.EndQuestionAsync(HostUserId, room.Code, CancellationToken.None);
+
+        var state = await service.JoinAsHostAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.Null(state.AnsweredPlayerIds); // đã chốt: vào lại đúng 6 giây kết quả không có tay giơ / ✓✗
+    }
+
+    [Fact]
+    public async Task SubmitAnswer_Sequential_ProgressListGrowsAndIncludesSubmitter()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var question = NewQuestion(room.Id, 0, startedAt: Now);
+        var (alice, bob, carol) = (NewPlayer(room.Id, "Alice"), NewPlayer(room.Id, "Bob"), NewPlayer(room.Id, "Carol"));
+        var repository = new FakeGameRepository { Room = room };
+        repository.Questions.Add(question);
+        repository.Players.AddRange([alice, bob, carol]);
+        var service = CreateService(repository, Now.AddSeconds(3));
+
+        var (_, first, _) = await service.SubmitAnswerAsync(alice.Id, "hash", question.Id, 0, CancellationToken.None);
+        var (_, second, _) = await service.SubmitAnswerAsync(bob.Id, "hash", question.Id, 3, CancellationToken.None);
+
+        Assert.Equal([alice.Id], first.AnsweredPlayerIds);
+        Assert.Equal(1, first.AnsweredCount);
+        Assert.Equal([alice.Id, bob.Id], second.AnsweredPlayerIds);
+        Assert.Equal(2, second.AnsweredCount);
+        Assert.Equal(3, second.TotalPlayers);
+    }
+
+    [Fact]
+    public async Task RoomState_PlayersInScrambledOrder_AreSortedByJoinedAtThenId()
+    {
+        var room = NewRoom(RoomStatus.InProgress);
+        var first = NewPlayer(room.Id, "First", SessionTokenHasher.Hash("first-token"));
+        var tieLowId = NewPlayer(room.Id, "TieLow");
+        var tieHighId = NewPlayer(room.Id, "TieHigh");
+        var last = NewPlayer(room.Id, "Last");
+        first.JoinedAt = Now;
+        (tieLowId.JoinedAt, tieHighId.JoinedAt) = (Now.AddSeconds(1), Now.AddSeconds(1)); // cùng thời điểm: phân định bằng Id
+        (tieLowId.Id, tieHighId.Id) = (new Guid("00000000-0000-0000-0000-000000000001"), new Guid("00000000-0000-0000-0000-000000000002"));
+        last.JoinedAt = Now.AddSeconds(2);
+        last.Score = 900; // điểm cao nhất nhưng vẫn ngồi cuối: chỗ ngồi không phụ thuộc điểm
+        var repository = new FakeGameRepository { Room = room };
+        repository.Players.AddRange([last, tieHighId, first, tieLowId]); // thứ tự nạp lộn xộn
+        var service = CreateService(repository);
+        string[] expected = ["First", "TieLow", "TieHigh", "Last"];
+
+        var hostState = await service.JoinAsHostAsync(HostUserId, room.Code, CancellationToken.None);
+        var (playerState, _, _) = await service.JoinAsPlayerAsync(room.Code, "first-token", CancellationToken.None);
+        first.Score = 5000; // điểm đổi giữa chừng không làm đổi chỗ
+        var afterScoreChange = await service.JoinAsHostAsync(HostUserId, room.Code, CancellationToken.None);
+
+        Assert.Equal(expected, hostState.Players.Select(p => p.DisplayName));
+        Assert.Equal(expected, playerState.Players.Select(p => p.DisplayName));
+        Assert.Equal(expected, afterScoreChange.Players.Select(p => p.DisplayName));
+    }
+
     // ---- Gắn tài khoản khi vào phòng (US2) ----
 
     [Fact]
@@ -1126,6 +1289,17 @@ public sealed class GameServiceTests
         SessionTokenHash = tokenHash,
         Score = score,
         JoinedAt = Now,
+    };
+
+    private static Answer NewAnswer(Player player, Question question, bool isCorrect) => new()
+    {
+        Id = Guid.NewGuid(),
+        PlayerId = player.Id,
+        QuestionId = question.Id,
+        SelectedIndex = isCorrect ? question.CorrectIndex : (question.CorrectIndex + 1) % Question.OPTION_COUNT,
+        AnsweredAt = Now,
+        IsCorrect = isCorrect,
+        PointsAwarded = isCorrect ? 1000 : 0,
     };
 
     private static GameService CreateService(FakeGameRepository repository, DateTimeOffset? now = null) =>

@@ -86,14 +86,16 @@ public sealed class FakeGameRepository : IGameRepository
     {
         var player = Players.SingleOrDefault(p => p.Id == playerId) ?? throw new NotFoundException("Không tìm thấy người chơi.");
         var question = Questions.SingleOrDefault(q => q.RoomId == Room.Id && q.StartedAt != null && q.EndedAt == null);
-        var answeredCount = question is null ? 0 : Answers.Count(a => a.QuestionId == question.Id);
+        IReadOnlyList<Guid> answeredPlayerIds = question is null
+            ? []
+            : Answers.Where(a => a.QuestionId == question.Id).Select(a => a.PlayerId).ToList();
 
         var snapshot = new SubmitAnswerSnapshot
         {
             Player = player,
             Room = Room,
             Question = question,
-            AnsweredCountForCurrentQuestion = answeredCount,
+            AnsweredPlayerIds = answeredPlayerIds,
             TotalPlayers = Players.Count,
         };
 

@@ -57,7 +57,6 @@ specs/004-ai-daily-limit/
 ├── spec.md · research.md · data-model.md · plan.md · tasks.md · quickstart.md
 ├── contracts/ai-quota.md
 ├── checklists/requirements.md
-└── migration.idempotent.sql      # tạo ở T031, để review và chạy lên Supabase
 ```
 
 ### Source Code (dự kiến)
@@ -112,7 +111,7 @@ Contract (`contracts/ai-quota.md`) đã chốt trước nên Đợt 3 có thể 
 CLAUDE.md: migration lên production chạy thủ công, có chủ đích, không tự chạy khi app khởi động.
 
 1. Dev: `dotnet ef migrations add AddAiUsageDaily` (đọc kỹ file sinh ra: chỉ `CreateTable`, PK `(Day, Scope)`, CHECK `Count >= 0`), thử trên Postgres Docker (`docker compose up -d`).
-2. Xuất SQL idempotent: `dotnet ef migrations script --idempotent` (từ migration trước đó trở đi hoặc toàn bộ; nếu toàn bộ thì idempotent nên chạy lại an toàn). Lưu thành `specs/004-ai-daily-limit/migration.idempotent.sql` để review. Kiểm tra không có `DROP`/`ALTER` bảng cũ.
+2. Xuất SQL idempotent CHỈ từ migration đang có trên production (`20261112104137_AddAvatarShop`) tới `20261119094951_AddAiUsageDaily`: `dotnet ef migrations script 20261112104137_AddAvatarShop 20261119094951_AddAiUsageDaily --idempotent -p QuizBattle.Infrastructure -s QuizBattle.Api`. File lưu NGOÀI repo (`D:/IT_Code/Quiz_Battle/sql/004-AddAiUsageDaily.sql`, UTF-8 không BOM) để không lẫn vào mã nguồn. Kiểm tra chỉ có `CREATE TABLE "AiUsageDaily"` (PK, CHECK) và `INSERT INTO "__EFMigrationsHistory"`, mỗi khối bọc trong điều kiện chưa có `MigrationId`; không có `DROP`/`ALTER`.
 3. Chạy script HAI LẦN liên tiếp trên Postgres dev để chứng minh idempotent (lần hai không lỗi, không đổi dữ liệu).
 4. Chạy script lên Supabase qua **Session pooler (cổng 5432)** TRƯỚC khi merge `feat/ai-daily-limit` vào `main` (backend mới truy vấn `AiUsageDaily`; bảng chưa có thì mọi generate 500). Người chạy: chủ dự án; Claude không tự chạy lên production.
 5. Đặt biến môi trường trên nơi deploy nếu muốn khác mặc định: `Ai__DailyLimitPerUser`, `Ai__DailyLimitGlobal` (global nên theo RPD của key Gemini — kiểm sau).

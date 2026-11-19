@@ -78,9 +78,9 @@
 
 ## Đợt 4: Chốt — migration production, tài liệu, nghiệm thu
 
-- [ ] T030 [P] `.env.example`: thêm `Ai__DailyLimitPerUser=20`, `Ai__DailyLimitGlobal=300` (kèm chú thích: global nên đặt theo RPD của key Gemini); cập nhật tài liệu triển khai nếu có liệt kê biến `Ai__*`. (Q1, Q7)
-- [ ] T031 Xuất SQL idempotent: `dotnet ef migrations script --idempotent` → `specs/004-ai-daily-limit/migration.idempotent.sql`; kiểm tra không có `DROP`/`ALTER` bảng cũ; chạy file đó HAI LẦN liên tiếp trên Postgres dev, lần hai không lỗi. Ghi trong mô tả PR bước **bắt buộc**: chủ dự án chạy script lên Supabase qua Session pooler (cổng 5432) TRƯỚC khi merge vào `main`. Claude KHÔNG chạy lên production. (Q7)
-- [ ] T032 Chạy trọn quickstart.md (kịch bản tay + checklist), build + test hai phía xanh (`dotnet test`, `npm test`, `npm run build`); đối chiếu bảng quyết định → task bên dưới đủ; commit `docs: hoàn thiện tài liệu giới hạn AI theo ngày` + push; đề xuất commit/PR cuối. (SC-008)
+- [x] T030 [P] `.env.example`: thêm `Ai__DailyLimitPerUser=20`, `Ai__DailyLimitGlobal=300` (kèm chú thích: global nên đặt theo RPD của key Gemini); cập nhật tài liệu triển khai nếu có liệt kê biến `Ai__*`. (Q1, Q7)
+- [x] T031 Xuất SQL idempotent CHỈ từ `20261112104137_AddAvatarShop` tới `20261119094951_AddAiUsageDaily` (`dotnet ef migrations script <từ> <tới> --idempotent`) → file NGOÀI repo `D:/IT_Code/Quiz_Battle/sql/004-AddAiUsageDaily.sql` (UTF-8 không BOM, 780 byte, SHA-256 `034003ef03a31fb8ba66b14546e0eb9449d01224b8dd9f87c5f8e54773d78f24`). Nội dung chỉ có `CREATE TABLE "AiUsageDaily"` (PK, CHECK) và `INSERT INTO "__EFMigrationsHistory"`, bọc trong điều kiện chưa có `MigrationId`; không DROP/ALTER. Đã chạy HAI lần (cộng một lần kiểm) trên DB dev 5433 bằng psql trong container: không lỗi, dữ liệu `AiUsageDaily` (3 dòng) và định nghĩa bảng không đổi. Bước **bắt buộc** còn lại cho chủ dự án: chạy script lên Supabase qua Session pooler (cổng 5432) TRƯỚC khi merge vào `main`; Claude KHÔNG chạy lên production. (Q7)
+- [x] T032 Chạy trọn quickstart.md (kịch bản tay + checklist), build + test hai phía xanh (`dotnet test`, `npm test`, `npm run build`); đối chiếu bảng quyết định → task bên dưới đủ; commit `docs: hoàn thiện tài liệu giới hạn AI theo ngày` + push; đề xuất commit/PR cuối. (SC-008)
 
 ---
 

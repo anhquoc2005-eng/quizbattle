@@ -40,10 +40,13 @@ Khởi động lại backend sau khi đổi. Giá trị `0`, `-1`, `abc` phải 
 
 ```bash
 cd backend
-dotnet ef migrations script --idempotent -p QuizBattle.Infrastructure -s QuizBattle.Api -o ../specs/004-ai-daily-limit/migration.idempotent.sql
-psql "<dev>" -f ../specs/004-ai-daily-limit/migration.idempotent.sql   # lần 1
-psql "<dev>" -f ../specs/004-ai-daily-limit/migration.idempotent.sql   # lần 2: không lỗi
+dotnet ef migrations script 20261112104137_AddAvatarShop 20261119094951_AddAiUsageDaily --idempotent -p QuizBattle.Infrastructure -s QuizBattle.Api -o "D:/IT_Code/Quiz_Battle/sql/004-AddAiUsageDaily.sql"
+# EF thêm BOM khi dùng -o: bỏ 3 byte đầu để file là UTF-8 không BOM
+docker exec -i quizbattle-db psql -U quizbattle -d quizbattle -v ON_ERROR_STOP=1 < "D:/IT_Code/Quiz_Battle/sql/004-AddAiUsageDaily.sql"   # lần 1
+docker exec -i quizbattle-db psql -U quizbattle -d quizbattle -v ON_ERROR_STOP=1 < "D:/IT_Code/Quiz_Battle/sql/004-AddAiUsageDaily.sql"   # lần 2: không lỗi
 ```
+
+File script nằm NGOÀI repo (không commit).
 
 Chạy file này lên Supabase bằng chuỗi **Session pooler (cổng 5432)** TRƯỚC khi merge vào `main`.
 
@@ -54,9 +57,10 @@ Chạy file này lên Supabase bằng chuỗi **Session pooler (cổng 5432)** T
 
 ## Checklist nghiệm thu
 
-- [ ] `dotnet test` xanh có `QUIZBATTLE_TEST_DB`; `npm test` + `npm run build` xanh
-- [ ] Mutation: bỏ `WHERE` thì T008/T009 đỏ (đã ghi số liệu ở trên)
-- [ ] Kịch bản tay 1–9 đạt
-- [ ] SQL idempotent chạy hai lần không lỗi; đã chạy lên Supabase trước merge
-- [ ] `.env.example` có hai biến mới; không có secret mới
-- [ ] Bảng đối chiếu quyết định → task ở cuối tasks.md đủ Q1–Q7, A–E
+- [x] `dotnet test` xanh có `QUIZBATTLE_TEST_DB` (477 chạy, 0 Skipped, 0 Failed); `npm test` (371) + `npm run lint` (đúng 3 cảnh báo cũ) + `npm run build` xanh
+- [x] Mutation: bỏ `WHERE` thì T008/T009 đỏ (đã ghi số liệu ở trên)
+- [x] Kịch bản tay 1–9: cố vấn đã kiểm tay qua HTTP và giao diện ở Đợt 2–3 (kiểm tra rẻ không tốn lượt, hủy không hoàn, 429 USER/GLOBAL có resetAt, AI_RATE_LIMIT ở request thứ 11, global từ chối không trừ user; "Còn 1/3" → sinh thật → "Còn 0/3"); Claude không lặp lại bước gọi Gemini thật
+- [x] SQL idempotent chạy hai lần không lỗi trên Postgres dev 5433
+- [ ] **Chủ dự án**: đã chạy script lên Supabase (Session pooler, cổng 5432) TRƯỚC khi merge — Claude không chạy lên production
+- [x] `.env.example` có hai biến mới (và README bảng biến môi trường); không có secret mới
+- [x] Bảng đối chiếu quyết định → task ở cuối tasks.md đủ Q1–Q7, A–E (đã rà: mỗi hàng có task, mọi task trong bảng đã xong)

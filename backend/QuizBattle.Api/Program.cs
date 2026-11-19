@@ -15,7 +15,7 @@ using QuizBattle.Infrastructure.Security;
 
 const string FrontendCorsPolicy = "Frontend";
 const string AuthRateLimiterPolicy = "auth";
-const string GenerateQuestionsRateLimiterPolicy = "generate-questions";
+const string GenerateQuestionsRateLimiterPolicy = RateLimitRejection.GenerateQuestionsPolicy;
 const string JoinRoomRateLimiterPolicy = "join-room";
 
 var builder = WebApplication.CreateBuilder(args);
@@ -127,16 +127,20 @@ builder.Services.AddRateLimiter(options =>
     options.OnRejected = async (context, cancellationToken) =>
     {
         var problemDetailsService = context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
-        await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+        var problem = new ProblemDetails
         {
-            HttpContext = context.HttpContext,
-            ProblemDetails = new ProblemDetails
-            {
-                Status = StatusCodes.Status429TooManyRequests,
-                Title = "Quá nhiều yêu cầu, vui lòng thử lại sau.",
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.20",
-            },
-        });
+            Status = StatusCodes.Status429TooManyRequests,
+            Title = "Quá nhiều yêu cầu, vui lòng thử lại sau.",
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.20",
+        };
+
+        // Chỉ policy sinh câu hỏi AI có "code" (AI_RATE_LIMIT) để client phân biệt "dồn dập" với "hết lượt trong ngày".
+        if (RateLimitRejection.CodeFor(context.HttpContext) is { } code)
+        {
+            problem.Extensions["code"] = code;
+        }
+
+        await problemDetailsService.TryWriteAsync(new ProblemDetailsContext { HttpContext = context.HttpContext, ProblemDetails = problem });
     };
 });
 

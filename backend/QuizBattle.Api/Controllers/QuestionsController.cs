@@ -20,8 +20,9 @@ public sealed class QuestionsController(IQuestionService questionService) : Cont
     }
 
     [HttpPost("generate")]
-    [EnableRateLimiting("generate-questions")]
+    [EnableRateLimiting(RateLimitRejection.GenerateQuestionsPolicy)]
     [ProducesResponseType<GenerateQuestionsResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<GenerateQuestionsResponse>> Generate(string code, GenerateQuestionsRequest request, CancellationToken cancellationToken)
     {
         var result = await questionService.GenerateAsync(User.GetUserId(), code, request, cancellationToken);

@@ -31,8 +31,15 @@ public sealed class GeminiQuestionGenerator(HttpClient httpClient, AiOptions aiO
 
             response = await httpClient.SendAsync(requestMessage, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Client đóng tab (RequestAborted) cũng làm SendAsync ném TaskCanceledException. Không được bọc thành lỗi AI:
+            // QuestionService hoàn lượt khi gặp AiUnavailableException, hủy request mà được hoàn thì lách được trần.
+            throw;
+        }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
+            // Tới đây token của request CHƯA bị hủy, nên TaskCanceledException là timeout của HttpClient.
             logger.LogError(ex, "Lỗi gọi Gemini API (network/timeout).");
             throw new AiUnavailableException("Không gọi được dịch vụ AI, vui lòng thử lại sau.");
         }

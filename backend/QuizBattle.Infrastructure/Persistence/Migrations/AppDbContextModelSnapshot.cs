@@ -22,6 +22,26 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("QuizBattle.Domain.Entities.AiUsage", b =>
+                {
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Scope")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Day", "Scope");
+
+                    b.ToTable("AiUsageDaily", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AiUsageDaily_Count_NonNegative", "\"Count\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("QuizBattle.Domain.Entities.Answer", b =>
                 {
                     b.Property<Guid>("Id")

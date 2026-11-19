@@ -189,6 +189,7 @@ Kiến trúc: **Supabase** (PostgreSQL) ← **Render** (backend, Docker) ← **V
 | Render | `Jwt__Key` | Có | Chuỗi ngẫu nhiên >= 32 byte |
 | Render | `Jwt__Issuer`, `Jwt__Audience` | Có | Ví dụ `quizbattle` |
 | Render | `Ai__ApiKey`, `Ai__Model` | Có (Production) | Khóa và model Gemini |
+| Render | `Ai__DailyLimitPerUser`, `Ai__DailyLimitGlobal` | Không | Trần lượt sinh câu hỏi AI mỗi ngày giờ Việt Nam, mặc định 20 mỗi người và 300 toàn hệ thống; số nguyên > 0; global nên đặt theo RPD của key Gemini |
 | Render | `Cors__AllowedOrigins` | Có (Production) | Domain Vercel, không dùng `*` |
 | Render | `ForwardedHeaders__ClientIpHeader` | Có | `CF-Connecting-IP` (Render đứng sau Cloudflare, `X-Forwarded-For` có 2 IP nên không dùng được cho rate limit) |
 | Vercel | `VITE_API_URL` | Có | URL backend, đặt lúc build |

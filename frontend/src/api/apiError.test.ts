@@ -96,3 +96,18 @@ describe('describeJoinAuthError', () => {
     expect(describeJoinAuthError(null)).toBeNull()
   })
 })
+
+describe('parseProblemDetails: resetAt', () => {
+  it('giữ code và resetAt của 429 hết lượt AI theo ngày', () => {
+    const problem = parseProblemDetails({
+      title: 'Bạn đã dùng hết lượt AI hôm nay.', status: 429, code: 'AI_DAILY_LIMIT_USER', resetAt: '2026-11-20T00:00:00+07:00',
+    })
+
+    expect(problem?.code).toBe('AI_DAILY_LIMIT_USER')
+    expect(problem?.resetAt).toBe('2026-11-20T00:00:00+07:00')
+  })
+
+  it('bỏ resetAt không phải chuỗi', () => {
+    expect(parseProblemDetails({ title: 'x', resetAt: 123 })?.resetAt).toBeUndefined()
+  })
+})

@@ -25,6 +25,7 @@ public sealed class GlobalExceptionHandler(
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.5"),
             BadGatewayException => (StatusCodes.Status502BadGateway, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.6.3"),
             AiUnavailableException => (StatusCodes.Status503ServiceUnavailable, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.6.4"),
+            AiDailyLimitException => (StatusCodes.Status429TooManyRequests, exception.Message, "https://tools.ietf.org/html/rfc9110#section-15.5.20"),
             _ => (StatusCodes.Status500InternalServerError, "Đã xảy ra lỗi không mong muốn.", "https://tools.ietf.org/html/rfc9110#section-15.6.1"),
         };
 
@@ -50,11 +51,17 @@ public sealed class GlobalExceptionHandler(
             NotFoundException { Code: { } c } => c,
             RequestValidationException { Code: { } c } => c,
             SessionReplacedException => "session_replaced",
+            AiDailyLimitException limit => limit.Code,
             _ => null,
         };
         if (code is not null)
         {
             problemDetails.Extensions["code"] = code;
+        }
+
+        if (exception is AiDailyLimitException dailyLimit)
+        {
+            problemDetails.Extensions["resetAt"] = dailyLimit.ResetAt.ToString("yyyy-MM-dd'T'HH:mm:sszzz");
         }
 
         // Cùng dạng với lỗi validate model của ASP.NET: errors = { trường: [thông điệp] } (frontend mapServerErrorsToFields).

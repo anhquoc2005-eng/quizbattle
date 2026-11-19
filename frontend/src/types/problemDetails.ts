@@ -7,4 +7,6 @@ export interface ProblemDetails {
   errors?: Record<string, string[]>
   /** Mã lỗi máy đọc được (vd token_expired) - trường mở rộng của backend, không phải chuẩn RFC 9457. */
   code?: string
+  /** Chỉ có ở 429 hết lượt AI theo ngày (AI_DAILY_LIMIT_*): ISO 8601 offset +07:00, thời điểm bộ đếm làm mới. */
+  resetAt?: string
 }

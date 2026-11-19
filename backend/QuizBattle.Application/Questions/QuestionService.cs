@@ -1,3 +1,4 @@
+using QuizBattle.Application.AiQuota;
 using QuizBattle.Application.Common;
 using QuizBattle.Application.Rooms;
 using QuizBattle.Domain.Entities;
@@ -8,7 +9,8 @@ namespace QuizBattle.Application.Questions;
 public sealed class QuestionService(
     IQuestionRepository questionRepository,
     IRoomRepository roomRepository,
-    IQuestionGenerator questionGenerator) : IQuestionService
+    IQuestionGenerator questionGenerator,
+    IAiQuotaService aiQuotaService) : IQuestionService
 {
     private const int MaxGenerateAttempts = 2; // gọi lần đầu + thử lại tối đa 1 lần
 
@@ -33,8 +35,24 @@ public sealed class QuestionService(
 
         var existingTexts = await questionRepository.ListTextsByRoomIdAsync(room.Id, cancellationToken);
 
+        // Giữ chỗ lượt SAU mọi kiểm tra rẻ ở trên (request bị từ chối vì phòng/chủ phòng/trạng thái/đầy câu không mất lượt)
+        // và TRƯỚC khi gọi AI. Transaction giữ chỗ đã commit xong nên không có khóa nào bị giữ trong lúc chờ AI.
+        var reservation = await aiQuotaService.ReserveAsync(hostUserId, cancellationToken);
+
         // Gọi Gemini và validate TRƯỚC, không giữ transaction/khóa trong lúc chờ AI (có thể chậm, tối đa 30s).
-        var candidates = await GenerateValidCandidatesAsync(room.Topic, request.Count, existingTexts, cancellationToken);
+        IReadOnlyList<QuestionCandidate> candidates;
+        try
+        {
+            candidates = await GenerateValidCandidatesAsync(room.Topic, request.Count, existingTexts, cancellationToken);
+        }
+        catch (Exception ex) when (ex is BadGatewayException or AiUnavailableException && !cancellationToken.IsCancellationRequested)
+        {
+            // Sinh thất bại hoàn toàn: trả lượt của user (KHÔNG trả lượt global - lần gọi AI vẫn đã tốn quota).
+            // Request bị hủy thì không hoàn: Gemini có thể đã chạy, hoàn sẽ thành lỗ hổng lách trần. Lỗi sau bước này
+            // (ví dụ 409 khi chèn) cũng không hoàn vì Gemini đã trả kết quả hợp lệ.
+            await aiQuotaService.RefundAsync(reservation, CancellationToken.None);
+            throw;
+        }
 
         var toInsert = candidates.Select(c =>
         {

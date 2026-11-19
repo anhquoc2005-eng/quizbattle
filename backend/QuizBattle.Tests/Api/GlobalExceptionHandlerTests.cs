@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using QuizBattle.Api.Middleware;
+using QuizBattle.Application.AiQuota;
 using QuizBattle.Application.Common;
 
 namespace QuizBattle.Tests.Api;
@@ -106,6 +107,21 @@ public sealed class GlobalExceptionHandlerTests
         var (problem, _) = await HandleAsync(new ConflictException("Bạn đã sở hữu món này.", "already_owned"));
 
         Assert.False(problem.Extensions.ContainsKey("errors"));
+    }
+
+    [Theory]
+    [InlineData(AiLimitKind.User, "AI_DAILY_LIMIT_USER")]
+    [InlineData(AiLimitKind.Global, "AI_DAILY_LIMIT_GLOBAL")]
+    public async Task GlobalExceptionHandler_AiDailyLimit_Returns429WithCodeAndResetAt(AiLimitKind kind, string expectedCode)
+    {
+        var resetAt = new DateTimeOffset(2026, 11, 20, 0, 0, 0, TimeSpan.FromHours(7));
+
+        var (problem, status) = await HandleAsync(new AiDailyLimitException(kind, resetAt));
+
+        Assert.Equal(StatusCodes.Status429TooManyRequests, status);
+        Assert.Equal(expectedCode, problem.Extensions["code"]);
+        Assert.Equal("2026-11-20T00:00:00+07:00", problem.Extensions["resetAt"]);
+        Assert.Null(problem.Detail); // không lộ stack trace
     }
 
     private static async Task<(ProblemDetails Problem, int Status)> HandleAsync(Exception exception)

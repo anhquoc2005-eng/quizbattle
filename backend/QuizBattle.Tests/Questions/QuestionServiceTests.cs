@@ -1,7 +1,9 @@
+using QuizBattle.Application.AiQuota;
 using QuizBattle.Application.Common;
 using QuizBattle.Application.Questions;
 using QuizBattle.Application.Rooms;
 using QuizBattle.Domain.Entities;
+using QuizBattle.Tests.TestHelpers;
 using QuizBattle.Domain.Enums;
 
 namespace QuizBattle.Tests.Questions;
@@ -89,7 +91,7 @@ public sealed class QuestionServiceTests
         Assert.Equal(QuestionReviewStatus.Approved, question.ReviewStatus);
     }
 
-    private static Room NewDraftRoom() => new()
+    internal static Room NewDraftRoom() => new()
     {
         Id = Guid.NewGuid(),
         Code = "ABCDEF",
@@ -100,10 +102,10 @@ public sealed class QuestionServiceTests
         CreatedAt = DateTimeOffset.UtcNow,
     };
 
-    private static QuestionService CreateService(Room room, IQuestionRepository questionRepository, IQuestionGenerator generator) =>
-        new(questionRepository, new FakeRoomRepository(room), generator);
+    internal static QuestionService CreateService(Room room, IQuestionRepository questionRepository, IQuestionGenerator generator, IAiQuotaService? quota = null) =>
+        new(questionRepository, new FakeRoomRepository(room), generator, quota ?? new FakeAiQuotaService());
 
-    private sealed class FakeRoomRepository(Room room) : IRoomRepository
+    internal sealed class FakeRoomRepository(Room room) : IRoomRepository
     {
         public Task AddAsync(Room r, CancellationToken cancellationToken) => throw new NotSupportedException();
 
@@ -120,7 +122,7 @@ public sealed class QuestionServiceTests
             Task.FromResult(room.HostUserId == hostUserId && room.Code == code ? room : null);
     }
 
-    private sealed class FakeQuestionGenerator(int throwFormatErrorTimes = 0, IReadOnlyList<QuestionCandidate>? validCandidates = null) : IQuestionGenerator
+    internal sealed class FakeQuestionGenerator(int throwFormatErrorTimes = 0, IReadOnlyList<QuestionCandidate>? validCandidates = null) : IQuestionGenerator
     {
         public int CallCount { get; private set; }
 
@@ -136,7 +138,7 @@ public sealed class QuestionServiceTests
         }
     }
 
-    private sealed class FakeQuestionRepository : IQuestionRepository
+    internal sealed class FakeQuestionRepository : IQuestionRepository
     {
         private readonly List<Question> _questions = [];
 

@@ -25,6 +25,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<UserAvatar> UserAvatars => Set<UserAvatar>();
 
+    public DbSet<AiUsage> AiUsages => Set<AiUsage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Mỗi entity có một lớp cấu hình riêng (IEntityTypeConfiguration) trong project này.

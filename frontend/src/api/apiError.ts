@@ -36,6 +36,7 @@ export function parseProblemDetails(body: unknown): ProblemDetails | null {
     detail: typeof candidate.detail === 'string' ? candidate.detail : undefined,
     errors: isValidationErrors(candidate.errors) ? candidate.errors : undefined,
     code: typeof candidate.code === 'string' ? candidate.code : undefined,
+    resetAt: typeof candidate.resetAt === 'string' ? candidate.resetAt : undefined,
   }
 }
 

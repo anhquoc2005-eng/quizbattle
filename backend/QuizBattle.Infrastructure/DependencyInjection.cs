@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using QuizBattle.Application.Abstractions;
+using QuizBattle.Application.AiQuota;
 using QuizBattle.Application.Auth;
 using QuizBattle.Application.Game;
 using QuizBattle.Application.Questions;
@@ -36,6 +37,9 @@ public static class DependencyInjection
         services.AddScoped<IQuestionRepository, QuestionRepository>();
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IAvatarRepository, AvatarRepository>();
+        services.AddScoped<IAiQuotaRepository, AiQuotaRepository>();
+        // Trần lượt AI theo ngày: sai giá trị (0, âm, chữ) thì ném lỗi ngay lúc khởi động, mọi môi trường.
+        services.AddSingleton(AiQuotaOptions.Parse(configuration["Ai:DailyLimitPerUser"], configuration["Ai:DailyLimitGlobal"]));
         services.AddScoped<ISessionTokenGenerator, SessionTokenGenerator>();
 
         // Không validate/throw lúc khởi động - thiếu Ai:ApiKey/Ai:Model thì app vẫn chạy (khác Jwt).

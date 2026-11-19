@@ -49,7 +49,7 @@ Chạy file này lên Supabase bằng chuỗi **Session pooler (cổng 5432)** T
 
 ## Bằng chứng mutation (T013 điền khi làm)
 
-- Xóa `WHERE "AiUsageDaily"."Count" < @limit` → `Reserve_ParallelCallsOverUserLimit_GrantsExactlyLimit`: ĐỎ (Granted = ___ thay vì 5); `Reserve_ManyUsersOverGlobalLimit_GrantsExactlyGlobalLimit`: ĐỎ (Granted = ___ thay vì 5).
+- Xóa `WHERE "AiUsageDaily"."Count" < @limit` → `Reserve_ParallelCallsOverUserLimit_GrantsExactlyLimit`: ĐỎ (Granted = 30 thay vì 5, N = 30); `Reserve_ManyUsersOverGlobalLimit_GrantsExactlyGlobalLimit`: ĐỎ (Granted = 20 thay vì 5, N = 20); `Reserve_UntilLimit_GrantsEveryCallThenRejectsWithUser` cũng đỏ (ngày 19/11/2026, Postgres 5433).
 - Khôi phục câu SQL → cả hai XANH.
 
 ## Checklist nghiệm thu

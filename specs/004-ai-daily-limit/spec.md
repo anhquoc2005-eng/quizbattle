@@ -51,6 +51,7 @@ Gemini, và cho chủ phòng thấy mình còn bao nhiêu lượt.
   lấy phòng (đúng chủ + Draft) → đếm câu → lấy danh sách câu hiện có → gọi Gemini → chèn có khóa phòng. Điểm giữ
   chỗ nằm giữa "lấy danh sách câu hiện có" và "gọi Gemini" (đúng yêu cầu D). Validation `Count` chạy ở model
   binding, trước cả controller.
+- **Lỗ đã phát hiện (duyệt 52430fa)**: [GeminiQuestionGenerator.cs:34](../../backend/QuizBattle.Infrastructure/Ai/GeminiQuestionGenerator.cs#L34) bắt `HttpRequestException or TaskCanceledException` rồi ném `AiUnavailableException`. Khi client đóng tab, `RequestAborted` làm `SendAsync` ném `TaskCanceledException` → thành `AiUnavailableException` → logic hoàn lượt coi là "Gemini lỗi" và hoàn, tức hủy request vẫn được hoàn. Vá ở T016a (generator phân biệt hủy với timeout) và T017 (điều kiện `!cancellationToken.IsCancellationRequested`); T020 có test dùng generator thật.
 - `GenerateValidCandidatesAsync` ném `BadGatewayException` (không có câu hợp lệ sau 2 lần) hoặc để lọt
   `AiUnavailableException` (Gemini không gọi được, thiếu cấu hình) — hai điểm kích hoạt hoàn lượt user.
 - Sau khi Gemini trả về, `InsertWithRoomLockAsync` vẫn có thể ném `ConflictException` (phòng vừa rời Draft, đầy chỗ).
@@ -113,7 +114,7 @@ Chủ phòng mở trang phòng (Draft), cạnh nút "Sinh câu hỏi" thấy "C�
 - **FR-002**: Ngày MUST được tính bằng `UTC + 7h` bằng hàm thuần nhận thời gian làm tham số; `resetAt` là 00:00 +07:00 của ngày kế tiếp.
 - **FR-003**: Giữ chỗ MUST là một transaction: tăng dòng global (có điều kiện `Count < limit`), rồi tăng dòng user (có điều kiện); câu nào bị từ chối thì toàn bộ rollback. Transaction MUST commit trước khi gọi Gemini.
 - **FR-004**: Mọi kiểm tra rẻ (D) MUST chạy trước giữ chỗ.
-- **FR-005**: Khi `BadGatewayException` hoặc `AiUnavailableException`, hệ thống MUST hoàn đúng 1 lượt cho dòng user của đúng `Day` đã giữ chỗ; MUST NOT hoàn dòng global; MUST NOT hoàn khi bị hủy hoặc khi lỗi xảy ra sau khi Gemini đã trả kết quả hợp lệ.
+- **FR-005**: Khi `BadGatewayException` hoặc `AiUnavailableException`, hệ thống MUST hoàn đúng 1 lượt cho dòng user của đúng `Day` đã giữ chỗ; MUST NOT hoàn dòng global; MUST NOT hoàn khi bị hủy (kể cả khi lỗi hủy bị bọc thành lỗi khác: generator phải ném lại `OperationCanceledException` khi token đã hủy, và điều kiện hoàn kiểm thêm `!cancellationToken.IsCancellationRequested`) hoặc khi lỗi xảy ra sau khi Gemini đã trả kết quả hợp lệ.
 - **FR-006**: Vượt trần MUST trả `429` ProblemDetails `{ type, title, status, detail?, code, resetAt }`, `code` ∈ {`AI_DAILY_LIMIT_USER`, `AI_DAILY_LIMIT_GLOBAL`}; khi cả hai cùng hết, `AI_DAILY_LIMIT_GLOBAL` được ưu tiên (kiểm global trước).
 - **FR-007**: Policy 10 request/giờ MUST giữ nguyên; 429 của nó MUST có `code = AI_RATE_LIMIT`.
 - **FR-008**: `GET /api/ai-quota` (yêu cầu đăng nhập) MUST trả `{ dailyLimit, used, remaining, globalExhausted, resetAt }`; MUST NOT lộ con số global.
@@ -143,11 +144,11 @@ Chủ phòng mở trang phòng (Draft), cạnh nút "Sinh câu hỏi" thấy "C�
 - **Lượt ≠ lần gọi Gemini**: 1 lượt có thể là 2 lần gọi, nên 300 lượt/ngày có thể là 600 request Gemini. Trần global nên đặt theo RPD (requests per day) của key Gemini đang dùng — sẽ kiểm sau khi biết gói; hiện chưa kiểm.
 - **Điểm nóng một dòng**: mọi giữ chỗ khóa dòng global trong vài ms (đến COMMIT). Với tối đa 300 lượt/ngày thì không đáng kể.
 
-## Điểm cần chốt còn lại
+## Điểm cần chốt — ĐÃ CHỐT (duyệt 52430fa)
 
-1. **Lỗi SAU khi Gemini trả kết quả hợp lệ** (`ConflictException` ở bước chèn: phòng vừa rời Draft hoặc vừa đủ 50 câu do request khác): đề xuất KHÔNG hoàn (Gemini đã tốn tiền, câu hỏi hợp lệ đã sinh). Ngược lại, `AiUnavailableException` do thiếu cấu hình (`Ai:ApiKey` rỗng) vẫn hoàn user nhưng global vẫn bị trừ dù thực tế không có lần gọi nào — chấp nhận vì production đã bắt buộc có `Ai:ApiKey`.
-2. **`GET /api/ai-quota` gắn theo user (không theo phòng)** và chỉ trả `globalExhausted` (boolean), không trả con số global để tránh lộ mức sử dụng toàn hệ thống.
-3. **Policy 10/giờ vẫn đếm mọi request** kể cả request sau đó bị từ chối vì hết lượt ngày hoặc kiểm tra rẻ (vì nó chạy trước controller). Chấp nhận: nó chỉ là lớp chống dồn dập.
+1. **[Đã chốt] Lỗi SAU khi Gemini trả kết quả hợp lệ** (`ConflictException` ở bước chèn: phòng vừa rời Draft hoặc vừa đủ 50 câu do request khác): đề xuất KHÔNG hoàn (Gemini đã tốn tiền, câu hỏi hợp lệ đã sinh). Ngược lại, `AiUnavailableException` do thiếu cấu hình (`Ai:ApiKey` rỗng) vẫn hoàn user nhưng global vẫn bị trừ dù thực tế không có lần gọi nào — chấp nhận vì production đã bắt buộc có `Ai:ApiKey`.
+2. **[Đã chốt] `GET /api/ai-quota` gắn theo user (không theo phòng)** và chỉ trả `globalExhausted` (boolean), không trả con số global để tránh lộ mức sử dụng toàn hệ thống.
+3. **[Đã chốt] Policy 10/giờ vẫn đếm mọi request** kể cả request sau đó bị từ chối vì hết lượt ngày hoặc kiểm tra rẻ (vì nó chạy trước controller). Chấp nhận: nó chỉ là lớp chống dồn dập.
 
 ## Ngoài phạm vi
 

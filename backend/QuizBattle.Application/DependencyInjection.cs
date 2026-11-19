@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using QuizBattle.Application.AiQuota;
 using QuizBattle.Application.Auth;
 using QuizBattle.Application.Avatars;
 using QuizBattle.Application.Game;
@@ -22,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IGameService, GameService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IShopService, ShopService>();
+        services.AddScoped<IAiQuotaService, AiQuotaService>();
         services.AddScoped<IAvatarService, AvatarService>();
         return services;
     }

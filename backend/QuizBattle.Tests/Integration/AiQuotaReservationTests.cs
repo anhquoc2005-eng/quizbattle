@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using QuizBattle.Application.AiQuota;
 using QuizBattle.Infrastructure.Persistence;
 
@@ -255,13 +256,13 @@ public sealed class AiQuotaReservationTests(DatabaseFixture fixture)
     private async Task<AiReserveResult> ReserveAsync(Guid userId, DateOnly day, int userLimit, int globalLimit)
     {
         await using var db = fixture.CreateContext();
-        return await new AiQuotaRepository(db).ReserveAsync(userId, day, userLimit, globalLimit, CancellationToken.None);
+        return await new AiQuotaRepository(db, NullLogger<AiQuotaRepository>.Instance).ReserveAsync(userId, day, userLimit, globalLimit, CancellationToken.None);
     }
 
     private async Task RefundAsync(Guid userId, DateOnly day)
     {
         await using var db = fixture.CreateContext();
-        await new AiQuotaRepository(db).RefundUserAsync(userId, day, CancellationToken.None);
+        await new AiQuotaRepository(db, NullLogger<AiQuotaRepository>.Instance).RefundUserAsync(userId, day, CancellationToken.None);
     }
 
     private async Task<int?> FindCountAsync(DateOnly day, string scope)

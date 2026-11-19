@@ -1,3 +1,5 @@
+using QuizBattle.Application.AiQuota;
+
 namespace QuizBattle.Api.Extensions;
 
 public static class ProductionConfigValidator
@@ -24,6 +26,16 @@ public static class ProductionConfigValidator
         if (string.IsNullOrWhiteSpace(configuration["Ai:Model"]))
         {
             problems.Add("Ai__Model (tên model Gemini)");
+        }
+
+        // Trần AI theo ngày không bắt buộc (có mặc định) nhưng nếu đã đặt thì phải là số nguyên > 0.
+        try
+        {
+            AiQuotaOptions.Parse(configuration["Ai:DailyLimitPerUser"], configuration["Ai:DailyLimitGlobal"]);
+        }
+        catch (InvalidOperationException ex)
+        {
+            problems.Add(ex.Message);
         }
 
         if (problems.Count > 0)

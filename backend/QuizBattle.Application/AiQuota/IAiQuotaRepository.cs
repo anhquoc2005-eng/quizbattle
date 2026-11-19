@@ -11,6 +11,7 @@ public interface IAiQuotaRepository
     /// <summary>
     /// Hoàn một lượt cho dòng USER của đúng <paramref name="day"/> đã giữ chỗ. Cố ý không có hàm hoàn dòng global:
     /// trần global đo số lần đã thực sự gọi AI, lần thất bại vẫn tốn quota.
+    /// Best-effort: lỗi DB khi hoàn chỉ được ghi log, không ném ra (để không che lỗi AI gốc).
     /// </summary>
     Task RefundUserAsync(Guid userId, DateOnly day, CancellationToken cancellationToken);
 

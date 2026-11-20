@@ -46,6 +46,15 @@ public sealed class AiQuotaHttpTests(DatabaseFixture fixture) : HttpTestBase(fix
     }
 
     [RequiresDatabaseFact]
+    public async Task Generate_NoToken_Returns401Problem()
+    {
+        // Bắt lỗi đặt UseRateLimiter trước UseAuthorization: hàm chia lượt gọi GetUserId() với request ẩn danh -> 500.
+        var response = await GenerateAsync(Factory.CreateClient(), "ZZZZZZ");
+
+        await AssertProblemAsync(response, HttpStatusCode.Unauthorized);
+    }
+
+    [RequiresDatabaseFact]
     public async Task Generate_InvalidBody_Returns400AndDoesNotConsumeQuota()
     {
         var (_, client) = await Factory.CreateUserClientAsync(Fixture);

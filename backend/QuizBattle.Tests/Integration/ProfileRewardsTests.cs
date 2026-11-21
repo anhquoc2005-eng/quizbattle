@@ -4,6 +4,7 @@ using QuizBattle.Application.Rooms;
 using QuizBattle.Domain.Entities;
 using QuizBattle.Domain.Enums;
 using QuizBattle.Infrastructure.Persistence;
+using QuizBattle.Tests.TestHelpers;
 
 namespace QuizBattle.Tests.Integration;
 
@@ -41,9 +42,7 @@ public sealed class ProfileRewardsTests(DatabaseFixture fixture)
         Assert.Equal("Lịch sử Việt Nam", item.Topic);
         Assert.Equal(Start, item.PlayedAt);
 
-        var user = await check.Users.AsNoTracking().SingleAsync(u => u.Id == player.Id);
-        Assert.Equal(await check.MatchRewards.Where(r => r.UserId == player.Id).SumAsync(r => r.Xp), user.TotalXp);
-        Assert.Equal(await check.CoinTransactions.Where(c => c.UserId == player.Id).SumAsync(c => c.Amount), user.CoinBalance);
+        await XpInvariant.AssertAsync(check, [player.Id]); // TotalXp = XP trận + XP ôn tập, CoinBalance = tổng sổ Xu
     }
 
     [RequiresDatabaseFact]
@@ -110,7 +109,7 @@ public sealed class ProfileRewardsTests(DatabaseFixture fixture)
         Score = xp * 10, RewardRank = 1, Xp = xp,
     };
 
-    // Phòng Finished với một người chơi đã nhận 80 XP và 8 Xu (đúng bất biến TotalXp = SUM(Xp), CoinBalance = SUM(Amount)).
+    // Phòng Finished với một người chơi đã nhận 80 XP và 8 Xu (đúng bất biến TotalXp = SUM(Xp trận) + SUM(Xp ôn tập), CoinBalance = SUM(Amount)).
     private async Task<(User Host, User Player, Room Room)> SeedFinishedRoomWithRewardAsync()
     {
         var host = await SeedUserAsync("host");

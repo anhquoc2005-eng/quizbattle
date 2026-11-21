@@ -38,10 +38,12 @@ Ràng buộc:
 - `CK_PracticeAnswers_XpReason` — một CHECK duy nhất gom giá trị và quan hệ:
   ```sql
   ("XpReason" IS NULL AND "IsCorrect")
-  OR ("XpReason" = 'wrong' AND NOT "IsCorrect" AND "XpAwarded" = 0)
-  OR ("XpReason" IN ('already_today', 'daily_cap') AND "IsCorrect" AND "XpAwarded" = 0)
-  OR ("XpReason" = 'daily_cap_partial' AND "IsCorrect" AND "XpAwarded" > 0)
+  OR ("XpReason" IS NOT NULL AND (
+        ("XpReason" = 'wrong' AND NOT "IsCorrect" AND "XpAwarded" = 0)
+     OR ("XpReason" IN ('already_today', 'daily_cap') AND "IsCorrect" AND "XpAwarded" = 0)
+     OR ("XpReason" = 'daily_cap_partial' AND "IsCorrect" AND "XpAwarded" > 0)))
   ```
+  Nhánh `"XpReason" IS NOT NULL` là bắt buộc: Postgres cho qua CHECK khi biểu thức ra NULL, và mọi so sánh `"XpReason" = ...` ra NULL khi cột NULL; thiếu nhánh này thì (NULL, câu sai) lọt qua (test `XpReason_NullWithWrongAnswer_ViolatesCheck` bắt được lỗi này khi code đợt 1).
   Nghĩa: `XpReason` chỉ nhận `{wrong, already_today, daily_cap, daily_cap_partial}` hoặc NULL; NULL chỉ hợp lệ với câu đúng. DB không biết `XpPerCorrect` (cấu hình) nên "NULL ⇒ XpAwarded đúng bằng `XpPerCorrect`" do `PracticeRewardCalculator`/repository bảo đảm và test kiểm (không bằng CHECK). Hệ quả: `XpPerCorrect = 0` cho câu đúng ra `XpReason = NULL, XpAwarded = 0` (hợp lệ).
 - CHECK `("IsCorrect" OR "XpAwarded" = 0)` được ràng buộc ở trên nên không thêm riêng.
 

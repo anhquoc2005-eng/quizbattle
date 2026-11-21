@@ -57,7 +57,7 @@ docker-compose.yml
 - Mọi thay đổi schema đi qua EF Core migration. Không sửa DB bằng tay.
 - Truy vấn chỉ đọc dùng `AsNoTracking()`. Tránh N+1: dùng `Include` hoặc projection.
 - Thao tác nhiều bước phải nhất quán (ví dụ lưu kết quả trận) thì bọc trong transaction.
-- Khi kết thúc trận, các dòng `Users` của người chơi bị khóa `SELECT ... FOR UPDATE` theo thứ tự `Id` (sau khi đã khóa `Room`) để cộng XP/Xu không mất cập nhật và không deadlock. Tính năng nào khác ghi vào `Users` (ví dụ cửa hàng trừ Xu) phải khóa theo cùng thứ tự đó, và giữ bất biến `CoinBalance` = tổng `CoinTransactions`, `TotalXp` = tổng `MatchRewards.Xp`.
+- Khi kết thúc trận, các dòng `Users` của người chơi bị khóa `SELECT ... FOR UPDATE` theo thứ tự `Id` (sau khi đã khóa `Room`) để cộng XP/Xu không mất cập nhật và không deadlock. Tính năng nào khác ghi vào `Users` (ví dụ cửa hàng trừ Xu) phải khóa theo cùng thứ tự đó, và giữ bất biến `CoinBalance` = tổng `CoinTransactions`, `TotalXp` = tổng `MatchRewards.Xp` + tổng `PracticeAnswers.XpAwarded` (XP ôn tập; ôn tập chỉ khóa một dòng `Users` của chính người dùng rồi mới đụng bộ đếm ngày).
 
 ### Bảo mật
 - Mật khẩu băm bằng thư viện chuẩn (ASP.NET Identity PasswordHasher hoặc BCrypt). Không tự viết.

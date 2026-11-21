@@ -27,7 +27,7 @@ Body `{ "roomCode": "ABC123" }`.
 - **200 OK**: đã có lượt đang mở của `(user, phòng)`; trả lại lượt đó, cùng `sessionId`, cùng dạng body. Không tạo mới.
 - Hai request đồng thời: một trả 201, một trả 200, cùng `sessionId`.
 - 404 `not_found`: phòng không tồn tại HOẶC user không đủ điều kiện (cùng một phản hồi, không lộ phòng của người khác).
-- 400: `roomCode` sai định dạng.
+- 400 `invalid_room_code` (qua `RequestValidationException`, có `errors.roomCode`): `roomCode` không phải 6 ký tự chữ và số sau khi cắt khoảng trắng và viết hoa. Đúng dạng mà không có phòng thì là 404.
 
 ## GET /api/practice/sessions/{id}
 **200** — `PracticeSessionDto`
@@ -46,6 +46,7 @@ Body `{ "roomCode": "ABC123" }`.
 - `lastResult`: kết quả câu nộp gần nhất của lượt (theo `AnsweredAt`), null nếu chưa nộp câu nào. Có `correctIndex` vì câu đã nộp (không lộ thêm gì). Dùng để F5 sau khi nộp vẫn thấy đáp án.
 - Khi `completed`: `summary = { correctCount, xpGainedInSession, xpGainedToday, remainingToday, resetAt }`.
 - 404 nếu lượt không tồn tại hoặc không thuộc user.
+- Ghi chú: GET có thể GHI `CompletedAt` của lượt khi mọi câu còn lại đã bị xóa (xóa phòng giữa lượt, Ch8). Đây là lần ghi duy nhất của GET và KHÔNG đụng XP, `TotalXp` hay bộ đếm ngày.
 
 ## POST /api/practice/sessions/{id}/answers
 Body `{ "questionId": "…", "selectedIndex": 2 }`.
@@ -79,7 +80,24 @@ Nếu `(lượt, câu)` đã được chấm, response luôn là **200** với k
 | `daily_cap_partial` | Còn lại < `XpPerCorrect`, cộng phần còn lại | true | phần còn lại (>0) |
 
 ### Lỗi
-- 400: `selectedIndex` ngoài 0..3; `questionId` thiếu.
+- 400 `invalid_selected_index` (có `errors.selectedIndex`): `selectedIndex` ngoài 0..3.
+- 400 `missing_question_id` (có `errors.questionId`): thiếu `questionId` hoặc là Guid rỗng.
 - 404: lượt không tồn tại/không thuộc user; hoặc `questionId` không thuộc lượt.
 - 409 `not_current_question`: câu CHƯA chấm và không phải câu hiện tại của lượt. (Câu đã chấm thì không bao giờ 409: phát lại.)
 - Khóa duy nhất của DB là lưới cuối; nếu từng bị vi phạm thì là lỗi hệ thống (500), không phải luồng thường (xem `research.md` R12).
+
+## Lỗi chung của /api/practice
+
+| Trường hợp | Status | `code` | `errors` |
+|---|---|---|---|
+| Không có token, token hết hạn hoặc là token phiên của khách (không phải JWT) | 401 | không | không |
+| `roomCode` sai dạng | 400 | `invalid_room_code` | `roomCode` |
+| `selectedIndex` ngoài 0..3 | 400 | `invalid_selected_index` | `selectedIndex` |
+| Thiếu `questionId` | 400 | `missing_question_id` | `questionId` |
+| Phòng không có hoặc không đủ điều kiện; lượt không thuộc user; câu không thuộc lượt | 404 | `not_found` | không |
+| Câu chưa chấm mà không phải câu hiện tại | 409 | `not_current_question` | không |
+| Quá 120 request/phút của một user (policy `practice`) | 429 | `PRACTICE_RATE_LIMIT` | không |
+
+Các lỗi 400 nghiệp vụ đi qua `RequestValidationException` nên có `code` và `errors` cùng dạng lỗi validate của ASP.NET.
+
+**Hạn chế đã biết (chung của toàn API, không sửa ở đợt này):** body JSON sai kiểu (ví dụ `selectedIndex` là chuỗi, `questionId` không phải Guid) bị model binding của ASP.NET từ chối với 400 mặc định, KHÔNG có trường `code`. Client chỉ dựa vào `status` và `errors` cho trường hợp này.

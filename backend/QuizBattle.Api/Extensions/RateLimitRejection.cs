@@ -9,8 +9,17 @@ public static class RateLimitRejection
 
     public const string AiRateLimitCode = "AI_RATE_LIMIT";
 
-    /// <summary>Chỉ policy sinh câu hỏi AI có mã; các policy khác (auth, join-room) giữ nguyên, không gắn code.</summary>
-    public static string? CodeFor(string? policyName) => policyName == GenerateQuestionsPolicy ? AiRateLimitCode : null;
+    public const string PracticePolicy = "practice";
+
+    public const string PracticeRateLimitCode = "PRACTICE_RATE_LIMIT";
+
+    /// <summary>Policy sinh câu hỏi AI và ôn tập có mã; các policy khác (auth, join-room) giữ nguyên, không gắn code.</summary>
+    public static string? CodeFor(string? policyName) => policyName switch
+    {
+        GenerateQuestionsPolicy => AiRateLimitCode,
+        PracticePolicy => PracticeRateLimitCode,
+        _ => null,
+    };
 
     public static string? CodeFor(HttpContext httpContext) =>
         CodeFor(httpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName);

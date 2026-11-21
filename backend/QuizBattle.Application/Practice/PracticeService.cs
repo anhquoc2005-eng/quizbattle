@@ -33,6 +33,11 @@ public sealed class PracticeService(
     {
         // Cùng một phản hồi cho "không có phòng" và "không đủ điều kiện" để không lộ phòng của người khác.
         var code = (request.RoomCode ?? string.Empty).Trim().ToUpperInvariant();
+        if (!IsRoomCodeShape(code))
+        {
+            throw new RequestValidationException("roomCode", "Mã phòng gồm 6 ký tự chữ và số.", "invalid_room_code");
+        }
+
         var room = await repository.FindPlayableRoomAsync(userId, code, cancellationToken)
             ?? throw new NotFoundException("Không tìm thấy phòng để ôn tập.", "not_found");
 
@@ -62,12 +67,12 @@ public sealed class PracticeService(
     {
         if (request.QuestionId == Guid.Empty)
         {
-            throw new RequestValidationException("questionId", "Thiếu questionId.");
+            throw new RequestValidationException("questionId", "Thiếu questionId.", "missing_question_id");
         }
 
         if (request.SelectedIndex is < 0 or >= Question.OPTION_COUNT)
         {
-            throw new RequestValidationException("selectedIndex", $"selectedIndex phải từ 0 đến {Question.OPTION_COUNT - 1}.");
+            throw new RequestValidationException("selectedIndex", $"selectedIndex phải từ 0 đến {Question.OPTION_COUNT - 1}.", "invalid_selected_index");
         }
 
         var now = timeProvider.GetUtcNow();
@@ -81,6 +86,9 @@ public sealed class PracticeService(
         return new PracticeAnswerResultDto(
             outcome.IsCorrect, outcome.CorrectIndex, outcome.XpAwarded, outcome.XpReason?.ToCode(), today, Remaining(today), outcome.Completed);
     }
+
+    // Chỉ kiểm dạng (độ dài 6, chữ và số); bảng chữ cái thật của mã phòng nằm ở RoomCodeGenerator. Đúng dạng mà không có phòng thì vẫn 404.
+    private static bool IsRoomCodeShape(string code) => code.Length == 6 && code.All(c => c is >= 'A' and <= 'Z' or >= '0' and <= '9');
 
     private int Remaining(int xpToday) => Math.Max(options.DailyXpCap - xpToday, 0);
 }

@@ -17,6 +17,7 @@ const string FrontendCorsPolicy = "Frontend";
 const string AuthRateLimiterPolicy = "auth";
 const string GenerateQuestionsRateLimiterPolicy = RateLimitRejection.GenerateQuestionsPolicy;
 const string JoinRoomRateLimiterPolicy = "join-room";
+const string PracticeRateLimiterPolicy = RateLimitRejection.PracticePolicy;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -116,6 +117,12 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: httpContext.User.GetUserId().ToString(),
             factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromHours(1) }));
 
+    // Ôn tập: theo user, 120 request/phút (một lượt ôn bình thường chỉ cần vài request mỗi phút). UseAuthorization chạy trước nên user đã xác thực.
+    options.AddPolicy(PracticeRateLimiterPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.GetUserId().ToString(),
+            factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1) }));
+
     // Endpoint ẩn danh (người chơi vào phòng, không có JWT) - chỉ chặn được theo IP. 60/phút vì cả lớp học thường
     // chung một Wi-Fi (cùng IP); số người mỗi phòng đã bị giới hạn bởi Room.MAX_PLAYERS.
     options.AddPolicy(JoinRoomRateLimiterPolicy, httpContext =>
@@ -134,7 +141,7 @@ builder.Services.AddRateLimiter(options =>
             Type = "https://tools.ietf.org/html/rfc9110#section-15.5.20",
         };
 
-        // Chỉ policy sinh câu hỏi AI có "code" (AI_RATE_LIMIT) để client phân biệt "dồn dập" với "hết lượt trong ngày".
+        // Policy sinh câu hỏi AI (AI_RATE_LIMIT) và ôn tập (PRACTICE_RATE_LIMIT) có "code"; auth/join-room giữ nguyên, không code.
         if (RateLimitRejection.CodeFor(context.HttpContext) is { } code)
         {
             problem.Extensions["code"] = code;

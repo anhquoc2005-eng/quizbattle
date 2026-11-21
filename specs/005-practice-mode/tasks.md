@@ -88,10 +88,10 @@
 
 ## Đợt 5: Chốt — production, tài liệu, nghiệm thu
 
-- [ ] T043 [P] Script SQL idempotent cho production (mẫu đợt 004): sinh từ migration bằng `dotnet ef migrations script --idempotent`, đọc lại, lưu vào chỗ 004 đã lưu; ghi bước chạy thủ công trên Supabase (Session pooler 5432) trước khi merge. (CLAUDE.md: Môi trường và Deploy)
+- [ ] T043 [P] Script SQL idempotent cho production: xuất TỪ migration `20261119094951_AddAiUsageDaily` (production đang ở đó) ĐẾN `AddPracticeMode` bằng `dotnet ef migrations script 20261119094951_AddAiUsageDaily AddPracticeMode --idempotent`. Lưu NGOÀI repo tại `D:\IT_Code\Quiz_Battle\sql\005-AddPracticeMode.sql`. Báo kích thước và SHA-256. Xác nhận bằng grep không có `DROP`/`DELETE` (ALTER chỉ thêm ràng buộc của 3 bảng mới). Cuối file thêm RIÊNG một khối `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` cho `PracticeSessions`, `PracticeAnswers`, `PracticeXpDaily` (EF không bật RLS) và hai câu `SELECT` kiểm sau khi chạy: `__EFMigrationsHistory` (có `AddPracticeMode`) và `pg_class.relrowsecurity` của 3 bảng (phải `true`). Ghi bước chạy thủ công trên Supabase (Session pooler 5432) trước khi merge. (CLAUDE.md: Môi trường và Deploy)
 - [ ] T044 Nghiệm thu `quickstart.md` mục 1–12 trên dev (dữ liệu thật), điền "Bằng chứng mutation" nếu chưa đủ; ghi kết quả vào mô tả PR. (SC-001…SC-005)
 - [ ] T045 [P] Tài liệu: kiểm `.env.example` có hai khóa mới; `spec.md` mục "Hạn chế đã biết" khớp thực tế (số 3000 XP/tháng = 100 × 30); nếu có README liệt kê API/tính năng thì thêm mục ôn tập. (Ch10)
-- [ ] T046 **Checkpoint cuối**: toàn bộ test xanh; script đã chạy trên Supabase (T043); merge `feat/practice-mode` vào `main` bằng merge commit (theo lịch sử repo). Nếu chưa chạy script thì KHÔNG merge: `/api/practice` trên production sẽ trả 500 vì thiếu bảng.
+- [ ] T046 **Checkpoint cuối**: toàn bộ test xanh; script đã chạy trên Supabase (T043). KHÔNG tự merge: chỉ merge `feat/practice-mode` vào `main` (merge commit, theo lịch sử repo) khi người làm báo cố vấn đã duyệt diff và test trình duyệt. Chưa chạy script thì cũng không merge: `/api/practice` trên production sẽ trả 500 vì thiếu bảng.
 
 ---
 

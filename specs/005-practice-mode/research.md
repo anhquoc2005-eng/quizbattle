@@ -73,4 +73,23 @@ Kết luận: chọn A; đưa vào "Điểm cần chốt" #1 của plan.
 
 ## R10. Mẫu test sẵn có
 - Tích hợp Postgres thật: `DatabaseFixture` + `RequiresDatabaseFact`. HTTP thật: `Integration/Http/ApiFactory.cs`, `HttpTestBase.cs`.
-- "Mutation" trong repo là test độ nhạy tự viết, không dùng công cụ mutation: tắt cơ chế bằng cờ `internal` rồi chứng minh test đồng thời đỏ (`ShopPurchaseSensitivityTests.cs:63`, `AvatarRepository.cs:11-16`). Ôn tập theo đúng mẫu, không thêm thư viện.
+- "Mutation" trong repo là test độ nhạy tự viết, không dùng công cụ mutation: tắt cơ chế bằng cờ `internal` rồi chứng minh test đồng thời đỏ (`ShopPurchaseSensitivityTests.cs:63`, `AvatarRepository.cs:11-16`). Ôn tập theo đúng mẫu, không thêm thư viện. Danh sách mutation M1–M7 ở `plan.md`.
+
+## R11. `POST /sessions`: mở lượt hoặc trả lượt đang dở (Ch7)
+- Mẫu: một câu `INSERT ... ON CONFLICT` thay vì "đọc rồi chèn", giống tinh thần `AiQuotaRepository.cs:13-20` (kiểm tra và ghi trong cùng một câu lệnh).
+- **Quyết định**: transaction mức **READ COMMITTED** (đặt tường minh, không để mặc định ngầm):
+  1. `INSERT INTO "PracticeSessions" (...) VALUES (...) ON CONFLICT ("UserId", "RoomId") WHERE "CompletedAt" IS NULL DO NOTHING RETURNING "Id"`. Có dòng trả về = lượt mới (201).
+  2. Không có dòng trả về = đã có lượt dở: đọc lại bằng MỘT CÂU LỆNH RIÊNG `SELECT "Id" ... WHERE "UserId" = @u AND "RoomId" = @r AND "CompletedAt" IS NULL` rồi trả 200.
+- Lý do dùng câu SELECT riêng ở READ COMMITTED: mỗi câu lệnh có snapshot mới. Khi hai POST đồng thời, câu INSERT của bên chậm chờ bên nhanh commit rồi `DO NOTHING`; câu SELECT sau đó chạy với snapshot mới nên THẤY dòng vừa commit. Nếu đặt mức REPEATABLE READ/SERIALIZABLE, snapshot chốt từ câu đầu nên SELECT không thấy dòng và INSERT có thể báo lỗi tuần tự hóa (40001), phải thêm vòng thử lại. READ COMMITTED không cần.
+- Không dùng `DO UPDATE SET ... RETURNING` để lấy `Id` trong một câu: sẽ ghi dòng (và khóa dòng) chỉ để đọc, và `RETURNING` của `DO UPDATE` chỉ hợp lệ khi thật sự cập nhật.
+- Việc chọn câu hỏi và xáo thứ tự diễn ra TRƯỚC câu INSERT (để `QuestionIds` có giá trị); bên thua cuộc đua bỏ danh sách đó, vô hại.
+
+## R12. Nộp đáp án idempotent, không bắt unique-violation
+- Hai request đồng thời cùng `(lượt, câu)` đều đi qua khóa `Users FOR UPDATE` của chính user (R4), nên chạy NỐI TIẾP: request sau, sau khi nhận khóa, đọc thấy `PracticeAnswers` đã commit và trả kết quả đã lưu (200). Không có thời điểm nào hai request cùng qua bước "chưa có dòng".
+- **Quyết định**: KHÔNG viết nhánh "bắt unique-violation → rollback → đọc lại". Với khóa `Users` đang giữ, nhánh đó không thể chạy nên không test được (code chết không kiểm chứng). Unique `(SessionId, QuestionId)` và unique một phần `(UserId, QuestionId, Day)` vẫn được giữ làm lưới ở DB: nếu có lỗi lập trình làm mất khóa, DB từ chối và request nhận 500 thay vì ghi trùng thầm lặng. 500 là tín hiệu đúng cho lỗi lập trình.
+- Mutation M4 (tắt khóa `Users`) chứng minh: không có khóa thì hai request đồng thời đụng unique index và một bên trả 500, test "cả hai 200" đỏ.
+- Phát lại: kết quả lấy từ dòng đã lưu (`IsCorrect`, `XpAwarded`, `XpReason`, và `CorrectIndex` đọc từ `Questions` vì câu đã nộp nên không lộ thêm). Cần cột `XpReason` (data-model) vì lý do không thể suy ngược từ `XpAwarded`: `0` có thể là `wrong`, `already_today` hay `daily_cap`.
+- `xpGainedToday`, `remainingToday`, `completed` trong response phát lại là trạng thái hiện tại, không đóng băng (contract).
+
+## R13. Cấu hình ôn tập (Ch9)
+- Mẫu: `AiQuotaOptions` ở đợt 004 (bind trong DI, validate khi khởi động; `ProductionConfigValidator` chỉ kiểm khi có đặt). Ôn tập KHÔNG vào `ProductionConfigValidator`; dùng `PracticeOptions` với `ValidateOnStart` và kiểm `XpPerCorrect >= 0`, `DailyXpCap >= 0`. Có mặc định 5/100 nên thiếu cấu hình vẫn hợp lệ.

@@ -1,6 +1,6 @@
 # Data Model: Chế độ ôn tập
 
-Một migration `AddPracticeMode` tạo 3 bảng. Không sửa bảng có sẵn. (Chưa viết migration ở đợt này.)
+Một migration `AddPracticeMode` tạo 3 bảng. Không sửa bảng có sẵn. (Chưa viết migration ở đợt spec.)
 
 ## PracticeSessions
 | Cột | Kiểu | Ghi chú |
@@ -12,9 +12,11 @@ Một migration `AddPracticeMode` tạo 3 bảng. Không sửa bảng có sẵn.
 | `RoomTopic` | varchar(200) NOT NULL | bản sao |
 | `QuestionIds` | uuid[] NOT NULL | thứ tự ngẫu nhiên chốt lúc tạo; không FK (mảng) |
 | `StartedAt` | timestamptz NOT NULL | |
-| `CompletedAt` | timestamptz NULL | set khi nộp câu cuối |
+| `CompletedAt` | timestamptz NULL | set khi nộp câu cuối hoặc khi hết câu còn tồn tại (Ch8) |
 
-Index: `(UserId, StartedAt DESC)` cho "lượt gần đây".
+Index:
+- Unique một phần `IX_PracticeSessions_OpenPerUserRoom` trên `("UserId", "RoomId") WHERE "CompletedAt" IS NULL`: mỗi (user, phòng) tối đa một lượt đang mở (Ch7). `RoomId` NULL (phòng đã xóa) không xung đột.
+- `("UserId", "StartedAt" DESC)` cho "lượt gần đây".
 
 ## PracticeAnswers (dòng ghi nhận XP)
 | Cột | Kiểu | Ghi chú |
@@ -26,12 +28,22 @@ Index: `(UserId, StartedAt DESC)` cho "lượt gần đây".
 | `SelectedIndex` | int NOT NULL | CHECK 0..3 |
 | `IsCorrect` | bool NOT NULL | |
 | `XpAwarded` | int NOT NULL | CHECK >= 0 |
+| `XpReason` | varchar(20) NULL | NULL ⇔ nhận đủ `XpPerCorrect`; xem CHECK dưới |
 | `Day` | date NOT NULL | ngày VN của thời điểm nộp |
 | `AnsweredAt` | timestamptz NOT NULL | |
 
-- Unique `(SessionId, QuestionId)`: mỗi câu chấm tối đa 1 lần trong một lượt (FR-005). NULL không xung đột nên không chặn nhầm (R7).
-- Unique một phần `(UserId, QuestionId, Day) WHERE "XpAwarded" > 0`: lưới an toàn cho "XP một lần cho mỗi (user, câu, ngày)".
-- CHECK `("IsCorrect" OR "XpAwarded" = 0)`: sai không có XP.
+Ràng buộc:
+- Unique `(SessionId, QuestionId)`: lưới DB cho "mỗi câu chấm đúng 1 lần trong một lượt" (FR-005). NULL không xung đột nên không chặn nhầm (research R7). Khi khóa `Users` đang giữ, vi phạm này không thể xảy ra; nó chỉ để DB tự bảo vệ (research R12).
+- Unique một phần `(UserId, QuestionId, Day) WHERE "XpAwarded" > 0`: lưới DB cho "XP một lần cho mỗi (user, câu, ngày)" (Ch4).
+- `CK_PracticeAnswers_XpReason` — một CHECK duy nhất gom giá trị và quan hệ:
+  ```sql
+  ("XpReason" IS NULL AND "IsCorrect")
+  OR ("XpReason" = 'wrong' AND NOT "IsCorrect" AND "XpAwarded" = 0)
+  OR ("XpReason" IN ('already_today', 'daily_cap') AND "IsCorrect" AND "XpAwarded" = 0)
+  OR ("XpReason" = 'daily_cap_partial' AND "IsCorrect" AND "XpAwarded" > 0)
+  ```
+  Nghĩa: `XpReason` chỉ nhận `{wrong, already_today, daily_cap, daily_cap_partial}` hoặc NULL; NULL chỉ hợp lệ với câu đúng. DB không biết `XpPerCorrect` (cấu hình) nên "NULL ⇒ XpAwarded đúng bằng `XpPerCorrect`" do `PracticeRewardCalculator`/repository bảo đảm và test kiểm (không bằng CHECK). Hệ quả: `XpPerCorrect = 0` cho câu đúng ra `XpReason = NULL, XpAwarded = 0` (hợp lệ).
+- CHECK `("IsCorrect" OR "XpAwarded" = 0)` được ràng buộc ở trên nên không thêm riêng.
 
 ## PracticeXpDaily (bộ đếm trần)
 | Cột | Kiểu | Ghi chú |
@@ -43,10 +55,11 @@ Index: `(UserId, StartedAt DESC)` cho "lượt gần đây".
 PK `(UserId, Day)`. Trần (`Practice:DailyXpCap`) kiểm bằng SQL, không bằng CHECK cứng, để đổi cấu hình không cần migration.
 
 ## Bất biến (sau tính năng)
-1. `Users.TotalXp = SUM(MatchRewards.Xp) + SUM(PracticeAnswers.XpAwarded)` cho từng user. (Thay `CLAUDE.md:60`; xem research R8.)
+1. `Users.TotalXp = SUM(MatchRewards.Xp) + SUM(PracticeAnswers.XpAwarded)` cho từng user. (Thay `CLAUDE.md:60`; research R8.)
 2. `PracticeXpDaily.Xp = SUM(PracticeAnswers.XpAwarded)` theo `(UserId, Day)`.
-3. `Users.CoinBalance = SUM(CoinTransactions.Amount)`: không đổi, ôn tập không ghi `CoinTransaction`.
+3. `Users.CoinBalance = SUM(CoinTransactions.Amount)`: không đổi.
 4. `PracticeXpDaily.Xp <= Practice:DailyXpCap`.
+5. Mỗi `(UserId, RoomId)` có tối đa một `PracticeSession` với `CompletedAt IS NULL`.
 
-## Quan hệ trạng thái lượt ôn
-`Đang ôn` (CompletedAt null) → `Hoàn tất` (CompletedAt set khi câu cuối được nộp). Lượt chưa xong vẫn đọc lại/tiếp tục được; không hết hạn ở phạm vi này (xem plan, điểm cần chốt).
+## Trạng thái lượt ôn
+`Đang mở` (CompletedAt null) → `Hoàn tất` (CompletedAt set khi nộp câu cuối, hoặc khi mọi câu còn tồn tại đã nộp mà vẫn thiếu câu bị xóa). Lượt hoàn tất không mở lại; bấm "Ôn" lần nữa tạo lượt mới.

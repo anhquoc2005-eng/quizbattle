@@ -150,13 +150,14 @@ Mỗi mutation là một cờ `internal` chỉ test đặt; test tương ứng P
 
 | M | Cách mutate | Test phải đỏ |
 |---|---|---|
-| M1 | Bỏ `WHERE Xp < cap` khỏi câu SQL | Trần đồng thời: `Xp > cap` |
+| M1 | Bỏ `WHERE Xp < cap` khỏi câu SQL | `Cap_LoweredBelowAlreadyUsed...`: bộ đếm bị kéo xuống và `granted` âm (đính chính: `LEAST` đã chặn vượt trần, `WHERE` chỉ cần khi trần bị hạ) |
 | M2 | Thay `LEAST(@xp, cap - Xp)` bằng `@xp` | Cấu hình 7/10: `Xp = 14 > 10` (phủ đúng nhánh "phần còn lại", Ch3) |
 | M3 | "Từ chối cả câu" khi `cap - Xp < xp` thay vì `LEAST` | Cấu hình 7/10: kỳ vọng 7 + 3, quan sát 7 + 0 |
 | M4 | `UseUserRowLock = false` + hook ép hai giao dịch đọc cùng lúc | Bất biến `TotalXp` (mất cập nhật) và "2 request cùng câu cả hai 200" (một bên 500 vì unique index); trần vẫn giữ nhờ câu SQL, test khẳng định cả hai điều |
 | M5 | Bỏ kiểm tra "đã nhận XP hôm nay cho câu này" | Test cày lại cùng câu trong ngày |
 | M6 | Bỏ nhánh phát lại (bước 3) | Test idempotent: nộp lại cộng XP lần hai hoặc đổi kết quả |
 | M7 | `POST /sessions` bỏ `ON CONFLICT` (INSERT thường) | Test 2 POST đồng thời cùng `sessionId` (một bên 500 do unique index) |
+| M8 (thêm ở Đợt 2) | Giữ chỗ đọc rồi ghi không nguyên tử, không khóa Users | Trần đồng thời: `Xp` vượt trần (đây mới là mutation chứng minh test trần đồng thời nhạy) |
 
 **HTTP qua `ApiFactory`**
 - 401 không token và token khách; 404 phòng không đủ điều kiện, lượt của người khác, câu không thuộc lượt.

@@ -4,6 +4,7 @@ using QuizBattle.Application.Auth;
 using QuizBattle.Application.Avatars;
 using QuizBattle.Application.Game;
 using QuizBattle.Application.Health;
+using QuizBattle.Application.Practice;
 using QuizBattle.Application.Profile;
 using QuizBattle.Application.Questions;
 using QuizBattle.Application.Rooms;
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IShopService, ShopService>();
         services.AddScoped<IAiQuotaService, AiQuotaService>();
+        services.AddScoped<IPracticeService, PracticeService>();
         services.AddScoped<IAvatarService, AvatarService>();
         return services;
     }

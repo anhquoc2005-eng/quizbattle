@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IAvatarRepository, AvatarRepository>();
         services.AddScoped<IAiQuotaRepository, AiQuotaRepository>();
+        services.AddScoped<IPracticeRepository, PracticeRepository>();
         // Trần lượt AI theo ngày: sai giá trị (0, âm, chữ) thì ném lỗi ngay lúc khởi động, mọi môi trường.
         services.AddSingleton(AiQuotaOptions.Parse(configuration["Ai:DailyLimitPerUser"], configuration["Ai:DailyLimitGlobal"]));
         // XP ôn tập: số âm/chữ thì ném lỗi ngay lúc khởi động (tương đương ValidateOnStart); không bắt buộc, có mặc định 5/100.

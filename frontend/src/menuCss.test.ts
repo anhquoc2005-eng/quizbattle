@@ -31,6 +31,13 @@ describe('menu điện thoại (index.css)', () => {
     expect(bodyOf('.bar .show-sm', mobileBlock)).toContain('display: block')
   })
 
+  it('UserName_LongNameIsTruncatedWithEllipsisOnOneLine', () => {
+    const body = bodyOf('.bar .user-name')
+    expect(body).toContain('text-overflow: ellipsis')
+    expect(body).toContain('white-space: nowrap')
+    expect(bodyOf('.bar .user-name', mobileBlock)).toContain('max-width: 9ch')
+  })
+
   it('MenuPanel_IsAbsolutelyPositioned', () => {
     expect(bodyOf('.bar .menu-panel')).toContain('position: absolute')
   })

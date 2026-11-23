@@ -517,6 +517,15 @@ a:focus-visible {
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
 }
+/* Tên hiển thị tối đa 50 ký tự: cắt bằng dấu … để không đẩy "Đăng xuất" ra ngoài màn hình (đầy đủ ở title). */
+.bar .user-name {
+  display: inline-block;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 .bar .menu-panel a {
   display: flex;
   align-items: center;
@@ -534,14 +543,22 @@ a:focus-visible {
     height: 52px;
     font-size: 24px;
   }
+  .bar {
+    gap: 8px;
+  }
   .bar nav {
-    gap: 12px;
+    gap: 8px;
+    min-width: 0;
   }
   .bar .hide-sm {
     display: none;
   }
   .bar .show-sm {
     display: block;
+  }
+  .bar .user-name {
+    max-width: 9ch;
+    min-width: 3ch;
   }
   .bar .btn-ghost {
     height: 36px;

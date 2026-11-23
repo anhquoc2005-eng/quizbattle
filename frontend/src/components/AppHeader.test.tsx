@@ -64,6 +64,7 @@ describe('AppHeader', () => {
     renderHeader({ user: USER }, 'practice')
 
     expect(screen.getByRole('link', { name: 'Alice' }).getAttribute('href')).toBe('/profile')
+    expect(screen.getByRole('link', { name: 'Alice' }).getAttribute('title')).toBe('Alice') // tên dài bị cắt bằng CSS, title giữ đủ tên
     expect(screen.getByRole('button', { name: 'Đăng xuất' })).toBeTruthy()
     // Mỗi link có hai bản: trên thanh (máy tính) và trong Menu (điện thoại).
     for (const link of screen.getAllByRole('link', { name: 'Ôn tập' })) expect(link.getAttribute('aria-current')).toBe('page')

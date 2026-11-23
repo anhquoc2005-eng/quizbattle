@@ -68,7 +68,7 @@ export function AppHeader({ current }: { current?: AppHeaderPage }) {
         {!isLoading &&
           (user ? (
             <>
-              <Link to="/profile" {...pageProps('profile', current)}>
+              <Link className="user-name" to="/profile" title={user.displayName} {...pageProps('profile', current)}>
                 {user.displayName}
               </Link>
               <button className="btn btn-ghost" type="button" onClick={handleLogout}>

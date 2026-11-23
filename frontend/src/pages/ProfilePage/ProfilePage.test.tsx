@@ -2,6 +2,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import type { AuthContextValue } from '../../components/AuthProvider'
+import { AuthContext } from '../../components/authContext'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getMyAvatar } from '../../api/avatar'
 import { getProfile, getRewards } from '../../api/profile'
@@ -9,6 +11,10 @@ import { getShopItems } from '../../api/shop'
 import { TEST_AVATAR } from '../../avatar/avatarFixture'
 import type { Profile, RewardHistoryItem } from '../../types/profile'
 import { ProfilePage } from './ProfilePage'
+
+
+// AppHeader đọc useAuth; test này không kiểm đăng nhập nên chỉ cấp giá trị tối thiểu.
+const AUTH = { user: { id: 'u1', email: 'a@b.c', displayName: 'Alice' }, isLoading: false, logout: vi.fn() } as unknown as AuthContextValue
 
 vi.mock('../../api/profile', () => ({ getProfile: vi.fn(), getRewards: vi.fn() }))
 vi.mock('../../api/avatar', () => ({ getMyAvatar: vi.fn(), saveMyAvatar: vi.fn() }))
@@ -26,9 +32,11 @@ const REWARD: RewardHistoryItem = {
 function renderPage() {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter>
-        <ProfilePage />
-      </MemoryRouter>
+      <AuthContext.Provider value={AUTH}>
+        <MemoryRouter>
+          <ProfilePage />
+        </MemoryRouter>
+      </AuthContext.Provider>
     </QueryClientProvider>,
   )
 }

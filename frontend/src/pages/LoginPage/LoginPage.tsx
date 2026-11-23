@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router'
 import { ApiError } from '../../api/apiError'
+import { getRedirectPath } from '../../auth/redirectPath'
 import { FormField } from '../../components/FormField'
 import { HowItWorksCard } from '../../components/HowItWorksCard'
 import { LogoMark } from '../../components/LogoMark'
@@ -68,7 +69,7 @@ export function LoginPage() {
         </Link>
         <nav>
           <span className="hide-sm text-muted">Chưa có tài khoản?</span>
-          <Link to="/register">Đăng ký</Link>
+          <Link to="/register" state={location.state}>Đăng ký</Link>
         </nav>
       </header>
       <main className="col grid grid-cols-1 content-center items-start gap-3.5 min-[861px]:grid-cols-2 min-h-[calc(100dvh-48px)] py-8 pb-12">
@@ -112,18 +113,3 @@ export function LoginPage() {
   )
 }
 
-interface LocationState {
-  from?: { pathname: string; search?: string }
-}
-
-function isLocationState(value: unknown): value is LocationState {
-  return typeof value === 'object' && value !== null
-}
-
-function getRedirectPath(state: unknown): string {
-  if (isLocationState(state) && typeof state.from?.pathname === 'string') {
-    // Giữ cả ?query: từ /join quay lại cần mã phòng (?code=...).
-    return state.from.pathname + (typeof state.from.search === 'string' ? state.from.search : '')
-  }
-  return '/dashboard'
-}

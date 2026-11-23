@@ -1,13 +1,12 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router'
 import { ApiError } from '../../api/apiError'
 import { describeAvatarError } from '../../api/avatarErrors'
 import { GUEST_PREVIEW_AVATAR } from '../../avatar/guestPreview'
 import { AVATAR_SLOTS, SLOT_LABELS } from '../../avatar/avatarSlots'
 import { previewWith } from '../../avatar/preview'
 import { CoinBalance } from '../../components/CoinBalance'
+import { AppHeader } from '../../components/AppHeader'
 import { ErrorRetry } from '../../components/ErrorRetry'
-import { LogoMark } from '../../components/LogoMark'
 import { useAuth } from '../../hooks/useAuth'
 import { useMyAvatar } from '../../hooks/useMyAvatar'
 import { useProfile } from '../../hooks/useProfile'
@@ -64,16 +63,7 @@ export function ShopPage() {
 
   return (
     <>
-      <header className="col bar">
-        <Link className="mark" to="/">
-          <LogoMark />
-          QuizBattle
-        </Link>
-        <nav>
-          <Link to="/ranking">Xếp hạng</Link>
-          {signedIn ? <Link to="/profile">{user.displayName}</Link> : <Link to="/login">Đăng nhập</Link>}
-        </nav>
-      </header>
+      <AppHeader current="shop" />
 
       <main className="col grid gap-3.5 py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">

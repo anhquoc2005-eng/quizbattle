@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ApiError, describeApiError } from '../../api/apiError'
+import { AppHeader } from '../../components/AppHeader'
 import { ErrorRetry } from '../../components/ErrorRetry'
 import { usePracticeSession } from '../../hooks/usePractice'
-import { PracticeHeader } from './PracticeHeader'
 import { PracticeQuestion, type SubmittedAnswer } from './PracticeQuestion'
 import { PracticeSummary } from './PracticeSummary'
 import { SESSION_NOT_FOUND_MESSAGE } from './practiceMessages'
@@ -24,7 +24,7 @@ export function PracticePage() {
 
   return (
     <>
-      <PracticeHeader />
+      <AppHeader current="practice" />
       <main className="col grid gap-3.5 py-6">
         {query.isPending && <p className="text-muted">Đang tải…</p>}
         {query.isError &&

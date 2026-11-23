@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { describeApiError } from '../../api/apiError'
+import { AppHeader } from '../../components/AppHeader'
 import { ErrorRetry } from '../../components/ErrorRetry'
 import { usePracticeRooms, useStartPractice } from '../../hooks/usePractice'
 import type { PracticeRoom } from '../../types/practice'
-import { PracticeHeader } from './PracticeHeader'
 
 export function PracticeRooms() {
   const query = usePracticeRooms()
@@ -34,7 +34,7 @@ export function PracticeRooms() {
 
   return (
     <>
-      <PracticeHeader />
+      <AppHeader current="practice" />
       <main className="col grid gap-3.5 py-6">
         <h1>Ôn tập</h1>
         {query.isPending && <p className="text-muted">Đang tải…</p>}

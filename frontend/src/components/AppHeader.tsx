@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { LogoMark } from './LogoMark'
@@ -8,9 +9,18 @@ function pageProps(page: AppHeaderPage, current?: AppHeaderPage) {
   return page === current ? { 'aria-current': 'page' as const } : {}
 }
 
+const MENU_LINKS: { page: AppHeaderPage; to: string; label: string }[] = [
+  { page: 'dashboard', to: '/dashboard', label: 'Phòng của tôi' },
+  { page: 'practice', to: '/practice', label: 'Ôn tập' },
+  { page: 'shop', to: '/shop', label: 'Cửa hàng' },
+  { page: 'ranking', to: '/ranking', label: 'Xếp hạng' },
+]
+
 export function AppHeader({ current }: { current?: AppHeaderPage }) {
   const { user, isLoading, logout } = useAuth()
   const location = useLocation()
+  // <details> không tự đóng khi React Router đổi trang, nên giữ trạng thái mở ở đây và đóng trong onClick của link.
+  const [menuOpen, setMenuOpen] = useState(false)
 
   function handleLogout() {
     // Tải lại trang thật (không điều hướng SPA): tránh đua với ProtectedRoute - nó cũng đổi sang
@@ -27,6 +37,18 @@ export function AppHeader({ current }: { current?: AppHeaderPage }) {
         QuizBattle
       </Link>
       <nav>
+        {user && (
+          <details className="show-sm" open={menuOpen} onToggle={(event) => setMenuOpen(event.currentTarget.open)}>
+            <summary className="btn btn-ghost">Menu</summary>
+            <div className="menu-panel">
+              {MENU_LINKS.map(({ page, to, label }) => (
+                <Link key={page} to={to} onClick={() => setMenuOpen(false)} {...pageProps(page, current)}>
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </details>
+        )}
         {user && (
           <>
             <Link className="hide-sm" to="/dashboard" {...pageProps('dashboard', current)}>

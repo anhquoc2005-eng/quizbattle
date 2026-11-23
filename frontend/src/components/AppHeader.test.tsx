@@ -34,13 +34,40 @@ function LoginProbe() {
 afterEach(cleanup)
 
 describe('AppHeader', () => {
+  it('AppHeader_SignedIn_MenuHoldsAllFourNavLinks', () => {
+    const { container } = renderHeader({ user: USER })
+    const menu = container.querySelector('details')!
+
+    expect(menu.querySelector('summary')?.textContent).toBe('Menu')
+    expect([...menu.querySelectorAll('a')].map((a) => a.textContent)).toEqual(['Phòng của tôi', 'Ôn tập', 'Cửa hàng', 'Xếp hạng'])
+  })
+
+  it('AppHeader_ClickMenuLink_ClosesMenu', () => {
+    const { container } = renderHeader({ user: USER })
+    const menu = container.querySelector('details')!
+    menu.open = true
+    fireEvent(menu, new Event('toggle')) // jsdom không tự phát 'toggle' khi gán open
+    expect(menu.open).toBe(true)
+
+    fireEvent.click(menu.querySelector('a')!)
+
+    expect(menu.open).toBe(false)
+  })
+
+  it('AppHeader_SignedOut_HasNoMenu', () => {
+    const { container } = renderHeader({})
+
+    expect(container.querySelector('details')).toBeNull()
+  })
+
   it('AppHeader_SignedIn_ShowsNameLogoutAndMarksCurrentPage', () => {
     renderHeader({ user: USER }, 'practice')
 
     expect(screen.getByRole('link', { name: 'Alice' }).getAttribute('href')).toBe('/profile')
     expect(screen.getByRole('button', { name: 'Đăng xuất' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Ôn tập' }).getAttribute('aria-current')).toBe('page')
-    expect(screen.getByRole('link', { name: 'Cửa hàng' }).getAttribute('aria-current')).toBeNull()
+    // Mỗi link có hai bản: trên thanh (máy tính) và trong Menu (điện thoại).
+    for (const link of screen.getAllByRole('link', { name: 'Ôn tập' })) expect(link.getAttribute('aria-current')).toBe('page')
+    for (const link of screen.getAllByRole('link', { name: 'Cửa hàng' })) expect(link.getAttribute('aria-current')).toBeNull()
     expect(screen.queryByRole('link', { name: 'Đăng nhập' })).toBeNull()
   })
 

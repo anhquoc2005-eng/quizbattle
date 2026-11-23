@@ -158,7 +158,7 @@ describe('PracticeQuestion', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Xem tổng kết' }))
 
-    expect(await screen.findByText('+10 XP trong lượt này, còn 90 XP hôm nay')).toBeTruthy()
+    expect(await screen.findByText('Còn 90 XP hôm nay')).toBeTruthy()
   })
 
   it('PracticePage_SessionNotFound_ShowsMessageWithLinkBack', async () => {

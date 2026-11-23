@@ -71,7 +71,7 @@ export function PracticeRooms() {
                     <div className="grid gap-1">
                       <b className="font-semibold">{room.topic}</b>
                       <span className="text-xs tabular-nums text-faint">
-                        <span className="text-accent">{room.roomCode}</span> · {room.questionCount} câu · {room.role === 'host' ? 'Chủ phòng' : 'Người chơi'}
+                        <span>{room.roomCode}</span> · {room.questionCount} câu · {room.role === 'host' ? 'Chủ phòng' : 'Người chơi'}
                       </span>
                     </div>
                     <button

@@ -20,7 +20,8 @@ describe('PracticeSummary', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('+35 XP trong lượt này, còn 40 XP hôm nay')).toBeTruthy()
+    expect(screen.getByText('+35 XP')).toBeTruthy()
+    expect(screen.getByText('Còn 40 XP hôm nay')).toBeTruthy()
     expect(screen.getByText('7 / 10')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Về danh sách ôn' }).getAttribute('href')).toBe('/practice')
   })

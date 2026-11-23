@@ -24,7 +24,7 @@ export function PracticeSummary({ session }: { session: PracticeSession }) {
         </div>
       </dl>
       <p className="tabular-nums">
-        +{summary.xpGainedInSession} XP trong lượt này, còn {summary.remainingToday} XP hôm nay
+        Còn {summary.remainingToday} XP hôm nay
       </p>
       <Link className="btn btn-ghost justify-self-start" to="/practice">
         Về danh sách ôn

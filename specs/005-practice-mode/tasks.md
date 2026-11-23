@@ -75,14 +75,14 @@
 
 **Purpose**: Ba màn hình đủ trạng thái tải/lỗi/rỗng, theo hệ thiết kế true-black-flat.
 
-- [ ] T035 [P] [US1] `frontend/src/types/practice.ts` (khớp DTO, camelCase) và `frontend/src/api/practice.ts` (`getPracticeRooms`, `createPracticeSession`, `getPracticeSession`, `submitPracticeAnswer`) qua API client dùng chung; URL từ `VITE_API_URL`. Không gọi `fetch` trong component. (FR-004)
-- [ ] T036 [P] [US5] Logic thuần `frontend/src/pages/Practice/practiceMessages.ts` (thông điệp theo `xpReason`: `wrong`, `already_today`, `daily_cap`, `daily_cap_partial`, `null`; định dạng "+X XP, còn Y hôm nay") và test Vitest `practiceMessages.test.ts` phủ mọi nhánh. (FR-006)
-- [ ] T037 [US1] `frontend/src/pages/Practice/PracticeRooms.tsx` (TanStack Query): danh sách phòng, số câu, "hôm nay X/100 XP", nút "Ôn" hoặc "Tiếp tục" khi có `openSessionId`; đủ trạng thái đang tải / lỗi (`ErrorRetry`) / rỗng. Test jsdom `PracticeRooms.test.tsx`: tải, lỗi + retry, rỗng, có dữ liệu, "Tiếp tục". (US1)
-- [ ] T038 [US2] `PracticeQuestion.tsx`: hiện câu hiện tại, chọn đáp án, nút disabled khi đang gửi, sau nộp hiện đúng/sai + đáp án đúng + XP; khi tải lại có `lastResult` thì hiện đáp án câu vừa nộp (F5 không mất); gửi lại không vỡ (phản hồi 200 như nhau). Test jsdom `PracticeQuestion.test.tsx`: disabled khi gửi, hiện kết quả, `lastResult` sau tải lại, lỗi 409 hiển thị rõ. Component quá ~150 dòng thì tách. (US2, FR-012)
-- [ ] T039 [US5] `PracticeSummary.tsx`: "+X XP trong lượt này, còn Y XP hôm nay", số câu đúng, nút về danh sách. Test jsdom `PracticeSummary.test.tsx`. (US5)
-- [ ] T040 [US2] Route `/practice` và `/practice/:sessionId` trong `App.tsx` dưới `ProtectedRoute`; liên kết vào trang Dashboard/menu theo kiểu có sẵn (`btn-ghost`, không dùng màu `accent` cho nút). (FR-001)
-- [ ] T041 [US2] Kiểm giao diện: nếu máy có skill `design-taste-frontend`, chạy `lint.mjs --app` và `inspect.mjs --app` trên bản build; sửa hết FAIL (không gradient, bóng, emoji, hex trực tiếp; `accent` chỉ cho thanh tiến độ XP). Build `npm run build` và `npm test`.
-- [ ] T042 **Checkpoint Đợt 4**: build + test frontend và backend xanh; commit `feat: màn ôn tập (danh sách phòng, từng câu, tổng kết)` + push.
+- [x] T035 [P] [US1] `frontend/src/types/practice.ts` (khớp DTO, camelCase) và `frontend/src/api/practice.ts` (`getPracticeRooms`, `createPracticeSession`, `getPracticeSession`, `submitPracticeAnswer`) qua API client dùng chung; URL từ `VITE_API_URL`. Không gọi `fetch` trong component. (FR-004)
+- [x] T036 [P] [US5] Logic thuần `frontend/src/pages/Practice/practiceMessages.ts` (thông điệp theo `xpReason`: `wrong`, `already_today`, `daily_cap`, `daily_cap_partial`, `null`; định dạng "+X XP, còn Y hôm nay") và test Vitest `practiceMessages.test.ts` phủ mọi nhánh. (FR-006)
+- [x] T037 [US1] `frontend/src/pages/Practice/PracticeRooms.tsx` (TanStack Query): danh sách phòng, số câu, "hôm nay X/100 XP", nút "Ôn" hoặc "Tiếp tục" khi có `openSessionId`; đủ trạng thái đang tải / lỗi (`ErrorRetry`) / rỗng. Test jsdom `PracticeRooms.test.tsx`: tải, lỗi + retry, rỗng, có dữ liệu, "Tiếp tục". (US1)
+- [x] T038 [US2] `PracticeQuestion.tsx`: hiện câu hiện tại, chọn đáp án, nút disabled khi đang gửi, sau nộp hiện đúng/sai + đáp án đúng + XP; khi tải lại có `lastResult` thì hiện đáp án câu vừa nộp (F5 không mất); gửi lại không vỡ (phản hồi 200 như nhau). Test jsdom `PracticeQuestion.test.tsx`: disabled khi gửi, hiện kết quả, `lastResult` sau tải lại, lỗi 409 hiển thị rõ. Component quá ~150 dòng thì tách. (US2, FR-012)
+- [x] T039 [US5] `PracticeSummary.tsx`: "+X XP trong lượt này, còn Y XP hôm nay", số câu đúng, nút về danh sách. Test jsdom `PracticeSummary.test.tsx`. (US5)
+- [x] T040 [US2] Route `/practice` và `/practice/:sessionId` trong `App.tsx` dưới `ProtectedRoute`; liên kết vào trang Dashboard/menu theo kiểu có sẵn (`btn-ghost`, không dùng màu `accent` cho nút). (FR-001)
+- [x] T041 [US2] Kiểm giao diện: nếu máy có skill `design-taste-frontend`, chạy `lint.mjs --app` và `inspect.mjs --app` trên bản build; sửa hết FAIL (không gradient, bóng, emoji, hex trực tiếp; `accent` chỉ cho thanh tiến độ XP). Build `npm run build` và `npm test`.
+- [x] T042 **Checkpoint Đợt 4**: build + test frontend và backend xanh; commit `feat: màn ôn tập (danh sách phòng, từng câu, tổng kết)` + push.
 
 ---
 

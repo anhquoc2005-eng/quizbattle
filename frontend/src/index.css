@@ -489,6 +489,42 @@ a:focus-visible {
   display: inline;
 }
 
+/* Menu điện thoại: chỉ hiện khi các link nav bị ẩn (cùng điểm ngắt với hide-sm). */
+/* Panel neo theo thanh header (không theo nút Menu) để mép phải luôn nằm trong màn hình dù tên người dùng dài. */
+.bar {
+  position: relative;
+}
+.bar .show-sm {
+  display: none;
+}
+.bar .show-sm summary {
+  list-style: none;
+  cursor: pointer;
+}
+.bar .show-sm summary::-webkit-details-marker {
+  display: none;
+}
+.bar .menu-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+}
+.bar .menu-panel a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
   .btn {
     height: 44px;
@@ -504,9 +540,13 @@ a:focus-visible {
   .bar .hide-sm {
     display: none;
   }
+  .bar .show-sm {
+    display: block;
+  }
   .bar .btn-ghost {
     height: 36px;
-    padding: 0 14px;
+    padding: 0 12px;
+    white-space: nowrap;
   }
 }
 

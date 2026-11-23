@@ -1,6 +1,6 @@
 # Quickstart: nghiệm thu thủ công (sau khi code xong)
 
-Tài liệu này mô tả cách kiểm tra; ở đợt spec CHƯA có code để chạy.
+Tài liệu này mô tả cách kiểm tra thủ công; code đã xong, kết quả nghiệm thu ghi ở cuối file.
 
 1. `docker compose up -d`, áp migration `AddPracticeMode` ở dev, chạy backend và frontend.
 2. Tạo 3 tài khoản A, B, C. A làm chủ phòng, B và C vào chơi hết một trận có thưởng (>= 2 tài khoản không phải chủ phòng trả lời).
@@ -33,3 +33,8 @@ Cách đo: bật TẠM cờ làm mặc định trong `PracticeRepository`, chạ
 | M9 (thêm, Đợt 3) | Bỏ `[EnableRateLimiting("practice")]` khỏi `PracticeController` | `PracticeHttpTests.Practice_Over120PerMinute_Returns429WithPracticeRateLimitCode` (`Expected: TooManyRequests / Actual: OK`), `PracticeHttpTests.Practice_RateLimitIsPerUser_AnotherUserIsNotLimited` (cùng thông điệp), `PracticeControllerTests.PracticeController_HasEnableRateLimitingPracticePolicy` (`Assert.NotNull() Failure: Value is null`) | như cột trước. Không có bản trong `PracticeSensitivityTests`: bằng chứng là bỏ attribute tạm thời, chạy `Practice*` (3 đỏ / 157 xanh), hoàn lại và chạy lại (160/160 xanh) | xanh |
 
 Đính chính so với plan ban đầu: M1 (bỏ `WHERE`) KHÔNG làm test trần đồng thời đỏ, vì `LEAST` đã chặn bộ đếm vượt trần; `WHERE` chỉ cần khi trần bị hạ thấp hơn mức đã dùng (nếu không bộ đếm bị kéo xuống và `granted` âm). Phần bảo vệ trần đồng thời nằm ở câu lệnh nguyên tử + khóa; mutation chứng minh phần đó là M8 (đọc rồi ghi không nguyên tử, không khóa).
+
+## Nghiệm thu (Đợt 5)
+
+- Test trình duyệt 23/11 (cố vấn): phòng VDU47V, luồng nộp/F5/Câu tiếp/tổng kết/Tiếp tục/already_today/390px đạt; 409 chỉ phủ bằng jsdom.
+- Script production: `D:\IT_Code\Quiz_Battle\sql\005-AddPracticeMode.sql` (ngoài repo; idempotent, kèm RLS cho 3 bảng). Đã chạy thử hai lần liên tiếp trên DB tạm tạo từ migration `AddAiUsageDaily`: cả hai lần thoát mã 0, đúng 1 dòng `20261121094752_AddPracticeMode` trong `__EFMigrationsHistory`, `relrowsecurity` của 3 bảng đều `true`. Chạy trên Supabase là bước thủ công (T046).

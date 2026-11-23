@@ -127,6 +127,10 @@ App không tự chạy migration khi khởi động — luôn chạy `dotnet ef 
 
 Server là nguồn sự thật duy nhất cho thời gian và điểm số — client không bao giờ gửi điểm hay thời gian lên, trận tự chạy nhờ `GameTimerService` (BackgroundService quét DB mỗi giây, không giữ timer trong RAM nên khởi động lại backend không làm mất lượt).
 
+## Ôn tập
+
+Người có tài khoản ôn lại các phòng đã chơi xong tại `/practice` (API `/api/practice`, rate limit riêng): `GET /rooms`, `POST /sessions` (idempotent, trả lại lượt đang mở), `GET /sessions/{id}`, `POST /sessions/{id}/answers`. Server không gửi đáp án đúng trước khi nộp. Mỗi câu đúng được `Practice__XpPerCorrect` XP (mặc định 5), tối đa `Practice__DailyXpCap` XP mỗi ngày giờ Việt Nam (mặc định 100); cùng một câu chỉ nhận XP một lần mỗi ngày. XP ôn cộng vào `TotalXp`, không cộng Xu. Migration `AddPracticeMode` không tự bật RLS cho 3 bảng `Practice*`: script SQL production có thêm `ENABLE ROW LEVEL SECURITY` ở cuối.
+
 ## Thử chơi nhiều người trên máy
 
 Sau khi backend (`http://localhost:5000`) và frontend (`http://localhost:5173`) đều đang chạy:

@@ -41,6 +41,9 @@ export function DashboardPage() {
           <Link className="hide-sm" to="/dashboard" aria-current="page">
             Phòng của tôi
           </Link>
+          <Link className="hide-sm" to="/practice">
+            Ôn tập
+          </Link>
           <Link className="hide-sm" to="/shop">
             Cửa hàng
           </Link>
@@ -62,9 +65,15 @@ export function DashboardPage() {
               {roomsQuery.isPending ? 'Đang tải…' : roomsQuery.isError ? 'Không tải được danh sách phòng.' : hasAnyRoom ? `Bạn có ${rooms.length} phòng.` : 'Bạn chưa tạo phòng nào.'}
             </p>
           </div>
-          <button className="btn btn-primary" type="button" onClick={() => setShowCreateForm((value) => !value)}>
-            Tạo phòng
-          </button>
+          <div className="flex flex-wrap gap-3">
+            {/* Nav ở trên bị ẩn trên điện thoại (hide-sm), nên cần lối vào thứ hai trong thân trang. */}
+            <Link className="btn btn-ghost" to="/practice">
+              Ôn tập
+            </Link>
+            <button className="btn btn-primary" type="button" onClick={() => setShowCreateForm((value) => !value)}>
+              Tạo phòng
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3.5 pb-12 min-[861px]:grid-cols-[2fr_1fr]">

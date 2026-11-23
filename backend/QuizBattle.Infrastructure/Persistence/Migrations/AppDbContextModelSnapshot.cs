@@ -2307,6 +2307,130 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
                     b.ToTable("Players", (string)null);
                 });
 
+            modelBuilder.Entity("QuizBattle.Domain.Entities.PracticeAnswer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AnsweredAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SelectedIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("XpAwarded")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("XpReason")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("SessionId", "QuestionId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PracticeAnswers_SessionId_QuestionId");
+
+                    b.HasIndex("UserId", "QuestionId", "Day")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PracticeAnswers_UserId_QuestionId_Day_Awarded")
+                        .HasFilter("\"XpAwarded\" > 0");
+
+                    b.ToTable("PracticeAnswers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PracticeAnswers_SelectedIndex_Range", "\"SelectedIndex\" BETWEEN 0 AND 3");
+
+                            t.HasCheckConstraint("CK_PracticeAnswers_XpAwarded_NonNegative", "\"XpAwarded\" >= 0");
+
+                            t.HasCheckConstraint("CK_PracticeAnswers_XpReason", "(\"XpReason\" IS NULL AND \"IsCorrect\") OR (\"XpReason\" IS NOT NULL AND ((\"XpReason\" = 'wrong' AND NOT \"IsCorrect\" AND \"XpAwarded\" = 0) OR (\"XpReason\" IN ('already_today', 'daily_cap') AND \"IsCorrect\" AND \"XpAwarded\" = 0) OR (\"XpReason\" = 'daily_cap_partial' AND \"IsCorrect\" AND \"XpAwarded\" > 0)))");
+                        });
+                });
+
+            modelBuilder.Entity("QuizBattle.Domain.Entities.PracticeSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid[]>("QuestionIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
+
+                    b.Property<string>("RoomCode")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
+
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RoomTopic")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoomId");
+
+                    b.HasIndex("UserId", "RoomId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PracticeSessions_OpenPerUserRoom")
+                        .HasFilter("\"CompletedAt\" IS NULL");
+
+                    b.HasIndex("UserId", "StartedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_PracticeSessions_UserId_StartedAt");
+
+                    b.ToTable("PracticeSessions", (string)null);
+                });
+
+            modelBuilder.Entity("QuizBattle.Domain.Entities.PracticeXpDaily", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Xp")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId", "Day");
+
+                    b.ToTable("PracticeXpDaily", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PracticeXpDaily_Xp_NonNegative", "\"Xp\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("QuizBattle.Domain.Entities.Question", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2669,6 +2793,48 @@ namespace QuizBattle.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Room");
+                });
+
+            modelBuilder.Entity("QuizBattle.Domain.Entities.PracticeAnswer", b =>
+                {
+                    b.HasOne("QuizBattle.Domain.Entities.Question", null)
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QuizBattle.Domain.Entities.PracticeSession", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QuizBattle.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QuizBattle.Domain.Entities.PracticeSession", b =>
+                {
+                    b.HasOne("QuizBattle.Domain.Entities.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QuizBattle.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QuizBattle.Domain.Entities.PracticeXpDaily", b =>
+                {
+                    b.HasOne("QuizBattle.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("QuizBattle.Domain.Entities.Question", b =>

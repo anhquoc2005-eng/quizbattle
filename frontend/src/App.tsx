@@ -6,6 +6,8 @@ import { JoinPage } from './pages/JoinPage/JoinPage'
 import { LoginPage } from './pages/LoginPage/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage/NotFoundPage'
 import { PlayPage } from './pages/PlayPage/PlayPage'
+import { PracticePage } from './pages/Practice/PracticePage'
+import { PracticeRooms } from './pages/Practice/PracticeRooms'
 import { ProfilePage } from './pages/ProfilePage/ProfilePage'
 import { RegisterPage } from './pages/RegisterPage/RegisterPage'
 import { ShopPage } from './pages/ShopPage/ShopPage'
@@ -37,6 +39,22 @@ export function App() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/practice"
+        element={
+          <ProtectedRoute>
+            <PracticeRooms />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/practice/:sessionId"
+        element={
+          <ProtectedRoute>
+            <PracticePage />
           </ProtectedRoute>
         }
       />

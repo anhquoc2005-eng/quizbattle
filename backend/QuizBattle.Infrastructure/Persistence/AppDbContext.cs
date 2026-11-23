@@ -27,6 +27,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
 
+    public DbSet<PracticeSession> PracticeSessions => Set<PracticeSession>();
+
+    public DbSet<PracticeAnswer> PracticeAnswers => Set<PracticeAnswer>();
+
+    public DbSet<PracticeXpDaily> PracticeXpDailies => Set<PracticeXpDaily>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Mỗi entity có một lớp cấu hình riêng (IEntityTypeConfiguration) trong project này.

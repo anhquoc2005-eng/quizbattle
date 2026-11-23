@@ -79,18 +79,11 @@ public sealed class RewardSettlementTests(DatabaseFixture fixture)
         }
     }
 
-    // TotalXp == SUM(MatchRewards.Xp) và CoinBalance == SUM(CoinTransactions.Amount) cho từng tài khoản.
+    // Bất biến sổ cái (TotalXp = XP trận + XP ôn tập, CoinBalance = tổng sổ Xu) cho từng tài khoản: dùng chung XpInvariant.
     private async Task AssertInvariantsAsync(IEnumerable<Guid> userIds)
     {
         await using var db = fixture.CreateContext();
-        foreach (var userId in userIds)
-        {
-            var user = await db.Users.AsNoTracking().SingleAsync(u => u.Id == userId);
-            var xp = await db.MatchRewards.Where(r => r.UserId == userId).SumAsync(r => r.Xp);
-            var coins = await db.CoinTransactions.Where(c => c.UserId == userId).SumAsync(c => c.Amount);
-            Assert.Equal(xp, user.TotalXp);
-            Assert.Equal(coins, user.CoinBalance);
-        }
+        await XpInvariant.AssertAsync(db, userIds);
     }
 
     private async Task<User> SeedUserAsync(string name)

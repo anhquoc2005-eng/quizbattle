@@ -526,6 +526,17 @@ a:focus-visible {
   vertical-align: middle;
   white-space: nowrap;
 }
+/* Tên hiển thị dài, liền khối: .name-wrap cho xuống dòng, .name-truncate cắt bằng … trên một dòng (đặt kèm title). */
+.name-wrap {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.name-truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .bar .menu-panel a {
   display: flex;
   align-items: center;

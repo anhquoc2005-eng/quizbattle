@@ -7,7 +7,7 @@ export function ProfileSummary({ profile }: { profile: Profile }) {
   return (
     <section className="card grid gap-4" aria-labelledby="profile-title">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 id="profile-title">{profile.displayName}</h1>
+        <h1 id="profile-title" className="name-wrap">{profile.displayName}</h1>
         <p className="tabular-nums">Cấp {profile.level}</p>
       </div>
 

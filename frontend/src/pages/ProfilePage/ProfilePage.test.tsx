@@ -115,4 +115,13 @@ describe('ProfilePage', () => {
     expect(await screen.findByText('Lịch sử Việt Nam')).toBeTruthy()
     expect(screen.getByText(/Hạng 2 · 2400 điểm · \+240 XP · \+64 Xu/)).toBeTruthy() // 44 + 20
   })
+
+  it('ProfilePage_LongName_WrapsInsteadOfOverflowing', async () => {
+    const name = 'N'.repeat(50)
+    vi.mocked(getProfile).mockResolvedValue({ ...PROFILE, displayName: name })
+    vi.mocked(getRewards).mockResolvedValue([])
+    renderPage()
+
+    expect((await screen.findByRole('heading', { name, level: 1 })).className).toContain('name-wrap')
+  })
 })

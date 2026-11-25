@@ -40,7 +40,9 @@ function RoomLivePageContent() {
           <Link className="hide-sm" to="/dashboard">
             Phòng của tôi
           </Link>
-          <span className="text-muted">{user?.displayName}</span>
+          <span className="user-name text-muted" title={user?.displayName}>
+            {user?.displayName}
+          </span>
           <button className="btn btn-ghost" type="button" onClick={handleLogout}>
             Đăng xuất
           </button>

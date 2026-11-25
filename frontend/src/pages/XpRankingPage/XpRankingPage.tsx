@@ -23,14 +23,18 @@ export function XpRankingPage() {
           {query.isSuccess && query.data.length > 0 && (
             <ol className="mt-3 grid list-none gap-1.5 p-0">
               {query.data.map((entry) => (
-                <li key={entry.rank} className="flex items-center justify-between gap-3 rounded-[14px] px-3 py-2">
-                  <span className="flex items-center gap-3">
-                    <span className="w-8 text-right tabular-nums text-faint">{entry.rank}</span>
-                    <Avatar avatar={entry.avatar} size="sm" />
-                    <span>{entry.displayName}</span>
-                    <span className="text-xs tabular-nums text-muted">Cấp {entry.level}</span>
+                <li key={entry.rank} className="flex min-w-0 items-center justify-between gap-3 rounded-[14px] px-3 py-2">
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="w-8 shrink-0 text-right tabular-nums text-faint">{entry.rank}</span>
+                    <span className="shrink-0">
+                      <Avatar avatar={entry.avatar} size="sm" />
+                    </span>
+                    <span className="name-truncate" title={entry.displayName}>
+                      {entry.displayName}
+                    </span>
+                    <span className="shrink-0 text-xs tabular-nums text-muted">Cấp {entry.level}</span>
                   </span>
-                  <span className="tabular-nums text-muted">{entry.totalXp} XP</span>
+                  <span className="shrink-0 tabular-nums text-muted">{entry.totalXp} XP</span>
                 </li>
               ))}
             </ol>

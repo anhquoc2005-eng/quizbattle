@@ -84,4 +84,16 @@ describe('XpRankingPage', () => {
     expect(images).toHaveLength(2)
     images.forEach((img) => expect(img.className).toContain('size-7'))
   })
+
+  it('XpRankingPage_LongName_IsTruncatedWithTitle_AndXpCannotShrink', async () => {
+    const name = 'N'.repeat(50)
+    vi.mocked(getXpLeaderboard).mockResolvedValue([{ rank: 1, displayName: name, level: 7, totalXp: 4520, avatar: TEST_AVATAR }])
+    const { container } = renderPage()
+
+    const nameEl = await screen.findByText(name)
+    expect(nameEl.className).toContain('name-truncate')
+    expect(nameEl.getAttribute('title')).toBe(name)
+    expect(container.querySelector('li')!.className).toContain('min-w-0')
+    expect(screen.getByText('4520 XP').className).toContain('shrink-0')
+  })
 })

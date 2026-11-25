@@ -11,12 +11,18 @@ export function PlayerList({ players }: { players: PlayerPresence[] }) {
   return (
     <ul className="grid list-none gap-1.5 p-0">
       {players.map((player) => (
-        <li key={player.playerId} className="flex items-center gap-2">
+        <li key={player.playerId} className="flex min-w-0 items-center gap-2">
           <span className={`size-2 shrink-0 rounded-full ${player.online ? 'bg-positive' : 'bg-faint'}`} aria-hidden="true" />
-          <Avatar avatar={player.avatar} size="sm" />
-          <span className={player.online ? undefined : 'text-faint'}>{player.displayName}</span>
-          <LevelBadge level={player.level} />
-          {!player.online && <span className="text-xs text-faint">(mất kết nối)</span>}
+          <span className="shrink-0">
+            <Avatar avatar={player.avatar} size="sm" />
+          </span>
+          <span className={`name-truncate ${player.online ? '' : 'text-faint'}`} title={player.displayName}>
+            {player.displayName}
+          </span>
+          <span className="shrink-0">
+            <LevelBadge level={player.level} />
+          </span>
+          {!player.online && <span className="shrink-0 text-xs text-faint">(mất kết nối)</span>}
         </li>
       ))}
     </ul>

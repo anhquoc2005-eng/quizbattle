@@ -50,4 +50,15 @@ describe('PlayerList', () => {
     expect(screen.getByText('Cấp 3')).not.toBeNull()
     expect(screen.getByText('(mất kết nối)')).not.toBeNull()
   })
+
+  it('LongName_IsTruncatedWithTitle_AndOfflineMarkerCannotShrink', () => {
+    const name = 'N'.repeat(50)
+    const { container } = render(<PlayerList players={[player('1', name, { online: false })]} />)
+
+    const nameEl = screen.getByText(name)
+    expect(nameEl.className).toContain('name-truncate')
+    expect(nameEl.getAttribute('title')).toBe(name)
+    expect(container.querySelector('li')!.className).toContain('min-w-0')
+    expect(screen.getByText('(mất kết nối)').className).toContain('shrink-0')
+  })
 })

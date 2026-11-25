@@ -41,4 +41,15 @@ describe('Leaderboard', () => {
     expect(screen.getByText('Bình').className).toContain('font-semibold')
     expect(container.querySelectorAll('li')[1]!.className).toContain('bg-raised')
   })
+
+  it('LongName_IsTruncatedOnOneLineWithFullNameInTitle_AndScoreCannotShrink', () => {
+    const name = 'N'.repeat(50)
+    const { container } = render(<Leaderboard entries={[entry('1', name, 1, 900)]} />)
+
+    const nameEl = screen.getByText(name)
+    expect(nameEl.className).toContain('name-truncate')
+    expect(nameEl.getAttribute('title')).toBe(name)
+    expect(container.querySelector('li')!.className).toContain('min-w-0')
+    expect(screen.getByText('900').className).toContain('shrink-0')
+  })
 })

@@ -15,15 +15,21 @@ export function Leaderboard({ entries, highlightPlayerId }: { entries: Leaderboa
         return (
           <li
             key={entry.playerId}
-            className={`flex items-center justify-between gap-3 rounded-[14px] px-3 py-2 ${isSelf ? 'bg-raised' : ''}`}
+            className={`flex min-w-0 items-center justify-between gap-3 rounded-[14px] px-3 py-2 ${isSelf ? 'bg-raised' : ''}`}
           >
-            <span className="flex items-center gap-3">
-              <span className="w-6 text-right tabular-nums text-faint">{entry.rank}</span>
-              <Avatar avatar={entry.avatar} size="sm" />
-              <span className={isSelf ? 'font-semibold' : undefined}>{entry.displayName}</span>
-              <LevelBadge level={entry.level} />
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="w-6 shrink-0 text-right tabular-nums text-faint">{entry.rank}</span>
+              <span className="shrink-0">
+                <Avatar avatar={entry.avatar} size="sm" />
+              </span>
+              <span className={`name-truncate ${isSelf ? 'font-semibold' : ''}`} title={entry.displayName}>
+                {entry.displayName}
+              </span>
+              <span className="shrink-0">
+                <LevelBadge level={entry.level} />
+              </span>
             </span>
-            <span className="tabular-nums text-muted">{entry.score}</span>
+            <span className="shrink-0 tabular-nums text-muted">{entry.score}</span>
           </li>
         )
       })}

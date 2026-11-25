@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { describeApiError } from '../../api/apiError'
+import { AppHeader } from '../../components/AppHeader'
 import { ErrorRetry } from '../../components/ErrorRetry'
-import { LogoMark } from '../../components/LogoMark'
-import { useAuth } from '../../hooks/useAuth'
 import { useRooms } from '../../hooks/useRooms'
 import { getSetupProgress, type StepStatus } from './setupProgress'
 import { CreateRoomForm } from './CreateRoomForm'
@@ -12,17 +11,8 @@ import { RoomList } from './RoomList'
 const TOTAL_STEPS = 3
 
 export function DashboardPage() {
-  const { user, logout } = useAuth()
   const roomsQuery = useRooms()
   const [showCreateForm, setShowCreateForm] = useState(false)
-
-  function handleLogout() {
-    // Tải lại trang thật (không điều hướng SPA): tránh đua với ProtectedRoute - nó cũng đổi sang
-    // /login ngay khi user = null nếu còn điều hướng bằng navigate() trong lúc đang ở /dashboard.
-    // Dọn sạch state React cũng là điều nên làm khi đăng xuất.
-    logout()
-    window.location.href = '/'
-  }
 
   const rooms = roomsQuery.data ?? []
   const hasAnyRoom = rooms.length > 0
@@ -32,30 +22,7 @@ export function DashboardPage() {
 
   return (
     <>
-      <header className="col bar">
-        <Link className="mark" to="/">
-          <LogoMark />
-          QuizBattle
-        </Link>
-        <nav>
-          <Link className="hide-sm" to="/dashboard" aria-current="page">
-            Phòng của tôi
-          </Link>
-          <Link className="hide-sm" to="/practice">
-            Ôn tập
-          </Link>
-          <Link className="hide-sm" to="/shop">
-            Cửa hàng
-          </Link>
-          <Link className="hide-sm" to="/ranking">
-            Xếp hạng
-          </Link>
-          <Link to="/profile">{user?.displayName}</Link>
-          <button className="btn btn-ghost" type="button" onClick={handleLogout}>
-            Đăng xuất
-          </button>
-        </nav>
-      </header>
+      <AppHeader current="dashboard" />
 
       <main className="col">
         <div className="flex flex-wrap items-center justify-between gap-4 pt-6 pb-4">

@@ -1,7 +1,8 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
 import { ApiError } from '../../api/apiError'
+import { getRedirectPath } from '../../auth/redirectPath'
 import { FormField } from '../../components/FormField'
 import { HowItWorksCard } from '../../components/HowItWorksCard'
 import { LogoMark } from '../../components/LogoMark'
@@ -17,7 +18,7 @@ const REGISTER_FIELDS = ['displayName', 'email', 'password'] as const
 
 export function RegisterPage() {
   const { register, user, isLoading: authLoading } = useAuth()
-  const navigate = useNavigate()
+  const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -25,8 +26,9 @@ export function RegisterPage() {
   const [formError, setFormError] = useState<string | undefined>()
 
   const mutation = useMutation({
+    // Không điều hướng ở đây: register() gán user nên nhánh "đã có user" bên dưới là đường điều hướng duy nhất
+    // (thêm navigate() ở onSuccess sẽ đua với nó và có thể đưa về /dashboard thay vì trang định vào).
     mutationFn: () => register(email, password, displayName),
-    onSuccess: () => navigate('/dashboard', { replace: true }),
     onError: (error: unknown) => {
       setFormError(undefined)
 
@@ -51,7 +53,7 @@ export function RegisterPage() {
   })
 
   if (!authLoading && user) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={getRedirectPath(location.state)} replace />
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -73,7 +75,7 @@ export function RegisterPage() {
         </Link>
         <nav>
           <span className="hide-sm text-muted">Đã có tài khoản?</span>
-          <Link to="/login">Đăng nhập</Link>
+          <Link to="/login" state={location.state}>Đăng nhập</Link>
         </nav>
       </header>
       <main className="col grid grid-cols-1 content-center items-start gap-3.5 min-[861px]:grid-cols-2 min-h-[calc(100dvh-48px)] py-8 pb-12">

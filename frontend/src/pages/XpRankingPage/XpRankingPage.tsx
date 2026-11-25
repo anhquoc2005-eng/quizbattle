@@ -1,8 +1,7 @@
-import { Link } from 'react-router'
 import { describeApiError } from '../../api/apiError'
 import { Avatar } from '../../components/Avatar'
+import { AppHeader } from '../../components/AppHeader'
 import { ErrorRetry } from '../../components/ErrorRetry'
-import { LogoMark } from '../../components/LogoMark'
 import { useXpLeaderboard } from '../../hooks/useXpLeaderboard'
 
 /** Bảng xếp hạng XP công khai (top 50). */
@@ -11,15 +10,7 @@ export function XpRankingPage() {
 
   return (
     <>
-      <header className="col bar">
-        <Link className="mark" to="/">
-          <LogoMark />
-          QuizBattle
-        </Link>
-        <nav>
-          <Link to="/shop">Cửa hàng</Link>
-        </nav>
-      </header>
+      <AppHeader current="ranking" />
 
       <main className="col py-6">
         <section className="card" aria-labelledby="ranking-title">

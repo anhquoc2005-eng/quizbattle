@@ -2,10 +2,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import type { AuthContextValue } from '../../components/AuthProvider'
+import { AuthContext } from '../../components/authContext'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TEST_AVATAR } from '../../avatar/avatarFixture'
 import { getXpLeaderboard } from '../../api/leaderboards'
 import { XpRankingPage } from './XpRankingPage'
+
+
+// AppHeader đọc useAuth; test này không kiểm đăng nhập nên chỉ cấp giá trị tối thiểu.
+const AUTH = { user: null, isLoading: false, logout: vi.fn() } as unknown as AuthContextValue
 
 vi.mock('../../api/leaderboards', () => ({ getXpLeaderboard: vi.fn() }))
 vi.mock('../../avatar/avatarRenderer', () => ({ peekAvatarDataUri: vi.fn().mockReturnValue('data:image/svg+xml,x'), renderAvatarDataUri: vi.fn().mockResolvedValue('data:image/svg+xml,x') }))
@@ -13,9 +19,11 @@ vi.mock('../../avatar/avatarRenderer', () => ({ peekAvatarDataUri: vi.fn().mockR
 function renderPage() {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter>
-        <XpRankingPage />
-      </MemoryRouter>
+      <AuthContext.Provider value={AUTH}>
+        <MemoryRouter>
+          <XpRankingPage />
+        </MemoryRouter>
+      </AuthContext.Provider>
     </QueryClientProvider>,
   )
 }

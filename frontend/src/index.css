@@ -567,6 +567,13 @@ a:focus-visible {
   }
 }
 
+/* Đã đăng nhập ở màn hẹp: bỏ chữ logo (link vẫn có aria-label) để Đăng xuất không bị cắt ở 320px. */
+@media (max-width: 400px) {
+  .bar.signed-in .mark-text {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .btn {
     transition: none;

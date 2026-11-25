@@ -80,6 +80,16 @@ describe('AppHeader', () => {
     expect(screen.getByText('from:/shop?x=1')).toBeTruthy()
   })
 
+  it.each([
+    ['SignedIn', { user: USER }, true],
+    ['SignedOut', {}, false],
+  ])('AppHeader_%s_LogoLinkKeepsAccessibleNameAndMarksHeader', (_label, auth, signedIn) => {
+    const { container } = renderHeader(auth)
+
+    expect(screen.getByRole('link', { name: 'QuizBattle' }).getAttribute('href')).toBe('/')
+    expect(container.querySelector('header')!.classList.contains('signed-in')).toBe(signedIn)
+  })
+
   it('AppHeader_AuthLoading_ShowsNeitherNameNorLogin', () => {
     renderHeader({ user: null, isLoading: true })
 

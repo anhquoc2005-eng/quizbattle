@@ -38,6 +38,14 @@ describe('menu điện thoại (index.css)', () => {
     expect(bodyOf('.bar .user-name', mobileBlock)).toContain('max-width: 9ch')
   })
 
+  it('MarkText_HiddenOnlyWhenSignedInOnNarrowScreens', () => {
+    const start = text.indexOf('@media (max-width: 400px) {')
+    expect(start).toBeGreaterThan(-1)
+    const block = text.slice(start, text.indexOf('@media', start + 1) === -1 ? undefined : text.indexOf('@media', start + 1))
+    expect(bodyOf('.bar.signed-in .mark-text', block)).toContain('display: none')
+    expect(bodyOf('.bar .mark-text')).toBeUndefined() // không có rule ẩn chữ không điều kiện
+  })
+
   it('MenuPanel_IsAbsolutelyPositioned', () => {
     expect(bodyOf('.bar .menu-panel')).toContain('position: absolute')
   })

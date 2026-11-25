@@ -31,10 +31,10 @@ export function AppHeader({ current }: { current?: AppHeaderPage }) {
   }
 
   return (
-    <header className="col bar">
-      <Link className="mark" to="/">
+    <header className={user ? 'col bar signed-in' : 'col bar'}>
+      <Link className="mark" to="/" aria-label="QuizBattle">
         <LogoMark />
-        QuizBattle
+        <span className="mark-text">QuizBattle</span>
       </Link>
       <nav>
         {user && (

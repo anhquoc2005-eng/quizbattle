@@ -1,47 +1,33 @@
-import { Link } from 'react-router'
-import { useAuth } from '../../hooks/useAuth'
-import { BackendStatus } from './BackendStatus'
+import { AppHeader } from '../../components/AppHeader'
+import { useHealth } from '../../hooks/useHealth'
+import { Cta } from './Cta'
+import { Faq } from './Faq'
+import { Hero } from './Hero'
+import { HowItWorks } from './HowItWorks'
+import { ScoreLab } from './ScoreLab'
+import { Showcase } from './Showcase'
+import { SiteFooter } from './SiteFooter'
+import { Stats } from './Stats'
+import { useReveal } from './useReveal'
 
 export function HomePage() {
-  const { user, isLoading } = useAuth()
+  // Chỉ để đánh thức backend (host free ngủ sau 15 phút): không render kết quả, lỗi cũng không hiện.
+  useHealth()
+  const ref = useReveal<HTMLElement>()
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-8 px-4 py-12">
-      <header className="space-y-3">
-        <h1 className="text-4xl font-bold sm:text-5xl">QuizBattle</h1>
-        <p className="text-muted">
-          Quiz real-time: nhập chủ đề, AI sinh câu hỏi, bạn bè vào phòng bằng mã và thi đấu trực tiếp.
-        </p>
-        {!isLoading && (
-          <div className="flex flex-wrap gap-3.5">
-            {user ? (
-              <Link className="btn btn-primary" to="/dashboard">
-                Vào trang của tôi
-              </Link>
-            ) : (
-              <>
-                <Link className="btn btn-primary" to="/login">
-                  Đăng nhập
-                </Link>
-                <Link className="btn btn-ghost" to="/register">
-                  Đăng ký
-                </Link>
-              </>
-            )}
-            <Link className="btn btn-ghost" to="/join">
-              Vào phòng
-            </Link>
-            <Link className="btn btn-ghost" to="/shop">
-              Cửa hàng
-            </Link>
-            <Link className="btn btn-ghost" to="/ranking">
-              Xếp hạng
-            </Link>
-          </div>
-        )}
-      </header>
-
-      <BackendStatus />
-    </main>
+    <>
+      <AppHeader />
+      <main ref={ref}>
+        <Hero />
+        <HowItWorks />
+        <Showcase />
+        <ScoreLab />
+        <Stats />
+        <Faq />
+        <Cta />
+      </main>
+      <SiteFooter />
+    </>
   )
 }

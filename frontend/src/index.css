@@ -586,43 +586,78 @@ a:focus-visible {
 }
 
 /* Trang chủ: chỉ animate transform/opacity. Trạng thái cuối nằm ở style gốc nên khối reduced-motion chỉ cần tắt animation. */
-.hero-char,
 .hero-rise {
   animation: hero-rise 0.6s ease-out both;
-}
-.hero-char {
-  display: inline-block;
-  animation-delay: calc(var(--i) * 70ms);
-}
-.hero-rise {
   animation-delay: var(--d, 0s);
 }
-.hero-glow {
-  position: absolute;
-  z-index: -1;
-  top: -120px;
-  right: 5%;
-  width: 480px;
-  height: 480px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  filter: blur(90px);
-  animation: hero-drift 16s ease-in-out infinite alternate;
+/* Câu tiêu đề: mỗi dòng trồi lên từ sau đường chân chữ. Padding/margin bù dấu tiếng Việt khỏi bị overflow cắt. */
+.home-mask {
+  display: block;
+  overflow: hidden;
+  padding-top: 0.14em;
+  margin-top: -0.14em;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
 }
-.hero-timer {
-  animation: hero-timer 7s linear infinite;
+.home-mask > span {
+  display: block;
+  animation: home-mask 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--d, 0s);
 }
-.hero-correct {
-  position: absolute;
-  inset: -1px;
-  border-radius: var(--radius-field);
-  border: 1px solid var(--color-positive);
-  background: color-mix(in srgb, var(--color-positive) 18%, transparent);
-  animation: hero-correct 7s ease infinite;
+.home-fade {
+  animation: home-fade 0.2s ease-out both;
 }
-.hero-score {
+/* Chỉ ẩn trước khi vào màn hình khi script đã chạy (useReveal đặt data-js). */
+[data-js] [data-reveal]:not([data-in]) {
+  opacity: 0;
+  transform: translateY(24px);
+}
+[data-reveal] {
+  transition:
+    opacity 0.6s ease-out,
+    transform 0.6s ease-out;
+}
+.home-timer {
+  animation: home-timer 7s linear infinite;
+}
+.home-score {
   display: inline-block;
-  animation: hero-score 7s ease-out infinite;
+  animation: home-score 7s ease-out infinite;
+}
+.home-range {
+  appearance: none;
+  background: transparent;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  cursor: pointer;
+}
+.home-range::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 32px;
+}
+.home-range::-moz-range-track {
+  background: transparent;
+  height: 32px;
+}
+.home-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--color-ink);
+}
+.home-range::-moz-range-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--color-ink);
+}
+.home-range:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 4px;
 }
 @keyframes hero-rise {
   from {
@@ -630,12 +665,17 @@ a:focus-visible {
     transform: translateY(14px);
   }
 }
-@keyframes hero-drift {
-  to {
-    transform: translate(-60px, 80px);
+@keyframes home-mask {
+  from {
+    transform: translateY(110%);
   }
 }
-@keyframes hero-timer {
+@keyframes home-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes home-timer {
   0% {
     transform: scaleX(1);
   }
@@ -644,20 +684,7 @@ a:focus-visible {
     transform: scaleX(0);
   }
 }
-@keyframes hero-correct {
-  0%,
-  60% {
-    opacity: 0;
-  }
-  66%,
-  92% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-@keyframes hero-score {
+@keyframes home-score {
   0%,
   64% {
     opacity: 0;
@@ -669,7 +696,7 @@ a:focus-visible {
   92%,
   100% {
     opacity: 0;
-    transform: translateY(-24px);
+    transform: translateY(-16px);
   }
 }
 .hero-actions .btn:active {
@@ -682,20 +709,19 @@ a:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Trang chủ: hiện ngay trạng thái cuối (chữ đủ, Canberra sáng, +850 hiện, giờ hết), quầng đứng yên. */
-  .hero-char,
+  /* Trang chủ: hiện ngay trạng thái cuối (chữ đủ, nội dung hiện, giờ hết), không còn chuyển động. */
   .hero-rise,
-  .hero-timer,
-  .hero-correct,
-  .hero-score,
-  .hero-glow {
+  .home-mask > span,
+  .home-fade,
+  .home-timer,
+  .home-score {
     animation: none;
   }
-  .hero-timer {
+  .home-timer {
     transform: scaleX(0);
   }
-  .hero-correct {
-    opacity: 1;
+  [data-reveal] {
+    transition: none;
   }
   .hero-actions .btn:hover {
     transform: none;

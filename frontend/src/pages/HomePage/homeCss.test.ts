@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import css from '../../index.css?raw'
 
-const HERO_CLASSES = ['.hero-char', '.hero-rise', '.hero-timer', '.hero-correct', '.hero-score', '.hero-glow']
+const HOME_ANIMATED = ['.hero-rise', '.home-mask > span', '.home-fade', '.home-timer', '.home-score']
+const REMOVED = ['.hero-glow', '.hero-char', '.hero-correct', 'hero-drift']
 
 /** Nội dung khối @media (prefers-reduced-motion: reduce) (khối có sẵn ở cuối file). */
 function reducedBlock(): string {
-  const start = css.lastIndexOf('@media (prefers-reduced-motion: reduce)')
-  return css.slice(start)
+  return css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'))
 }
 
 describe('index.css trang chủ', () => {
@@ -14,17 +14,26 @@ describe('index.css trang chủ', () => {
     expect(css.length).toBeGreaterThan(1000)
   })
 
-  it('Css_HeroAnimations_DefineHeroKeyframes', () => {
-    for (const name of ['hero-rise', 'hero-drift', 'hero-timer', 'hero-correct', 'hero-score']) {
+  it('Css_HomeAnimations_DefineKeyframes', () => {
+    for (const name of ['hero-rise', 'home-mask', 'home-fade', 'home-timer', 'home-score']) {
       expect(css).toContain(`@keyframes ${name}`)
     }
   })
 
-  it('Css_ReducedMotion_DisablesEveryHeroAnimation', () => {
+  it('Css_ReducedMotion_DisablesEveryHomeAnimationAndRevealTransition', () => {
     const block = reducedBlock()
-    const m = block.match(/([^{}]*)\{\s*animation:\s*none;\s*\}/g) ?? []
-    const disabled = m.join('\n')
-    for (const cls of HERO_CLASSES) expect(disabled).toContain(cls)
+    const disabled = (block.match(/([^{}]*)\{\s*animation:\s*none;\s*\}/g) ?? []).join('\n')
+    for (const cls of HOME_ANIMATED) expect(disabled).toContain(cls)
+    expect(block).toMatch(/\[data-reveal\]\s*\{\s*transition:\s*none;/)
+  })
+
+  // Nội dung chỉ được ẩn trước khi vào màn hình khi script đã đặt data-js: lỗi script thì vẫn đọc được.
+  it('Css_RevealHiding_RequiresDataJsAncestor', () => {
+    const hidingRules = [...css.matchAll(/([^{}]*)\{([^{}]*opacity:\s*0[^{}]*)\}/g)].filter(([, sel]) =>
+      /data-reveal/.test(sel ?? ''),
+    )
+    expect(hidingRules.length).toBeGreaterThan(0)
+    for (const [, sel] of hidingRules) expect(sel).toContain('[data-js]')
   })
 
   // Rule ngoài @layer thắng class Tailwind: display ở đây từng đè `flex` của .hero-actions (nút dính nhau).
@@ -32,5 +41,9 @@ describe('index.css trang chủ', () => {
     const rules = [...css.matchAll(/([^{}]*)\{([^{}]*)\}/g)].filter(([, sel]) => /\.hero-rise\b/.test(sel ?? ''))
     expect(rules.length).toBeGreaterThan(0)
     for (const [, , body] of rules) expect(body).not.toMatch(/\bdisplay\s*:/)
+  })
+
+  it('Css_Home_HasNoGlowOrRemovedHeroClasses', () => {
+    for (const name of REMOVED) expect(css).not.toContain(name)
   })
 })

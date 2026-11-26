@@ -26,4 +26,11 @@ describe('index.css trang chủ', () => {
     const disabled = m.join('\n')
     for (const cls of HERO_CLASSES) expect(disabled).toContain(cls)
   })
+
+  // Rule ngoài @layer thắng class Tailwind: display ở đây từng đè `flex` của .hero-actions (nút dính nhau).
+  it('Css_HeroRise_DoesNotDeclareDisplay', () => {
+    const rules = [...css.matchAll(/([^{}]*)\{([^{}]*)\}/g)].filter(([, sel]) => /\.hero-rise\b/.test(sel))
+    expect(rules.length).toBeGreaterThan(0)
+    for (const [, , body] of rules) expect(body).not.toMatch(/\bdisplay\s*:/)
+  })
 })

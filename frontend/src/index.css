@@ -588,14 +588,13 @@ a:focus-visible {
 /* Trang chủ: chỉ animate transform/opacity. Trạng thái cuối nằm ở style gốc nên khối reduced-motion chỉ cần tắt animation. */
 .hero-char,
 .hero-rise {
-  display: inline-block;
   animation: hero-rise 0.6s ease-out both;
 }
 .hero-char {
+  display: inline-block;
   animation-delay: calc(var(--i) * 70ms);
 }
 .hero-rise {
-  display: block;
   animation-delay: var(--d, 0s);
 }
 .hero-glow {

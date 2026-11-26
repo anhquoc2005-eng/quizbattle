@@ -585,7 +585,122 @@ a:focus-visible {
   }
 }
 
+/* Trang chủ: chỉ animate transform/opacity. Trạng thái cuối nằm ở style gốc nên khối reduced-motion chỉ cần tắt animation. */
+.hero-char,
+.hero-rise {
+  display: inline-block;
+  animation: hero-rise 0.6s ease-out both;
+}
+.hero-char {
+  animation-delay: calc(var(--i) * 70ms);
+}
+.hero-rise {
+  display: block;
+  animation-delay: var(--d, 0s);
+}
+.hero-glow {
+  position: absolute;
+  z-index: -1;
+  top: -120px;
+  right: 5%;
+  width: 480px;
+  height: 480px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  filter: blur(90px);
+  animation: hero-drift 16s ease-in-out infinite alternate;
+}
+.hero-timer {
+  animation: hero-timer 7s linear infinite;
+}
+.hero-correct {
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-field);
+  border: 1px solid var(--color-positive);
+  background: color-mix(in srgb, var(--color-positive) 18%, transparent);
+  animation: hero-correct 7s ease infinite;
+}
+.hero-score {
+  display: inline-block;
+  animation: hero-score 7s ease-out infinite;
+}
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes hero-drift {
+  to {
+    transform: translate(-60px, 80px);
+  }
+}
+@keyframes hero-timer {
+  0% {
+    transform: scaleX(1);
+  }
+  60%,
+  100% {
+    transform: scaleX(0);
+  }
+}
+@keyframes hero-correct {
+  0%,
+  60% {
+    opacity: 0;
+  }
+  66%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hero-score {
+  0%,
+  64% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  70% {
+    opacity: 1;
+  }
+  92%,
+  100% {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+}
+.hero-actions .btn:active {
+  transform: translateY(-2px) scale(0.98);
+}
+@media (hover: hover) {
+  .hero-actions .btn:hover {
+    transform: translateY(-2px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* Trang chủ: hiện ngay trạng thái cuối (chữ đủ, Canberra sáng, +850 hiện, giờ hết), quầng đứng yên. */
+  .hero-char,
+  .hero-rise,
+  .hero-timer,
+  .hero-correct,
+  .hero-score,
+  .hero-glow {
+    animation: none;
+  }
+  .hero-timer {
+    transform: scaleX(0);
+  }
+  .hero-correct {
+    opacity: 1;
+  }
+  .hero-actions .btn:hover {
+    transform: none;
+  }
   .btn {
     transition: none;
   }

@@ -25,7 +25,7 @@ export function Leaderboard({ entries, highlightPlayerId }: { entries: Leaderboa
               <span className={`name-truncate ${isSelf ? 'font-semibold' : ''}`} title={entry.displayName}>
                 {entry.displayName}
               </span>
-              <span className="shrink-0">
+              <span className="shrink-0 empty:hidden">
                 <LevelBadge level={entry.level} />
               </span>
             </span>

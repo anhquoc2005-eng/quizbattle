@@ -6,7 +6,7 @@ export function Cta() {
   const { user } = useAuth()
   return (
     <section aria-labelledby="cta-title" className="bg-ink text-ground">
-      <div className="col flex min-h-[60svh] lg:min-h-[min(90svh,760px)] flex-col justify-between gap-16 py-[clamp(48px,8vw,96px)]">
+      <div className="col flex lg:min-h-[min(90svh,760px)] flex-col justify-between gap-16 py-[clamp(48px,8vw,96px)]">
         <h2 id="cta-title" data-reveal className="text-[clamp(48px,8vw,120px)] font-semibold leading-[1] tracking-[-0.04em]">
           Mã đã sẵn sàng.
           <br />

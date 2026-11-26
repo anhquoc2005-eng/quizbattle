@@ -23,7 +23,7 @@ export function JoinCodeForm() {
         name="code"
         value={code}
         onChange={(e) => setCode(sanitizeRoomCode(e.target.value))}
-        placeholder="A7K29X"
+        placeholder="······"
         autoComplete="off"
         autoCapitalize="characters"
         spellCheck={false}

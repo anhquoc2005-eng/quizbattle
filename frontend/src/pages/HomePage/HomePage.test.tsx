@@ -90,6 +90,12 @@ describe('Ô mã phòng', () => {
     expect(codeInput().getAttribute('name')).toBe('code')
   })
 
+  it('RoomCode_Placeholder_IsSixDotsNotAFakeCode', () => {
+    renderHome()
+    expect(codeInput().placeholder).toBe('······')
+    expect(codeInput().value).toBe('')
+  })
+
   it('RoomCode_TypingInvalidChars_FiltersAndUppercases', () => {
     renderHome()
     fireEvent.change(codeInput(), { target: { value: 'a7k-O1x!' } })

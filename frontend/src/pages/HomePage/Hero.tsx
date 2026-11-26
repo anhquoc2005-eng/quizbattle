@@ -18,7 +18,7 @@ function MaskedLine({ children, delay }: { children: string; delay: string }) {
 export function Hero() {
   const { user, isLoading } = useAuth()
   return (
-    <section className="col grid gap-12 pb-[clamp(96px,14vw,200px)] pt-[clamp(40px,7vw,96px)] lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-end">
+    <section className="col grid gap-12 pb-[clamp(96px,14vw,200px)] pt-[clamp(40px,7vw,96px)] lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-center">
       <div>
         <h1 className="text-[clamp(48px,8vw,120px)] font-semibold leading-[1.05] tracking-[-0.04em]">
           <MaskedLine delay="0s">Vào trận</MaskedLine>{' '}

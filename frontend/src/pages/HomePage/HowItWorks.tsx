@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { StageFragment } from './StageFragment'
+import { StepRange } from './StepRange'
 
 const STAGES = [
   { name: 'Nhập chủ đề', clause: 'Nhập chủ đề bạn muốn thi.', detail: 'Gõ một chủ đề, chọn số câu và thời gian mỗi câu (5 đến 120 giây, mặc định 20).' },
@@ -14,7 +15,7 @@ export function HowItWorks() {
   const last = STAGES.length - 1
   return (
     <section aria-labelledby="how-title" className="col pb-[clamp(96px,14vw,200px)]" data-reveal>
-      <div className="grid gap-2 md:min-h-[min(80svh,680px)] md:grid-cols-2">
+      <div className="grid gap-2 md:min-h-[min(70svh,560px)] md:grid-cols-2">
         <div className="order-2 flex flex-col justify-between gap-8 md:order-1 md:p-8">
           <h2
             id="how-title"
@@ -35,21 +36,7 @@ export function HowItWorks() {
         </div>
       </div>
       <div className="mt-8">
-        <div className="relative h-8">
-          <div className="absolute inset-x-0 top-3 h-2 rounded-full bg-raised" />
-          <div className="absolute left-0 top-3 h-2 rounded-full bg-accent" style={{ width: `${(stage / last) * 100}%` }} />
-          <input
-            type="range"
-            min={0}
-            max={last}
-            step={1}
-            value={stage}
-            onChange={(e) => setStage(Number(e.target.value))}
-            aria-label="Chặng cách chơi"
-            aria-valuetext={STAGES[stage]!.name}
-            className="home-range absolute inset-0"
-          />
-        </div>
+        <StepRange min={0} max={last} value={stage} onChange={setStage} ariaLabel="Chặng cách chơi" valueText={STAGES[stage]!.name} />
         <ol className="mt-4 grid grid-cols-2 gap-2 text-base sm:grid-cols-4">
           {STAGES.map((s, i) => (
             <li key={s.name}>

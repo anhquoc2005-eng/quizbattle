@@ -119,6 +119,21 @@ describe('Ô mã phòng', () => {
   })
 })
 
+describe('Điểm tính ngay', () => {
+  it('ScoreLab_AnswerInstantly_Shows1000Points', () => {
+    renderHome()
+    fireEvent.change(screen.getByLabelText(/Trả lời sau/), { target: { value: '0' } })
+    expect(screen.getByText('+1000')).toBeTruthy()
+  })
+
+  it('ScoreLab_ChooseWrong_ShowsZeroPointsAndYouStayThird', () => {
+    renderHome()
+    fireEvent.click(screen.getByRole('button', { name: 'Sai' }))
+    expect(screen.getByText('+0')).toBeTruthy()
+    expect(screen.getByText('3. Bạn')).toBeTruthy()
+  })
+})
+
 describe('Cách chơi và chủ đề', () => {
   it('HowItWorks_MovingSlider_SwapsTheClause', () => {
     renderHome()

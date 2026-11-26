@@ -54,6 +54,72 @@ describe('AppHeader', () => {
     expect(menu.open).toBe(false)
   })
 
+  function openMenu(container: HTMLElement) {
+    const menu = container.querySelector('details')!
+    menu.open = true
+    fireEvent(menu, new Event('toggle')) // jsdom không tự phát 'toggle' khi gán open
+    expect(menu.open).toBe(true)
+    return menu
+  }
+
+  it('AppHeader_MenuOpen_EscapeClosesMenuAndFocusesSummary', () => {
+    const { container } = renderHeader({ user: USER })
+    const menu = openMenu(container)
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(menu.open).toBe(false)
+    expect(document.activeElement).toBe(menu.querySelector('summary'))
+  })
+
+  it('AppHeader_MenuOpen_OtherKeyKeepsMenuOpen', () => {
+    const { container } = renderHeader({ user: USER })
+    const menu = openMenu(container)
+
+    fireEvent.keyDown(document, { key: 'a' })
+
+    expect(menu.open).toBe(true)
+  })
+
+  it('AppHeader_MenuOpen_PointerDownOutsideHeaderClosesMenu', () => {
+    const { container } = renderHeader({ user: USER })
+    const menu = openMenu(container)
+
+    fireEvent.pointerDown(document.body)
+
+    expect(menu.open).toBe(false)
+  })
+
+  it('AppHeader_MenuOpen_PointerDownOnUserNameLinkClosesMenu', () => {
+    const { container } = renderHeader({ user: USER })
+    const menu = openMenu(container)
+
+    fireEvent.pointerDown(screen.getByRole('link', { name: 'Alice' })) // trong header nhưng ngoài <details>
+
+    expect(menu.open).toBe(false)
+  })
+
+  it('AppHeader_MenuOpen_PointerDownInsideMenuKeepsItOpen', () => {
+    const { container } = renderHeader({ user: USER })
+    const menu = openMenu(container)
+
+    fireEvent.pointerDown(container.querySelector('.menu-panel')!)
+    fireEvent.pointerDown(menu.querySelector('summary')!)
+
+    expect(menu.open).toBe(true)
+  })
+
+  it('AppHeader_MenuClosed_EscapeAndPointerDownDoNothing', () => {
+    const { container } = renderHeader({ user: USER })
+    const menu = container.querySelector('details')!
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.pointerDown(document.body)
+
+    expect(menu.open).toBe(false)
+    expect(document.activeElement).not.toBe(menu.querySelector('summary'))
+  })
+
   it('AppHeader_SignedOut_HasNoMenu', () => {
     const { container } = renderHeader({})
 

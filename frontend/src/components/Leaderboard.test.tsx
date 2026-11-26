@@ -34,6 +34,14 @@ describe('Leaderboard', () => {
     })
   })
 
+  it('GuestWithoutLevel_LevelBadgeWrapperIsEmptyAndHiddenSoItTakesNoGap', () => {
+    const { container } = render(<Leaderboard entries={[entry('1', 'An', 1, 900)]} />)
+
+    const wrapper = container.querySelector('.name-truncate')!.nextElementSibling!
+    expect(wrapper.className).toContain('empty:hidden')
+    expect(wrapper.childNodes).toHaveLength(0)
+  })
+
   it('KeepsRankNameAndScore_AndHighlightsSelf', () => {
     const { container } = render(<Leaderboard entries={[entry('1', 'An', 1, 900), entry('2', 'Bình', 2, 700)]} highlightPlayerId="2" />)
 

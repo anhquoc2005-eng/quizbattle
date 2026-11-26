@@ -35,6 +35,14 @@ describe('PlayerList', () => {
     })
   })
 
+  it('GuestWithoutLevel_LevelBadgeWrapperIsEmptyAndHiddenSoItTakesNoGap', () => {
+    const { container } = render(<PlayerList players={[player('1', 'An')]} />)
+
+    const wrapper = container.querySelector('.name-truncate')!.nextElementSibling!
+    expect(wrapper.className).toContain('empty:hidden')
+    expect(wrapper.childNodes).toHaveLength(0)
+  })
+
   it('AvatarComesBeforeTheNameInEachRow', () => {
     const { container } = render(<PlayerList players={[player('1', 'An')]} />)
 

@@ -19,7 +19,7 @@ export function PlayerList({ players }: { players: PlayerPresence[] }) {
           <span className={`name-truncate ${player.online ? '' : 'text-faint'}`} title={player.displayName}>
             {player.displayName}
           </span>
-          <span className="shrink-0">
+          <span className="shrink-0 empty:hidden">
             <LevelBadge level={player.level} />
           </span>
           {!player.online && <span className="shrink-0 text-xs text-faint">(mất kết nối)</span>}

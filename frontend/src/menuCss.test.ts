@@ -46,6 +46,14 @@ describe('menu điện thoại (index.css)', () => {
     expect(bodyOf('.bar .mark-text')).toBeUndefined() // không có rule ẩn chữ không điều kiện
   })
 
+  it('GhostButtonsInBar_Are44pxTallOnPhones_KeepPaddingAndNoWrap', () => {
+    const body = bodyOf('.bar .btn-ghost', mobileBlock)
+    expect(body).toBeDefined() // chống xanh suông: thiếu rule thì phải đỏ
+    expect(body).toContain('height: 44px')
+    expect(body).toContain('padding: 0 12px')
+    expect(body).toContain('white-space: nowrap')
+  })
+
   it('MenuPanel_IsAbsolutelyPositioned', () => {
     expect(bodyOf('.bar .menu-panel')).toContain('position: absolute')
   })

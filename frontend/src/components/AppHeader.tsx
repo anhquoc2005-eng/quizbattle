@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useAuth } from '../hooks/useAuth'
 import { LogoMark } from './LogoMark'
@@ -21,6 +21,27 @@ export function AppHeader({ current }: { current?: AppHeaderPage }) {
   const location = useLocation()
   // <details> không tự đóng khi React Router đổi trang, nên giữ trạng thái mở ở đây và đóng trong onClick của link.
   const [menuOpen, setMenuOpen] = useState(false)
+  const detailsRef = useRef<HTMLDetailsElement>(null)
+  const summaryRef = useRef<HTMLElement>(null)
+
+  // Chỉ gắn listener khi menu đang mở. Bấm chính summary nằm trong <details> nên không bị đóng ở đây rồi onToggle mở lại.
+  useEffect(() => {
+    if (!menuOpen) return
+    function onPointerDown(event: PointerEvent) {
+      if (!detailsRef.current?.contains(event.target as Node)) setMenuOpen(false)
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      setMenuOpen(false)
+      summaryRef.current?.focus()
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [menuOpen])
 
   function handleLogout() {
     // Tải lại trang thật (không điều hướng SPA): tránh đua với ProtectedRoute - nó cũng đổi sang
@@ -38,8 +59,8 @@ export function AppHeader({ current }: { current?: AppHeaderPage }) {
       </Link>
       <nav>
         {user && (
-          <details className="show-sm" open={menuOpen} onToggle={(event) => setMenuOpen(event.currentTarget.open)}>
-            <summary className="btn btn-ghost">Menu</summary>
+          <details ref={detailsRef} className="show-sm" open={menuOpen} onToggle={(event) => setMenuOpen(event.currentTarget.open)}>
+            <summary ref={summaryRef} className="btn btn-ghost">Menu</summary>
             <div className="menu-panel">
               {MENU_LINKS.map(({ page, to, label }) => (
                 <Link key={page} to={to} onClick={() => setMenuOpen(false)} {...pageProps(page, current)}>

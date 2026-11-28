@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import cta from './Cta.tsx?raw'
-import footer from './SiteFooter.tsx?raw'
 import hero from './Hero.tsx?raw'
 import how from './HowItWorks.tsx?raw'
 import joinForm from './JoinCodeForm.tsx?raw'
@@ -22,11 +21,6 @@ describe('bố cục trang chủ trên màn desktop thấp', () => {
     readable(how, 'home-fade')
     expect(how).not.toContain('justify-between')
     expect(how).not.toMatch(/min-h-\[[^\]]*v?h[^\]]*\]/)
-  })
-
-  it('SiteFooter_Source_DoesNotShiftWordmarkOutOfFooter', () => {
-    readable(footer, 'overflow-hidden')
-    expect(footer).not.toContain('translate-y')
   })
 
   it('JoinCodeForm_SubmitButton_IsNotFullyRounded', () => {

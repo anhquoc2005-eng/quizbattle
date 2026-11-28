@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { useAuth } from '../../hooks/useAuth'
 
-/** Chân trang đảo màu: tên QuizBattle cỡ lớn, bị cắt ở đáy và mép phải bởi overflow-hidden. */
+/** Chân trang đảo màu: tên QuizBattle cỡ lớn, hiện đủ; overflow-hidden chỉ chặn tràn ngang. */
 export function SiteFooter() {
   const { user } = useAuth()
   return (
@@ -24,7 +24,7 @@ export function SiteFooter() {
       </div>
       <p
         aria-hidden="true"
-        className="col translate-y-[26%] whitespace-nowrap text-[clamp(56px,17vw,240px)] font-semibold leading-[0.9] tracking-[-0.05em]"
+        className="col whitespace-nowrap pb-[0.12em] text-[clamp(56px,17vw,240px)] font-semibold leading-none tracking-[-0.05em]"
       >
         QuizBattle
       </p>

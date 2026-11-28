@@ -14,7 +14,7 @@ export function JoinCodeForm() {
   }
 
   return (
-    <form action="/join" method="get" onSubmit={handleSubmit} className="flex flex-wrap items-center gap-3">
+    <form action="/join" method="get" onSubmit={handleSubmit} className="flex flex-wrap items-stretch gap-3">
       <label htmlFor="home-room-code" className="sr-only">
         Mã phòng
       </label>
@@ -29,9 +29,9 @@ export function JoinCodeForm() {
         spellCheck={false}
         enterKeyHint="go"
         aria-describedby="home-room-code-hint"
-        className="w-[4.7em] max-w-full rounded-[0.2em] bg-raised px-[0.2em] py-[0.08em] text-[clamp(44px,7.5vw,104px)] font-semibold uppercase leading-[1.05] tabular-nums tracking-[0.02em] text-accent caret-ink outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-ink"
+        className="w-[4.7em] max-w-full rounded-[0.2em] bg-raised px-[0.2em] py-[0.08em] text-[clamp(40px,min(7.5vw,11vh),80px)] font-semibold uppercase leading-none tabular-nums tracking-[0.02em] text-accent caret-ink outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-ink"
       />
-      <button type="submit" disabled={!complete} className="btn btn-primary h-14 px-8 text-base">
+      <button type="submit" disabled={!complete} className="btn btn-primary h-auto! min-h-14 px-8 text-base">
         Vào phòng
       </button>
       <p id="home-room-code-hint" className="basis-full text-base text-muted">

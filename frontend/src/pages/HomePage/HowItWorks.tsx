@@ -15,8 +15,8 @@ export function HowItWorks() {
   const last = STAGES.length - 1
   return (
     <section aria-labelledby="how-title" className="col pb-[clamp(96px,14vw,200px)]" data-reveal>
-      <div className="grid gap-2 md:min-h-[min(70svh,560px)] md:grid-cols-2">
-        <div className="order-2 flex flex-col justify-between gap-8 md:order-1 md:p-8">
+      <div className="grid gap-2 md:grid-cols-2">
+        <div className="order-2 flex flex-col justify-center gap-6 md:order-1 md:p-8">
           <h2
             id="how-title"
             key={stage}

@@ -61,7 +61,7 @@ describe('HomePage', () => {
 
   it('Render_LoggedOut_ShowsCreateRoomToRegisterAndSharedLinks', async () => {
     renderHome()
-    expect((await screen.findByRole('link', { name: 'Tạo phòng' })).getAttribute('href')).toBe('/register')
+    for (const link of await screen.findAllByRole('link', { name: 'Tạo phòng' })) expect(link.getAttribute('href')).toBe('/register')
     for (const name of ['Cửa hàng', 'Xếp hạng']) expect(screen.getAllByRole('link', { name })[0]).toBeTruthy()
     expect(screen.getAllByRole('link', { name: 'Đăng nhập' }).length).toBeGreaterThan(0)
   })

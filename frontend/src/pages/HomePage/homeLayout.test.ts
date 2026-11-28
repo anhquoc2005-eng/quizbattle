@@ -3,6 +3,7 @@ import cta from './Cta.tsx?raw'
 import footer from './SiteFooter.tsx?raw'
 import hero from './Hero.tsx?raw'
 import how from './HowItWorks.tsx?raw'
+import joinForm from './JoinCodeForm.tsx?raw'
 
 // Chống xanh suông: nguồn phải đọc được và chứa một class chắc chắn có trong file.
 // Khoảng cách, chiều cao tương đối và chữ có bị cắt hay không: chỉ đo bằng trình duyệt (jsdom không có layout).
@@ -26,6 +27,11 @@ describe('bố cục trang chủ trên màn desktop thấp', () => {
   it('SiteFooter_Source_DoesNotShiftWordmarkOutOfFooter', () => {
     readable(footer, 'overflow-hidden')
     expect(footer).not.toContain('translate-y')
+  })
+
+  it('JoinCodeForm_SubmitButton_IsNotFullyRounded', () => {
+    readable(joinForm, 'btn btn-primary')
+    expect(joinForm).not.toContain('rounded-full')
   })
 
   it('Hero_Source_LimitsFontSizeByViewportHeightToo', () => {
